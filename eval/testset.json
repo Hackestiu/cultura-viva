@@ -1,0 +1,72 @@
+[
+  {
+    "id": "birth-death",
+    "question": "When and where was Antoni Gaudí born, and when did he die?",
+    "reference": "Antoni Gaudí was born on June 25, 1852, in Catalonia, Spain (Reus, or possibly Riudoms), and died on June 10, 1926, at age 73, three days after being struck by a Barcelona tram."
+  },
+  {
+    "id": "eusebi-guell",
+    "question": "Who was Eusebi Güell and what did he commission from Gaudí?",
+    "reference": "Eusebi Güell was an industrialist and Gaudí's main patron and close friend. He commissioned Park Güell, Palau Güell, and the crypt of Colònia Güell, among other works."
+  },
+  {
+    "id": "funicular-model",
+    "question": "What is the funicular model technique Gaudí used, and where did he first use it at full scale?",
+    "reference": "The funicular model is an upside-down scale model built with weighted hanging strings or chains that, under gravity, reveals ideal catenary curves for compression-only arches and vaults. Gaudí first used it at full scale for the Crypt of Colònia Güell, and later applied the technique to the Sagrada Família."
+  },
+  {
+    "id": "trencadis",
+    "question": "What is trencadís and where is it prominently used?",
+    "reference": "Trencadís is a mosaic technique made from broken tile and ceramic fragments, often recycled offcuts. It is prominently used on the serpentine bench and gatehouse pavilions of Park Güell and on the roof of Casa Batlló."
+  },
+  {
+    "id": "sagrada-facades",
+    "question": "What are the three main façades of the Sagrada Família and what does each represent?",
+    "reference": "The Sagrada Família has the Nativity façade (Christ's birth, completed under Gaudí's supervision), the Passion façade (Christ's suffering and death, built later in a starker style by Josep Maria Subirachs), and the Glory façade (the path to God and final judgment)."
+  },
+  {
+    "id": "sagrada-spires",
+    "question": "How many spires will the finished Sagrada Família have, and what do they represent?",
+    "reference": "The finished Sagrada Família will have eighteen spires: twelve for the Apostles, four for the Evangelists, one for the Virgin Mary, and the tallest central tower representing Jesus Christ."
+  },
+  {
+    "id": "sagrada-construction-time",
+    "question": "Why has construction of the Sagrada Família taken so long?",
+    "reference": "Construction has continued for over a century largely because the basilica is funded entirely by private donations and ticket sales rather than public or church funds, and because many of Gaudí's original models were destroyed during the Spanish Civil War in 1936."
+  },
+  {
+    "id": "park-guell-origin",
+    "question": "What was Park Güell originally intended to be, and why did that plan fail?",
+    "reference": "Park Güell was originally commissioned by Eusebi Güell as a private, English-inspired garden city housing development for wealthy families. The plan largely failed commercially, with only two houses ever built and sold, so the site was later bought by Barcelona and reopened as a public park in 1926."
+  },
+  {
+    "id": "hypostyle-room",
+    "question": "What is the Hypostyle Room in Park Güell and what dual purpose does it serve?",
+    "reference": "The Hypostyle Room is a forest of 86 Doric-style stone columns in Park Güell, originally intended as a market for the housing development. It supports the great terrace above it and also functions as a drainage system, channeling rainwater into an underground cistern."
+  },
+  {
+    "id": "casa-batllo-nickname",
+    "question": "Why is Casa Batlló nicknamed the 'House of Bones', and what does its roof represent?",
+    "reference": "Casa Batlló is nicknamed 'Casa dels ossos' (House of Bones) because of its undulating, skeletal, bone-like stonework balcony structure. Its dragon-backed, scale-like tiled roof is often interpreted as a reference to the legend of Saint George slaying the dragon."
+  },
+  {
+    "id": "casa-mila-nickname",
+    "question": "Why is Casa Milà commonly called 'La Pedrera', and what structural innovation does it use?",
+    "reference": "Casa Milà is nicknamed 'La Pedrera' ('The Stone Quarry') because of its rough-hewn, undulating gray stone facade. It uses a system of steel beams and iron columns instead of load-bearing walls, which allowed free-flowing floor plans and large windows, and it has no straight walls."
+  },
+  {
+    "id": "unesco-works",
+    "question": "Which Gaudí works were declared UNESCO World Heritage Sites, and in what years?",
+    "reference": "Park Güell, Palau Güell, and Casa Milà were declared UNESCO World Heritage Sites in 1984. Casa Vicens, the Nativity façade and crypt of the Sagrada Família, Casa Batlló, and the crypt of Colònia Güell were added in 2005, together listed as the 'Works of Antoni Gaudí'."
+  },
+  {
+    "id": "casa-vicens-style",
+    "question": "What style influenced Casa Vicens, Gaudí's first major commission?",
+    "reference": "Casa Vicens, built 1883-1885, shows the strong influence of Mudéjar (Moorish-revival) style, with striped brickwork, colorful ceramic tile patterns inspired by marigold flowers, and turrets reminiscent of Islamic architecture."
+  },
+  {
+    "id": "palau-guell-hall",
+    "question": "What is notable about the central hall of Palau Güell?",
+    "reference": "The central hall of Palau Güell is topped by a parabolic dome pierced with small star-shaped openings that create a starry-sky effect when lit from above."
+  }
+]

@@ -1,0 +1,26 @@
+# ignore app cache folder
+.cache/
+
+venv/
+env/
+.venv/
+
+
+*.gguf
+*.bin
+*.pt
+*.safetensors
+*.onnx
+models/
+
+*.npz
+*.index
+
+*.wav
+*.mp3
+audios/
+
+
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,82 @@
+{
+    "sagrada_familia": {
+        "name": "Sagrada Família",
+        "aliases": [
+            "basilica de la sagrada familia",
+            "sagrada familia",
+            "temple expiatori de la sagrada familia"
+        ],
+        "location": "Eixample district, Barcelona, Catalonia, Spain",
+        "architect": "Antoni Gaudí (took over from Francisco de Paula del Villar in 1883)",
+        "style": "Gothic Revival combined with curvilinear Art Nouveau (Catalan Modernism)",
+        "construction_start": "19 March 1882",
+        "consecrated": "7 November 2010, by Pope Benedict XVI, who proclaimed it a basilica",
+        "unesco_status": "Nativity façade and Crypt declared UNESCO World Heritage Site in 2005",
+        "status": "Still under construction, funded solely by private donations and visitor entry fees",
+        "notable_facts": [
+            "It is the tallest church in the world",
+            "Gaudí devoted the rest of his life to the project and is buried in its crypt",
+            "At Gaudí's death in 1926, less than a quarter of the project was complete",
+            "In 1936, anarchists set fire to the crypt during the Spanish Civil War, destroying part of Gaudí's original plans"
+        ]
+    },
+    "casa_batllo": {
+        "name": "Casa Batlló",
+        "aliases": [
+            "casa batllo",
+            "casa dels ossos",
+            "house of bones"
+        ],
+        "location": "Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain",
+        "architect": "Antoni Gaudí (renovation of an existing 1877 building)",
+        "style": "Art Nouveau / Catalan Modernism",
+        "construction_start": "1904 (renovation began)",
+        "construction_end": "1906",
+        "unesco_status": "Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí', inscribed 1984 (extended 2005)",
+        "status": "Completed, open to the public as a museum",
+        "notable_facts": [
+            "The façade is covered in colorful trencadís (broken tile mosaic)",
+            "Locally nicknamed 'Casa dels ossos' (House of Bones) for its skeletal organic facade",
+            "The roof is often interpreted as representing the back of a dragon"
+        ]
+    },
+    "park_guell": {
+        "name": "Park Güell",
+        "aliases": [
+            "park guell",
+            "parc guell"
+        ],
+        "location": "La Salut neighbourhood, Gràcia district, Barcelona, Catalonia, Spain",
+        "architect": "Antoni Gaudí, commissioned by Eusebi Güell",
+        "style": "Catalan Modernism",
+        "construction_start": "1900",
+        "construction_end": "1914",
+        "unesco_status": "Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí', inscribed 1984",
+        "status": "Completed, operates as a public park (partly ticketed monumental zone)",
+        "notable_facts": [
+            "Originally conceived as a residential garden-city development that was never completed as housing",
+            "Features the famous mosaic salamander ('el drac') at the main entrance",
+            "Became a municipal park in 1926"
+        ]
+    },
+    "casa_mila": {
+        "name": "Casa Milà",
+        "aliases": [
+            "casa mila",
+            "la pedrera",
+            "the quarry"
+        ],
+        "location": "Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain",
+        "architect": "Antoni Gaudí",
+        "style": "Art Nouveau / Catalan Modernism",
+        "construction_start": "1906",
+        "construction_end": "1912",
+        "unesco_status": "Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí', inscribed 1984",
+        "status": "Completed, open to the public as a museum and residential building",
+        "notable_facts": [
+            "Nicknamed 'La Pedrera' (The Quarry) for its rough-hewn stone facade",
+            "Has no straight walls; the design is built around two large courtyards",
+            "The rooftop features sculptural chimneys often compared to medieval warriors"
+        ]
+    }
+}

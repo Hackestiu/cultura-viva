@@ -6,8 +6,7 @@ from llama_cpp import Llama
 from piper import PiperVoice
 from transformers import AutoImageProcessor, MobileNetV2ForImageClassification
 from PIL import Image
-from retrieve import RagIndex
-from typing import Any, Optional
+from typing import Optional
 
 # set configuration paths for the models
 STT_MODEL_PATH = "./models/stt/ggml-small.en.bin"
@@ -44,7 +43,7 @@ def classify_image(image_path: str, confidence_threshold: int=0.15, max_labels: 
     results = []
     for prob, idx in zip(list(top_probs), list(top_indices)):
         if prob >= confidence_threshold:
-            label = model.config.id2label[idx]
+            label = model.config.id2label[idx.item()]
             results.append(f"{label} ({prob*100:.0f}% confidence)")
 
     if not results:
@@ -55,29 +54,23 @@ def classify_image(image_path: str, confidence_threshold: int=0.15, max_labels: 
     return results
 
 
-def ask_slm(prompt_text: str, image_labels: Optional[list[str]] = None, rag_docs: Optional[list[dict[str, Any]]] = None) -> str:
+def ask_slm(prompt_text: str, image_labels: Optional[list[str]] = None) -> str:
     """Ask the SLM a question and return the response."""
     print("[SLM] Loading Qwen2.5 and generating response...")
-
-    # RAG context
-    rag_context = ""
-    if rag_docs:
-        context_lines = [f"- {doc['text']}" for doc in rag_docs]
-        rag_context = "Knowledge base context:\n" + "\n".join(context_lines) + "\n\n"
 
     # computer vision model context
     vision_context = ""
     if image_labels:
         vision_context = f"The image shows: {', '.join(image_labels)}.\n\n"
 
-    
+
     system_prompt= (
             "You are a helpful museum guide. "
-            "Answer the user's question directly using the provided visual context and knowledge base context. "
+            "Answer the user's question directly using the provided visual context. "
             "Do not repeat the visual context labels in your answer, do not use hashtags or social media formats."
         )
     # final prompt to send to the SLM
-    full_prompt = f"{system_prompt}\n\n{rag_context}{vision_context}User question: {prompt_text}\n\nAnswer:"
+    full_prompt = f"{system_prompt}\n\n{vision_context}User question: {prompt_text}\n\nAnswer:"
 
     print(f"[SLM] Full prompt sent:\n{full_prompt}")
 
@@ -103,7 +96,7 @@ def synthesize(text: str, output_path: str) -> None:
 
 
 def main() -> None:
-    """Main function to run the full pipeline: STT -> VISION -> RAG -> LLM -> TTS."""
+    """Main function to run the full pipeline: STT -> VISION -> LLM -> TTS."""
     if len(sys.argv) < 2:
         print("Usage: python3 pipeline.py <input.wav> [image.jpg]")
         sys.exit(1)
@@ -120,26 +113,14 @@ def main() -> None:
     # image classification
     image_labels = classify_image(image_path) if image_path else None
 
-    # RAG context retrieval
-    print("[RAG] Querying vector index...")
-    rag = RagIndex("rag_index.npz")
-
-    # combine RAG search query with transcribed text and image labels
-    search_query = transcribed_text
-    if image_labels:
-        search_query = f"{' '.join(image_labels)} {transcribed_text}"
-
-    rag_docs = rag.retrieve(search_query, top_k=2)
-
     # generate response from the SLM
-    llm_response = ask_slm(transcribed_text, image_labels, rag_docs)
+    llm_response = ask_slm(transcribed_text, image_labels)
 
     # tts
     synthesize(llm_response, OUTPUT_WAV)
 
     print("\n--- Pipeline complete ---")
     print(f"Transcribed text: {transcribed_text}")
-    print(f"RAG contexts used: {len(rag_docs)}")
     print(f"SLM response:     {llm_response}")
 
 

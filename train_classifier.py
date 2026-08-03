@@ -29,27 +29,27 @@ from torchvision.transforms import (
     Resize,
     CenterCrop,
 )
-
+from sklearn.metrics import confusion_matrix
  
 
-HF_DATASET_NAME = "culturaviva/hackestiu" 
+HF_DATASET_NAME = "culturaviva/gaudi_image" 
 HF_TOKEN = os.environ["HF_TOKEN"]                 # do export HF_TOKEN=hf_xxxx before running this script
 VISION_MODEL_NAME = "google/mobilenet_v2_1.0_224"
 OUTPUT_DIR = "./gaudi-mobilenetv2-finetuned"
 NUM_EPOCHS = 100          
 BATCH_SIZE = 8           
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 3e-5
 TRAIN_SIZE = 0.7 # redundant
 VAL_SIZE = 0.15
 TEST_SIZE = 0.15
 SEED = 42   # for reproducibility       
 
 WANDB_PROJECT = "cultura-viva"     
-WANDB_RUN_NAME = "mobilenetv2-run-05-100EPOCHS"  
+WANDB_RUN_NAME = "mobilenetv2-run-07-newdatabase"  
 
 # load the dataset from Hugging Face
 
-raw_dataset = load_dataset(HF_DATASET_NAME, token=HF_TOKEN)
+raw_dataset = load_dataset(HF_DATASET_NAME, data_dir="Hackestiu", token=HF_TOKEN)
  
 if "test" not in raw_dataset and "validation" not in raw_dataset:
     split1 = raw_dataset["train"].train_test_split(
@@ -159,6 +159,17 @@ def compute_metrics(eval_pred) -> dict:
     predictions = np.argmax(eval_pred.predictions, axis=1)
     acc = accuracy_metric.compute(predictions=predictions, references=eval_pred.label_ids)
     f1 = f1_metric.compute(predictions=predictions, references=eval_pred.label_ids, average="macro")
+    cm = confusion_matrix(eval_pred.label_ids,predictions)
+
+    wandb.log({
+        "confusion_matrix": wandb.plot.confusion_matrix(
+            probs=None,
+            y_true=eval_pred.label_ids,
+            preds=predictions,
+            class_names=labels
+        )
+    })
+
     return {
         "accuracy": acc["accuracy"],
         "f1": f1["f1"],

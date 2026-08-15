@@ -1,0 +1,7 @@
+models:
+  stt_path: ./models/stt/ggml-small.en.bin
+  slm_path: ./models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+  tts_path: ./models/tts/en_US-lessac-medium.onnx
+
+output:
+  wav_path: output.wav

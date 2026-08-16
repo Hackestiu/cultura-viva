@@ -1,0 +1,19 @@
+dataset:
+  name: culturaviva/gaudi_image
+  data_dir: Hackestiu
+  val_size: 0.15
+  test_size: 0.15
+  seed: 42
+
+model:
+  vision_model_name: google/mobilenet_v2_1.0_224
+  output_dir: ./gaudi-mobilenetv2-finetuned
+
+training:
+  num_epochs: 100
+  batch_size: 8
+  learning_rate: 3e-5
+
+wandb:
+  project: cultura-viva
+  run_name: mobilenetv2-run-07-newdatabase

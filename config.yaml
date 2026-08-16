@@ -1,19 +1,39 @@
 dataset:
   name: culturaviva/gaudi_image
-  data_dir: Hackestiu
   val_size: 0.15
   test_size: 0.15
   seed: 42
-
-model:
-  vision_model_name: google/mobilenet_v2_1.0_224
-  output_dir: ./gaudi-mobilenetv2-finetuned
-
-training:
+ 
+# defaults applied to every (monument, model) run, unless overridden
+training_defaults:
   num_epochs: 100
   batch_size: 8
   learning_rate: 3e-5
-
+ 
 wandb:
   project: cultura-viva
-  run_name: mobilenetv2-run-07-newdatabase
+ 
+# one entry per monument. data_dir is the subfolder under dataset.name
+# (culturaviva/gaudi_image/<data_dir>). Classes ("elements") are auto-detected
+# per monument from its own subfolders, so N can differ between monuments.
+monuments:
+  - name: sagrada_familia
+    data_dir: sagrada_familia
+  - name: casa_batllo
+    data_dir: casa_batllo
+  - name: park_guell
+    data_dir: park_guell
+  - name: casa_mila
+    data_dir: casa_mila
+ 
+# one entry per model to train. Only "name" and "vision_model_name" are
+# required -- everything else falls back to training_defaults, and
+# output_dir/run_name are auto-derived from "name" if omitted.
+models:
+  - name: mobilenetv2
+    vision_model_name: google/mobilenet_v2_1.0_224
+    run_name: mobilenetv2-run-07-newdatabase
+ 
+  # - name: resnet50
+  #   vision_model_name: microsoft/resnet-50
+  #   run_name: resnet50-run-07-newdatabase

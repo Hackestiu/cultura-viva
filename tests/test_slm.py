@@ -12,8 +12,13 @@ class _FakeLlama:
         return {"choices": [{"text": " a generated answer "}]}
 
 
-def test_ask_slm_includes_vision_context_in_prompt(monkeypatch):
+def _use_real_backend(monkeypatch):
+    monkeypatch.setattr(slm, "MOCK_MODELS", False)
     monkeypatch.setattr(slm, "Llama", _FakeLlama)
+
+
+def test_ask_slm_includes_vision_context_in_prompt(monkeypatch):
+    _use_real_backend(monkeypatch)
 
     reply = slm.ask_slm(
         "When was it built?",
@@ -27,7 +32,7 @@ def test_ask_slm_includes_vision_context_in_prompt(monkeypatch):
 
 
 def test_ask_slm_without_image_labels_omits_vision_context(monkeypatch):
-    monkeypatch.setattr(slm, "Llama", _FakeLlama)
+    _use_real_backend(monkeypatch)
 
     slm.ask_slm("What is this?")
 
@@ -36,7 +41,7 @@ def test_ask_slm_without_image_labels_omits_vision_context(monkeypatch):
 
 
 def test_ask_slm_uses_default_system_prompt_when_none_given(monkeypatch):
-    monkeypatch.setattr(slm, "Llama", _FakeLlama)
+    _use_real_backend(monkeypatch)
 
     slm.ask_slm("What is this?")
 
@@ -45,7 +50,7 @@ def test_ask_slm_uses_default_system_prompt_when_none_given(monkeypatch):
 
 
 def test_ask_slm_includes_custom_system_prompt_and_kg_context(monkeypatch):
-    monkeypatch.setattr(slm, "Llama", _FakeLlama)
+    _use_real_backend(monkeypatch)
 
     slm.ask_slm(
         "What is this?",
@@ -57,3 +62,16 @@ def test_ask_slm_includes_custom_system_prompt_and_kg_context(monkeypatch):
     assert "You are a playful guide for children." in prompt
     assert "The dragon was built around 1904-1905." in prompt
     assert slm.DEFAULT_SYSTEM_PROMPT not in prompt
+
+
+def test_ask_slm_uses_mock_backend_when_mock_models_enabled(monkeypatch):
+    monkeypatch.setattr(slm, "MOCK_MODELS", True)
+
+    reply = slm.ask_slm(
+        "What is this?",
+        image_labels=["dragon"],
+        kg_context="Located at: Park Güell.",
+    )
+
+    assert "dragon" in reply
+    assert "Park Güell" in reply

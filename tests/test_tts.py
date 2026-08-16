@@ -16,6 +16,7 @@ class _FakeVoice:
 
 
 def test_synthesize_writes_wav_file(monkeypatch, tmp_path):
+    monkeypatch.setattr(tts, "MOCK_MODELS", False)
     fake_voice = _FakeVoice()
     monkeypatch.setattr(tts.PiperVoice, "load", staticmethod(lambda path: fake_voice))
 
@@ -26,3 +27,15 @@ def test_synthesize_writes_wav_file(monkeypatch, tmp_path):
     assert output_path.exists()
     with wave.open(str(output_path), "rb") as f:
         assert f.getnchannels() == 1
+
+
+def test_synthesize_uses_mock_backend_when_mock_models_enabled(monkeypatch, tmp_path):
+    monkeypatch.setattr(tts, "MOCK_MODELS", True)
+
+    output_path = tmp_path / "out.wav"
+    tts.synthesize("hello there", str(output_path))
+
+    assert output_path.exists()
+    with wave.open(str(output_path), "rb") as f:
+        assert f.getnchannels() == 1
+        assert f.getnframes() > 0

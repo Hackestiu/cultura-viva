@@ -1,5 +1,6 @@
 import cv2
 from datetime import datetime
+from loguru import logger
 
 # ==========================================
 # CONFIGURATION
@@ -35,11 +36,11 @@ def is_triggered(key: int) -> bool:
 # MAIN CAPTURE LOOP
 # ==========================================
 def main():
-    print(f"Starting camera preview in {TRIGGER_MODE} mode.")
-    print("[SPACE]/[ENTER] to capture a picture, [Q] to quit.")
+    logger.info(f"Starting camera preview in {TRIGGER_MODE} mode.")
+    logger.info("[SPACE]/[ENTER] to capture a picture, [Q] to quit.")
     cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
     if not cap.isOpened():
-        print("Error: Could not open camera device.")
+        logger.error("Could not open camera device.")
         return
 
     window_name = "Camera Preview"
@@ -48,7 +49,7 @@ def main():
         while True:
             ret, frame = cap.read()
             if not ret:
-                print("Failed to capture frame from stream.")
+                logger.warning("Failed to capture frame from stream.")
                 continue
 
             cv2.imshow(window_name, frame)
@@ -64,7 +65,7 @@ def main():
                 ret, frame = cap.retrieve()
 
                 if not ret:
-                    print("Failed to capture frame from stream.")
+                    logger.warning("Failed to capture frame from stream.")
                     continue
 
                 if RESIZE_FOR_MOBILENET:
@@ -73,12 +74,12 @@ def main():
                 height, width = frame.shape[:2]
                 filename = f"{SAVE_DIR}/capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
                 cv2.imwrite(filename, frame)
-                print(f"--> Saved picture to {filename} ({width}x{height})")
+                logger.info(f"--> Saved picture to {filename} ({width}x{height})")
 
     finally:
         cap.release()
         cv2.destroyAllWindows()
-        print("Camera released. Exiting.")
+        logger.info("Camera released. Exiting.")
 
 
 if __name__ == "__main__":

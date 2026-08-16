@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Callable, Optional
 
+from loguru import logger
+
 
 class Location(Enum):
     """Physical site the visitor is standing at."""
@@ -14,7 +16,7 @@ def classify_pedrera(image_path: Optional[str]) -> Optional[str]:
     MobileNetV2 model (see train_classifier.py) once one exists."""
     if not image_path:
         return None
-    print(f"[VISION][pedrera] (mock) classifying {image_path}...")
+    logger.info(f"[VISION][pedrera] (mock) classifying {image_path}...")
     return "chimney"
 
 
@@ -23,7 +25,7 @@ def classify_park_guell(image_path: Optional[str]) -> Optional[str]:
     MobileNetV2 model (see train_classifier.py) once one exists."""
     if not image_path:
         return None
-    print(f"[VISION][park_guell] (mock) classifying {image_path}...")
+    logger.info(f"[VISION][park_guell] (mock) classifying {image_path}...")
     return "dragon"
 
 

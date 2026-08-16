@@ -1,3 +1,4 @@
+from models.mock_stt import MOCK_QUESTION
 from speech import stt
 
 
@@ -15,5 +16,11 @@ class _FakeWhisperModel:
 
 
 def test_transcribe_joins_segments(monkeypatch):
+    monkeypatch.setattr(stt, "MOCK_MODELS", False)
     monkeypatch.setattr(stt, "WhisperModel", _FakeWhisperModel)
     assert stt.transcribe("input.wav") == "hello world"
+
+
+def test_transcribe_uses_mock_backend_when_mock_models_enabled(monkeypatch):
+    monkeypatch.setattr(stt, "MOCK_MODELS", True)
+    assert stt.transcribe("input.wav") == MOCK_QUESTION

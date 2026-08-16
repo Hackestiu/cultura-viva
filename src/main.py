@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+from loguru import logger
+
 from config import OUTPUT_WAV
 from knowledge.knowledge_graph import get_context
 from speech.slm import ask_slm
@@ -103,15 +105,15 @@ def main() -> None:
     try:
         result = run(location, personality, args.audio_path, args.image_path)
     except ValueError as exc:
-        print(exc)
+        logger.error(exc)
         sys.exit(1)
 
-    print("\n--- Orchestration complete ---")
-    print(f"Location:         {location.value}")
-    print(f"Personality:      {personality.value}")
-    print(f"Detected element: {result.element}")
-    print(f"Question:         {result.question}")
-    print(f"Answer:           {result.answer}")
+    logger.info("--- Orchestration complete ---")
+    logger.info(f"Location:         {location.value}")
+    logger.info(f"Personality:      {personality.value}")
+    logger.info(f"Detected element: {result.element}")
+    logger.info(f"Question:         {result.question}")
+    logger.info(f"Answer:           {result.answer}")
 
 
 if __name__ == "__main__":

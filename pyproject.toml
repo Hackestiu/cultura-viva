@@ -1,0 +1,24 @@
+[project]
+name = "tts-benchmark"
+version = "0.1.0"
+description = "TTS inference-time benchmark for small open-source models on the Arduino UNO Q"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "soundfile",
+]
+
+[project.optional-dependencies]
+# Only needed to actually run models (benchmark.py, on the board itself).
+# Kept out of the base install so generating/viewing the report (simulate.py
+# + visualize.py) never has to pull down PyTorch.
+real = [
+    "torch>=2.1",
+    "transformers>=4.35",
+    "huggingface-hub",
+    "datasets",
+]
+
+[tool.uv]
+package = false

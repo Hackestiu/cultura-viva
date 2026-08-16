@@ -1,0 +1,38 @@
+{
+  "description": "Small / edge-friendly open-source HF TTS models compared in this benchmark, plus one larger autoregressive model (Bark-small) kept as a contrast point. To add a model, append an entry here -- see README 'Adding a new model'.",
+  "models": [
+    {
+      "slug": "mms-tts-eng",
+      "name": "MMS-TTS (English, VITS)",
+      "model_id": "facebook/mms-tts-eng",
+      "architecture": "vits",
+      "params_millions": 36,
+      "disk_size_mb": 145.3
+    },
+    {
+      "slug": "vits-ljs",
+      "name": "VITS (LJSpeech)",
+      "model_id": "kakao-enterprise/vits-ljs",
+      "architecture": "vits",
+      "params_millions": 83,
+      "disk_size_mb": 332.1
+    },
+    {
+      "slug": "speecht5-tts",
+      "name": "SpeechT5 TTS",
+      "model_id": "microsoft/speecht5_tts",
+      "vocoder_id": "microsoft/speecht5_hifigan",
+      "architecture": "speecht5",
+      "params_millions": 174,
+      "disk_size_mb": 654.8
+    },
+    {
+      "slug": "bark-small",
+      "name": "Bark (small)",
+      "model_id": "suno/bark-small",
+      "architecture": "bark",
+      "params_millions": 300,
+      "disk_size_mb": 1721.4
+    }
+  ]
+}

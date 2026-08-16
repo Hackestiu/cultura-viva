@@ -1,0 +1,51 @@
+{
+  "topic": "Antoni Gaudí",
+  "language": "en",
+  "note": "Word counts span short/medium/long on purpose -- see length_bucket() in common.py -- so inference time can be compared per length bucket instead of pooled across very different sentence lengths.",
+  "sentences": [
+    {
+      "id": 1,
+      "text": "Antoni Gaudí was born in Reus in 1852 and became the leading figure of Catalan Modernism."
+    },
+    {
+      "id": 2,
+      "text": "The Sagrada Família, his unfinished basilica in Barcelona, has been under construction since 1882."
+    },
+    {
+      "id": 3,
+      "text": "Park Güell showcases Gaudí's playful mosaic technique known as trencadís."
+    },
+    {
+      "id": 4,
+      "text": "Casa Batlló's undulating facade is said to represent the legend of Saint George and the dragon."
+    },
+    {
+      "id": 5,
+      "text": "La Pedrera, also called Casa Milà, has no straight walls and was inspired by natural rock formations."
+    },
+    {
+      "id": 6,
+      "text": "Seven of Gaudí's works are listed as UNESCO World Heritage Sites."
+    },
+    {
+      "id": 7,
+      "text": "Gaudí died in Barcelona in 1926."
+    },
+    {
+      "id": 8,
+      "text": "Gaudí never married and had no children."
+    },
+    {
+      "id": 9,
+      "text": "Casa Vicens was Gaudí's first house."
+    },
+    {
+      "id": 10,
+      "text": "Gaudí drew inspiration from nature, incorporating organic forms, curved lines, and structural principles found in trees, bones, and honeycombs into his architecture."
+    },
+    {
+      "id": 11,
+      "text": "Construction of the Sagrada Família has relied entirely on private donations and visitor admission fees rather than government or church funding since it began in 1882."
+    }
+  ]
+}

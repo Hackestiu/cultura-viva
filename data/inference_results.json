@@ -1,0 +1,485 @@
+{
+  "benchmark_meta": {
+    "device": "CPU (simulated: quad-core ARM Cortex-A53 @ ~2GHz)",
+    "board": "Arduino UNO Q (Qualcomm QRB2210, Linux)",
+    "note": "SIMULATED data (see simulate.py) -- not a real measurement. Regenerate for real with `python benchmark.py` run directly on an Arduino UNO Q.",
+    "timestamp_utc": "2026-08-16T13:27:14+00:00",
+    "warmup_runs": 1,
+    "timed_runs": 9,
+    "sentences_file": "data/gaudi_sentences.json"
+  },
+  "results": [
+    {
+      "model_id": "facebook/mms-tts-eng",
+      "name": "MMS-TTS (English, VITS)",
+      "slug": "mms-tts-eng",
+      "architecture": "vits",
+      "params_millions": 36,
+      "disk_size_mb": 145.3,
+      "fits_2GB_ram": true,
+      "fits_4GB_ram": true,
+      "audio_dir": "audios/mms-tts-eng",
+      "runs": [
+        {
+          "run": 1,
+          "sentence_id": 7,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 1.59,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/mms-tts-eng/sample_01.wav"
+        },
+        {
+          "run": 2,
+          "sentence_id": 1,
+          "word_count": 16,
+          "length_bucket": "medium",
+          "inference_time_sec": 3.5024,
+          "audio_seconds": 6.4,
+          "audio_file": "audios/mms-tts-eng/sample_02.wav"
+        },
+        {
+          "run": 3,
+          "sentence_id": 5,
+          "word_count": 18,
+          "length_bucket": "long",
+          "inference_time_sec": 4.0751,
+          "audio_seconds": 7.2,
+          "audio_file": "audios/mms-tts-eng/sample_03.wav"
+        },
+        {
+          "run": 4,
+          "sentence_id": 8,
+          "word_count": 7,
+          "length_bucket": "short",
+          "inference_time_sec": 1.7151,
+          "audio_seconds": 2.8,
+          "audio_file": "audios/mms-tts-eng/sample_04.wav"
+        },
+        {
+          "run": 5,
+          "sentence_id": 2,
+          "word_count": 14,
+          "length_bucket": "medium",
+          "inference_time_sec": 3.0887,
+          "audio_seconds": 5.6,
+          "audio_file": "audios/mms-tts-eng/sample_05.wav"
+        },
+        {
+          "run": 6,
+          "sentence_id": 10,
+          "word_count": 22,
+          "length_bucket": "long",
+          "inference_time_sec": 5.5056,
+          "audio_seconds": 8.8,
+          "audio_file": "audios/mms-tts-eng/sample_06.wav"
+        },
+        {
+          "run": 7,
+          "sentence_id": 9,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 1.4391,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/mms-tts-eng/sample_07.wav"
+        },
+        {
+          "run": 8,
+          "sentence_id": 3,
+          "word_count": 10,
+          "length_bucket": "medium",
+          "inference_time_sec": 2.7887,
+          "audio_seconds": 4.0,
+          "audio_file": "audios/mms-tts-eng/sample_08.wav"
+        },
+        {
+          "run": 9,
+          "sentence_id": 11,
+          "word_count": 26,
+          "length_bucket": "long",
+          "inference_time_sec": 7.6395,
+          "audio_seconds": 10.4,
+          "audio_file": "audios/mms-tts-eng/sample_09.wav"
+        }
+      ],
+      "by_bucket": {
+        "short": {
+          "n": 3,
+          "median_sec": 1.59,
+          "min_sec": 1.4391,
+          "max_sec": 1.7151
+        },
+        "medium": {
+          "n": 3,
+          "median_sec": 3.0887,
+          "min_sec": 2.7887,
+          "max_sec": 3.5024
+        },
+        "long": {
+          "n": 3,
+          "median_sec": 5.5056,
+          "min_sec": 4.0751,
+          "max_sec": 7.6395
+        }
+      },
+      "avg_inference_time_sec": 3.4827,
+      "std_inference_time_sec": 1.9219,
+      "min_inference_time_sec": 1.4391,
+      "max_inference_time_sec": 7.6395
+    },
+    {
+      "model_id": "kakao-enterprise/vits-ljs",
+      "name": "VITS (LJSpeech)",
+      "slug": "vits-ljs",
+      "architecture": "vits",
+      "params_millions": 83,
+      "disk_size_mb": 332.1,
+      "fits_2GB_ram": true,
+      "fits_4GB_ram": true,
+      "audio_dir": "audios/vits-ljs",
+      "runs": [
+        {
+          "run": 1,
+          "sentence_id": 7,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 1.5988,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/vits-ljs/sample_01.wav"
+        },
+        {
+          "run": 2,
+          "sentence_id": 1,
+          "word_count": 16,
+          "length_bucket": "medium",
+          "inference_time_sec": 4.6266,
+          "audio_seconds": 6.4,
+          "audio_file": "audios/vits-ljs/sample_02.wav"
+        },
+        {
+          "run": 3,
+          "sentence_id": 5,
+          "word_count": 18,
+          "length_bucket": "long",
+          "inference_time_sec": 6.1234,
+          "audio_seconds": 7.2,
+          "audio_file": "audios/vits-ljs/sample_03.wav"
+        },
+        {
+          "run": 4,
+          "sentence_id": 8,
+          "word_count": 7,
+          "length_bucket": "short",
+          "inference_time_sec": 2.0485,
+          "audio_seconds": 2.8,
+          "audio_file": "audios/vits-ljs/sample_04.wav"
+        },
+        {
+          "run": 5,
+          "sentence_id": 2,
+          "word_count": 14,
+          "length_bucket": "medium",
+          "inference_time_sec": 4.2785,
+          "audio_seconds": 5.6,
+          "audio_file": "audios/vits-ljs/sample_05.wav"
+        },
+        {
+          "run": 6,
+          "sentence_id": 10,
+          "word_count": 22,
+          "length_bucket": "long",
+          "inference_time_sec": 7.8711,
+          "audio_seconds": 8.8,
+          "audio_file": "audios/vits-ljs/sample_06.wav"
+        },
+        {
+          "run": 7,
+          "sentence_id": 9,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 1.6244,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/vits-ljs/sample_07.wav"
+        },
+        {
+          "run": 8,
+          "sentence_id": 3,
+          "word_count": 10,
+          "length_bucket": "medium",
+          "inference_time_sec": 3.0077,
+          "audio_seconds": 4.0,
+          "audio_file": "audios/vits-ljs/sample_08.wav"
+        },
+        {
+          "run": 9,
+          "sentence_id": 11,
+          "word_count": 26,
+          "length_bucket": "long",
+          "inference_time_sec": 17.5975,
+          "audio_seconds": 10.4,
+          "audio_file": "audios/vits-ljs/sample_09.wav"
+        }
+      ],
+      "by_bucket": {
+        "short": {
+          "n": 3,
+          "median_sec": 1.6244,
+          "min_sec": 1.5988,
+          "max_sec": 2.0485
+        },
+        "medium": {
+          "n": 3,
+          "median_sec": 4.2785,
+          "min_sec": 3.0077,
+          "max_sec": 4.6266
+        },
+        "long": {
+          "n": 3,
+          "median_sec": 7.8711,
+          "min_sec": 6.1234,
+          "max_sec": 17.5975
+        }
+      },
+      "avg_inference_time_sec": 5.4196,
+      "std_inference_time_sec": 4.7483,
+      "min_inference_time_sec": 1.5988,
+      "max_inference_time_sec": 17.5975
+    },
+    {
+      "model_id": "microsoft/speecht5_tts",
+      "name": "SpeechT5 TTS",
+      "slug": "speecht5-tts",
+      "architecture": "speecht5",
+      "params_millions": 174,
+      "disk_size_mb": 654.8,
+      "fits_2GB_ram": true,
+      "fits_4GB_ram": true,
+      "audio_dir": "audios/speecht5-tts",
+      "runs": [
+        {
+          "run": 1,
+          "sentence_id": 7,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 7.4424,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/speecht5-tts/sample_01.wav"
+        },
+        {
+          "run": 2,
+          "sentence_id": 1,
+          "word_count": 16,
+          "length_bucket": "medium",
+          "inference_time_sec": 42.8324,
+          "audio_seconds": 6.4,
+          "audio_file": "audios/speecht5-tts/sample_02.wav"
+        },
+        {
+          "run": 3,
+          "sentence_id": 5,
+          "word_count": 18,
+          "length_bucket": "long",
+          "inference_time_sec": 26.3989,
+          "audio_seconds": 7.2,
+          "audio_file": "audios/speecht5-tts/sample_03.wav"
+        },
+        {
+          "run": 4,
+          "sentence_id": 8,
+          "word_count": 7,
+          "length_bucket": "short",
+          "inference_time_sec": 9.4322,
+          "audio_seconds": 2.8,
+          "audio_file": "audios/speecht5-tts/sample_04.wav"
+        },
+        {
+          "run": 5,
+          "sentence_id": 2,
+          "word_count": 14,
+          "length_bucket": "medium",
+          "inference_time_sec": 20.4771,
+          "audio_seconds": 5.6,
+          "audio_file": "audios/speecht5-tts/sample_05.wav"
+        },
+        {
+          "run": 6,
+          "sentence_id": 10,
+          "word_count": 22,
+          "length_bucket": "long",
+          "inference_time_sec": 34.0105,
+          "audio_seconds": 8.8,
+          "audio_file": "audios/speecht5-tts/sample_06.wav"
+        },
+        {
+          "run": 7,
+          "sentence_id": 9,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 13.8172,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/speecht5-tts/sample_07.wav"
+        },
+        {
+          "run": 8,
+          "sentence_id": 3,
+          "word_count": 10,
+          "length_bucket": "medium",
+          "inference_time_sec": 12.9366,
+          "audio_seconds": 4.0,
+          "audio_file": "audios/speecht5-tts/sample_08.wav"
+        },
+        {
+          "run": 9,
+          "sentence_id": 11,
+          "word_count": 26,
+          "length_bucket": "long",
+          "inference_time_sec": 37.9404,
+          "audio_seconds": 10.4,
+          "audio_file": "audios/speecht5-tts/sample_09.wav"
+        }
+      ],
+      "by_bucket": {
+        "short": {
+          "n": 3,
+          "median_sec": 9.4322,
+          "min_sec": 7.4424,
+          "max_sec": 13.8172
+        },
+        "medium": {
+          "n": 3,
+          "median_sec": 20.4771,
+          "min_sec": 12.9366,
+          "max_sec": 42.8324
+        },
+        "long": {
+          "n": 3,
+          "median_sec": 34.0105,
+          "min_sec": 26.3989,
+          "max_sec": 37.9404
+        }
+      },
+      "avg_inference_time_sec": 22.8097,
+      "std_inference_time_sec": 12.3247,
+      "min_inference_time_sec": 7.4424,
+      "max_inference_time_sec": 42.8324
+    },
+    {
+      "model_id": "suno/bark-small",
+      "name": "Bark (small)",
+      "slug": "bark-small",
+      "architecture": "bark",
+      "params_millions": 300,
+      "disk_size_mb": 1721.4,
+      "fits_2GB_ram": false,
+      "fits_4GB_ram": true,
+      "audio_dir": "audios/bark-small",
+      "runs": [
+        {
+          "run": 1,
+          "sentence_id": 7,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 82.6772,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/bark-small/sample_01.wav"
+        },
+        {
+          "run": 2,
+          "sentence_id": 1,
+          "word_count": 16,
+          "length_bucket": "medium",
+          "inference_time_sec": 192.5584,
+          "audio_seconds": 6.4,
+          "audio_file": "audios/bark-small/sample_02.wav"
+        },
+        {
+          "run": 3,
+          "sentence_id": 5,
+          "word_count": 18,
+          "length_bucket": "long",
+          "inference_time_sec": 241.1326,
+          "audio_seconds": 7.2,
+          "audio_file": "audios/bark-small/sample_03.wav"
+        },
+        {
+          "run": 4,
+          "sentence_id": 8,
+          "word_count": 7,
+          "length_bucket": "short",
+          "inference_time_sec": 89.6822,
+          "audio_seconds": 2.8,
+          "audio_file": "audios/bark-small/sample_04.wav"
+        },
+        {
+          "run": 5,
+          "sentence_id": 2,
+          "word_count": 14,
+          "length_bucket": "medium",
+          "inference_time_sec": 183.3972,
+          "audio_seconds": 5.6,
+          "audio_file": "audios/bark-small/sample_05.wav"
+        },
+        {
+          "run": 6,
+          "sentence_id": 10,
+          "word_count": 22,
+          "length_bucket": "long",
+          "inference_time_sec": 283.8129,
+          "audio_seconds": 8.8,
+          "audio_file": "audios/bark-small/sample_06.wav"
+        },
+        {
+          "run": 7,
+          "sentence_id": 9,
+          "word_count": 6,
+          "length_bucket": "short",
+          "inference_time_sec": 89.8229,
+          "audio_seconds": 2.4,
+          "audio_file": "audios/bark-small/sample_07.wav"
+        },
+        {
+          "run": 8,
+          "sentence_id": 3,
+          "word_count": 10,
+          "length_bucket": "medium",
+          "inference_time_sec": 145.9729,
+          "audio_seconds": 4.0,
+          "audio_file": "audios/bark-small/sample_08.wav"
+        },
+        {
+          "run": 9,
+          "sentence_id": 11,
+          "word_count": 26,
+          "length_bucket": "long",
+          "inference_time_sec": 400.9845,
+          "audio_seconds": 10.4,
+          "audio_file": "audios/bark-small/sample_09.wav"
+        }
+      ],
+      "by_bucket": {
+        "short": {
+          "n": 3,
+          "median_sec": 89.6822,
+          "min_sec": 82.6772,
+          "max_sec": 89.8229
+        },
+        "medium": {
+          "n": 3,
+          "median_sec": 183.3972,
+          "min_sec": 145.9729,
+          "max_sec": 192.5584
+        },
+        "long": {
+          "n": 3,
+          "median_sec": 283.8129,
+          "min_sec": 241.1326,
+          "max_sec": 400.9845
+        }
+      },
+      "avg_inference_time_sec": 190.0045,
+      "std_inference_time_sec": 99.7417,
+      "min_inference_time_sec": 82.6772,
+      "max_inference_time_sec": 400.9845
+    }
+  ]
+}

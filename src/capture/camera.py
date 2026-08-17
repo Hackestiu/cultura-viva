@@ -8,7 +8,7 @@ from loguru import logger
 # Options: "KEYBOARD" or "BUTTON"
 TRIGGER_MODE = "KEYBOARD"
 SAVE_DIR = "."
-RESIZE_FOR_MOBILENET = True
+RESIZE_FOR_MOBILENET = False  # Set to False to keep full 1080p capture resolution[cite: 1]
 MOBILENET_INPUT_SIZE = (224, 224)
 
 # Initialize RPC bridge globally ONLY if using button mode
@@ -39,6 +39,11 @@ def main():
     logger.info(f"Starting camera preview in {TRIGGER_MODE} mode.")
     logger.info("[SPACE]/[ENTER] to capture a picture, [Q] to quit.")
     cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+    
+    # Configure 1080p Resolution (1920x1080)[cite: 1]
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
     if not cap.isOpened():
         logger.error("Could not open camera device.")
         return

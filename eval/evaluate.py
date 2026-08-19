@@ -23,7 +23,13 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from ragas import EvaluationDataset, evaluate
 from ragas.dataset_schema import SingleTurnSample
-from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+from ragas.metrics.collections import (
+    AnswerCorrectness,
+    AnswerRelevancy,
+    ContextPrecision,
+    ContextRecall,
+    Faithfulness,
+)
 
 from eval import config
 
@@ -34,7 +40,78 @@ def load_json(path: Path) -> list[dict]:
             f"{path} not found. Point --predictions (or PREDICTIONS_PATH) at the file your "
             f"RAG + SLM pipeline repo exports. See eval/predictions.example.json for the schema."
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{path} is not valid JSON: {exc}") from exc
+
+    if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+        raise ValueError(f"{path} must contain a JSON array of objects")
+    return data
+
+
+def validate_testset(testset: list[dict]) -> None:
+    required_fields = {"id", "question", "reference"}
+    missing_fields = [
+        (index, required_fields - set(item))
+        for index, item in enumerate(testset)
+        if required_fields - set(item)
+    ]
+    ids = [item.get("id") for item in testset]
+    duplicate_ids = sorted({item_id for item_id in ids if ids.count(item_id) > 1})
+    invalid_fields = [
+        index
+        for index, item in enumerate(testset)
+        if any(not isinstance(item.get(field), str) or not item[field].strip() for field in required_fields)
+    ]
+    if missing_fields:
+        raise ValueError(f"Testset entries are missing required fields: {missing_fields}")
+    if invalid_fields:
+        raise ValueError(f"Testset required fields must be non-empty strings; invalid entries: {invalid_fields}")
+    if duplicate_ids:
+        raise ValueError(f"Testset ids must be unique; duplicates: {duplicate_ids}")
+
+
+def validate_predictions(predictions: list[dict], expected_ids: set[str]) -> None:
+    required_fields = {"id", "contexts", "answer"}
+    missing_fields = [
+        (index, required_fields - set(item))
+        for index, item in enumerate(predictions)
+        if required_fields - set(item)
+    ]
+    ids = [item.get("id") for item in predictions]
+    invalid_ids = [
+        index for index, item_id in enumerate(ids) if not isinstance(item_id, str) or not item_id.strip()
+    ]
+    duplicate_ids = sorted({item_id for item_id in ids if isinstance(item_id, str) and ids.count(item_id) > 1})
+    invalid_contexts = [
+        index
+        for index, item in enumerate(predictions)
+        if not isinstance(item.get("contexts"), list)
+        or any(not isinstance(context, str) or not context.strip() for context in item.get("contexts", []))
+    ]
+    invalid_answers = [
+        index
+        for index, item in enumerate(predictions)
+        if not isinstance(item.get("answer"), str) or not item["answer"].strip()
+    ]
+    prediction_ids = {item_id for item_id in ids if isinstance(item_id, str)}
+    missing_ids = sorted(expected_ids - prediction_ids)
+    unexpected_ids = sorted(prediction_ids - expected_ids)
+    if missing_fields:
+        raise ValueError(f"Prediction entries are missing required fields: {missing_fields}")
+    if invalid_ids:
+        raise ValueError(f"Prediction ids must be non-empty strings; invalid entries: {invalid_ids}")
+    if invalid_contexts:
+        raise ValueError(f"Prediction contexts must be non-empty string arrays; invalid entries: {invalid_contexts}")
+    if invalid_answers:
+        raise ValueError(f"Prediction answers must be non-empty strings; invalid entries: {invalid_answers}")
+    if duplicate_ids:
+        raise ValueError(f"Prediction ids must be unique; duplicates: {duplicate_ids}")
+    if missing_ids or unexpected_ids:
+        raise ValueError(
+            f"Prediction ids must exactly match the testset; missing: {missing_ids}, unexpected: {unexpected_ids}"
+        )
 
 
 def build_dataset(testset: list[dict], predictions: list[dict]) -> EvaluationDataset:
@@ -85,10 +162,18 @@ def main() -> None:
 
     testset = load_json(config.TESTSET_PATH)
     predictions = load_json(args.predictions)
+    validate_testset(testset)
+    validate_predictions(predictions, {item["id"] for item in testset})
     dataset = build_dataset(testset, predictions)
 
     judge_llm, judge_embeddings = build_judge()
-    metrics = [Faithfulness(), AnswerRelevancy(), ContextPrecision(), ContextRecall()]
+    metrics = [
+        AnswerCorrectness(),
+        AnswerRelevancy(),
+        Faithfulness(),
+        ContextPrecision(),
+        ContextRecall(),
+    ]
 
     print(f"Running ragas evaluation over {len(dataset)} Gaudí questions...")
     result = evaluate(

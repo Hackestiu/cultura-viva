@@ -1,0 +1,54 @@
+[
+  {
+    "engine": "faster-whisper:base.en",
+    "language": "en",
+    "samples": 24,
+    "avg_inference_time_sec": 1.3092,
+    "avg_wer": 0.0611,
+    "avg_cer": 0.0233,
+    "avg_keyword_spotting_accuracy": 0.5,
+    "avg_rtf": 0.1067,
+    "avg_inference_latency_ms": 1309.2,
+    "max_peak_ram_mb": 446.19,
+    "model_size_mb": null
+  },
+  {
+    "engine": "faster-whisper:tiny.en",
+    "language": "en",
+    "samples": 24,
+    "avg_inference_time_sec": 0.5626,
+    "avg_wer": 0.0634,
+    "avg_cer": 0.0259,
+    "avg_keyword_spotting_accuracy": 0.4167,
+    "avg_rtf": 0.0487,
+    "avg_inference_latency_ms": 562.57,
+    "max_peak_ram_mb": 268.61,
+    "model_size_mb": null
+  },
+  {
+    "engine": "sherpa-onnx",
+    "language": "en",
+    "samples": 24,
+    "avg_inference_time_sec": 1.3299,
+    "avg_wer": 0.0623,
+    "avg_cer": 0.0257,
+    "avg_keyword_spotting_accuracy": 0.4167,
+    "avg_rtf": 0.1137,
+    "avg_inference_latency_ms": 1329.87,
+    "max_peak_ram_mb": 566.31,
+    "model_size_mb": 244.72
+  },
+  {
+    "engine": "vosk",
+    "language": "en",
+    "samples": 24,
+    "avg_inference_time_sec": 2.3674,
+    "avg_wer": 0.1418,
+    "avg_cer": 0.0551,
+    "avg_keyword_spotting_accuracy": 0.2083,
+    "avg_rtf": 0.2037,
+    "avg_inference_latency_ms": 2367.36,
+    "max_peak_ram_mb": 298.21,
+    "model_size_mb": 67.61
+  }
+]

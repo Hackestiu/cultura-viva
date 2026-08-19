@@ -1,0 +1,33 @@
+# Python and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Downloaded model weights and native model caches
+models/*
+app/models/*
+!app/models/README.md
+!app/models/.gitkeep
+model-cache/
+*.bin
+*.ggml
+*.gguf
+*.onnx
+*.ct2/
+.cache/
+~/.cache/
+
+# Generated audio, reports, plots, and deployment archives
+app/data_audio/*.wav
+app/results/edge/
+app/results_computer/*.csv
+app/results_arduino/
+*.zip
+*.tar.gz
+
+# Local logs and OS/editor files
+*.log
+.DS_Store
+.vscode/

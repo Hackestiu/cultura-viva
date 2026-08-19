@@ -1,0 +1,22 @@
+name: cultura-viva-stt-benchmark
+version: 1.0.0
+description: Offline English STT benchmark for Arduino UNO Q
+runtime: python3
+entrypoint: python3 main.py
+workdir: /app
+restart: never
+requirements: requirements.txt
+dependencies:
+  - faster-whisper==1.1.1
+  - vosk==0.3.45
+  - sherpa-onnx==1.12.40
+  - soundfile==0.13.1
+  - psutil==6.1.1
+  - edge-tts==7.2.8
+environment:
+  AUDIO_DIR: data_audio
+  MANIFEST: data_audio/manifest.json
+  OUTPUT_DIR: results_arduino
+  VOSK_MODEL_DIR: models/vosk-model-small-en-us-0.15
+  SHERPA_ONNX_MODEL_DIR: models/sherpa-onnx-en
+  PYTHONUNBUFFERED: "1"

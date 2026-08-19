@@ -1,55 +1,45 @@
-# stt-benchmark
+# Cultura Viva STT Benchmark
 
-Benchmark of Whisper models (`tiny.en`, `base.en`, `small.en`, via `faster-whisper`) on a set of short English audio recordings about Antoni Gaudí's work (Sagrada Família, Park Güell, Casa Batlló, etc.). It measures inference time and Word Error Rate (WER) to compare the speed/accuracy trade-off across model variants.
 
-## Repository structure
+## Dataset & Domain Keywords
 
-```
-stt-benchmark/
-├── colab/
-│   └── stt_benchmark_whisper_test1.ipynb   # Full notebook: setup, benchmarking, plots, export
-├── data_audio/
-│   └── README.md                           # Link to the audio files (hosted on Google Drive, not versioned here)
-├── results/
-│   ├── plots/
-│   │   ├── avg_inference_time.png          # Average inference time per model
-│   │   └── avg_wer.png                     # Average WER per model
-│   └── predictions.json                    # Detailed results: file, model, ground truth, transcription, time, WER
-└── README.md
+`app/data_audio/` contains 16 kHz mono WAV visitor queries and `manifest.json` ground truth. The generated corpus varies intent, register, speaker, and duration. Domain entities are annotated per item and include `Gaudí`, `Sagrada Família`, `salamander`, `dragon`, `trencadís`, `Park Güell`, `Casa Batlló`, `Casa Milà`, and `modernisme`.
+
+Regenerate audio and the manifest together after changing query text:
+
+```bash
+cd app
+python dataset_generator.py
 ```
 
-## Dataset
+## Tested Models
 
-18 audio recordings in two formats:
+- faster-whisper `tiny.en` and `base.en`
+- Vosk small English
+- sherpa-onnx Whisper English
 
-| Format | Files | Content |
-|---|---|---|
-| `.ogg` | `G_cb`, `G_pg`, `G_sf`, `g_completito` | Long-form narrations, one descriptive paragraph per monument (`g_completito` is the combined narration of all three) |
-| `.m4a` | `G1`–`G14` | Short Q&A-style questions about facts, techniques, and architectural elements of Gaudí's work |
+Engines with missing Python dependencies or model files are skipped. All available candidate models are loaded once and then evaluated over the same manifest.
 
-The ground truth (reference text used to compute WER) is defined directly in the notebook, in the `GROUND_TRUTH` variable.
+## Evaluation Metrics
 
-**Audio files are not committed to this repository.** They are hosted on Google Drive:
+Per utterance and aggregate reports include WER, CER, Gaudí keyword spotting accuracy, real-time factor (RTF), inference latency in milliseconds, peak RAM in MB, and model size on disk in MB when the model path is local. Each engine writes a schema-versioned JSON file under `predictions/`, while aggregate metrics are stored in `summary.json`. The benchmark also generates comparison plots and does not generate CSV files.
 
-**Audio dataset (Google Drive):** `<https://drive.google.com/drive/folders/12tf5xiSog3TiN3sY_WmBBGB-nJSMYQTC?usp=sharing>`
+Latency and RTF measure transcription after the model has been loaded; model startup time is not included. Peak RAM is the process memory observed during transcription and should be treated as a host-side comparison, not as a complete Arduino deployment measurement.
 
-To reproduce the benchmark, download the folder (or mount it directly in Colab) and place its contents under `data_audio/`, matching the filenames used in `GROUND_TRUTH`.
+## How to Run
 
-## How to reproduce the benchmark
+See [app/README.md](app/README.md) for Linux, Windows, model installation, and App Lab packaging. The shortest local run is:
 
-1. Open `colab/stt_benchmark_whisper_test1.ipynb` in Google Colab.
-2. Mount Google Drive and make sure `data_audio/` (from the link above) is accessible — adjust `AUDIO_DIR` in the notebook accordingly.
-3. Run all cells in order. The notebook will:
-   - Install `faster-whisper`, `jiwer`, `pandas`, `seaborn`.
-   - Transcribe each audio file with `tiny.en`, `base.en`, and `small.en`, passing domain keywords via `initial_prompt`.
-   - Measure inference time and compute WER for each audio/model combination.
-   - Export results to `results/predictions.json`.
-   - Generate `results/plots/avg_inference_time.png` and `results/plots/avg_wer.png`.
-4. Push the new results to the repo (directly from Colab with `git`, or manually via the GitHub web interface).
+```bash
+cd app
+python -m pip install -r requirements.txt
+python main.py --engines faster-whisper:tiny.en
+```
 
-## Results
+## Results / Findings
 
-Aggregated results (average time and average WER per model) are available at:
-- `results/plots/avg_inference_time.png`
-- `results/plots/avg_wer.png`
-- `results/predictions.json` (per-file, per-model detail)
+Local CPU runs write to `app/results_computer/`; Arduino App Lab runs write to `app/results_arduino/`. Re-run on the target UNO Q before making deployment decisions; host timings and RAM are not edge measurements.
+
+## Historical Colab Execution
+
+`colab/` is a historical artifact from the offline model-selection phase. It documents the evaluation used to choose models before edge-device integration. It is not production runtime code and should not be mixed with current computer or Arduino reports.

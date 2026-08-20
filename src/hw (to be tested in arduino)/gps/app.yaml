@@ -1,0 +1,6 @@
+name: GPS Minimap
+description: "Reports the UNO Q's current GPS position for display on a minimap."
+icon: 🗺️
+version: "1.0.0"
+ports: []
+bricks: []

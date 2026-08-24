@@ -13,11 +13,18 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from utils import (
+    DOMAIN_KEYWORD_ALIASES,
+    build_domain_prompt,
+    build_sherpa_hotwords_file,
     character_error_rate,
+    canonicalize_domain_entities,
     current_rss_mb,
+    current_timestamp_utc,
     directory_size_mb,
+    ensure_16k_mono_pcm16,
     find_domain_keywords,
     keyword_spotting_accuracy,
+    resolve_faster_whisper_path,
     run_metadata,
     wav_duration_seconds,
     word_error_rate,
@@ -26,10 +33,15 @@ from utils import (
 
 
 APP_DIR = Path(__file__).resolve().parent
+CACHE_DIR = APP_DIR / "cache"
+NORMALIZED_AUDIO_DIR = CACHE_DIR / "normalized_audio"
 
 
 class Recognizer(Protocol):
     """Minimal interface implemented by each optional STT backend."""
+
+    domain_bias_applied: bool
+    model_size_mb: float | None
 
     def transcribe(self, audio_path: Path, language: str) -> str: ...
 
@@ -45,26 +57,72 @@ class DatasetItem:
 class FasterWhisperRecognizer:
     """faster-whisper adapter; CPU INT8 is the default for UNO Q."""
 
-    def __init__(self, model_name: str, device: str, compute_type: str) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        device: str,
+        compute_type: str,
+        beam_size: int,
+        initial_prompt: str | None,
+    ) -> None:
         from faster_whisper import WhisperModel
 
-        self.model = WhisperModel(model_name, device=device, compute_type=compute_type)
+        # Resolve the local snapshot ourselves (offline-safe) instead of letting
+        # WhisperModel guess, so the *same* path is used both to load the model
+        # and to measure its size. Previously these could disagree, and the
+        # size lookup done after the fact (by name, with local_files_only=True)
+        # would silently fail on an offline device — the reason Whisper model
+        # sizes were missing from the resource-usage plot.
+        local_path = resolve_faster_whisper_path(model_name)
+        self.model = WhisperModel(local_path or model_name, device=device, compute_type=compute_type)
+        self.model_size_mb = directory_size_mb(Path(local_path)) if local_path else None
+
+        self.beam_size = beam_size
+        self.initial_prompt = initial_prompt
+        self.domain_bias_applied = initial_prompt is not None
 
     def transcribe(self, audio_path: Path, language: str) -> str:
         segments, _ = self.model.transcribe(
-            str(audio_path), language=language, beam_size=1, vad_filter=True
+            str(audio_path),
+            language=language,
+            beam_size=self.beam_size,
+            temperature=0.0,
+            vad_filter=True,
+            # Wider speech padding and a shorter required silence gap than the
+            # library defaults: these clips are short (3-20s), single-utterance,
+            # and some intentionally contain a mid-utterance pause or injected
+            # background noise (see dataset_generator.py). The stock VAD
+            # settings are tuned for long-form audio and can clip soft onsets
+            # or misread the injected pause as an utterance boundary, both of
+            # which show up as deletions/substitutions right at a clip's edges.
+            vad_parameters=dict(min_silence_duration_ms=800, speech_pad_ms=300),
+            # Each file here is one independent utterance. Conditioning on
+            # previous text is meant for multi-segment long-form audio; with
+            # short isolated clips it mainly risks hallucinating from an
+            # unrelated previous segment (a known faster-whisper failure mode)
+            # rather than helping, so it's turned off explicitly.
+            condition_on_previous_text=False,
+            initial_prompt=self.initial_prompt,
         )
         return " ".join(segment.text.strip() for segment in segments).strip()
 
 
 class VoskRecognizer:
-    """Vosk adapter using a local model directory and the standard WAV reader."""
+    """Vosk adapter using a local model directory and the standard WAV reader.
+
+    Vosk's runtime grammar mechanism restricts recognition to a fixed closed
+    vocabulary rather than softly biasing an open one (see alphacep/vosk-api
+    issue #878), so it has no equivalent to faster-whisper's initial_prompt or
+    sherpa-onnx's hotwords and always runs with domain_bias_applied = False.
+    """
 
     def __init__(self, model_path: str) -> None:
         from vosk import KaldiRecognizer, Model
 
         self._recognizer_type = KaldiRecognizer
         self.model = Model(model_path)
+        self.domain_bias_applied = False
+        self.model_size_mb = directory_size_mb(Path(model_path))
 
     def transcribe(self, audio_path: Path, language: str) -> str:
         import wave
@@ -77,12 +135,34 @@ class VoskRecognizer:
 
 
 class SherpaOnnxRecognizer:
-    """sherpa-onnx adapter; configure model files through SHERPA_ONNX_MODEL_DIR."""
+    """sherpa-onnx adapter; configure model files through SHERPA_ONNX_MODEL_DIR.
 
-    def __init__(self, model_dir: str) -> None:
+    Only sherpa-onnx's transducer models support hotwords/contextual biasing;
+    the decoding method must also be modified_beam_search (k2-fsa hotwords
+    docs). The Whisper-export branch below therefore always runs
+    greedy_search with domain_bias_applied = False, regardless of
+    --enable-domain-bias. The transducer branch uses modified_beam_search
+    with a beam width matched to faster-whisper's --whisper-beam-size, and
+    applies a hotwords file built from the same keyword list
+    (utils.DOMAIN_KEYWORD_ALIASES) that faster-whisper's initial_prompt is
+    built from, when one is supplied.
+
+    Both branches assume 16 kHz mono input and do not resample — see
+    utils.ensure_16k_mono_pcm16, which the benchmark loop now runs every file
+    through before it reaches transcribe().
+    """
+
+    def __init__(
+        self,
+        model_dir: str,
+        beam_size: int = 5,
+        hotwords_file: Path | None = None,
+        hotwords_score: float = 2.0,
+    ) -> None:
         import sherpa_onnx
 
         model = Path(model_dir)
+        self.model_size_mb = directory_size_mb(model)
         whisper_files = sorted(model.glob("*-encoder.onnx"))
         if whisper_files:
             encoder = whisper_files[0]
@@ -99,6 +179,7 @@ class SherpaOnnxRecognizer:
                 task="transcribe",
                 decoding_method="greedy_search",
             )
+            self.domain_bias_applied = False
             return
 
         required_files = ("encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt")
@@ -107,15 +188,21 @@ class SherpaOnnxRecognizer:
             raise FileNotFoundError(
                 f"sherpa-onnx model directory needs Whisper *-encoder.onnx files or: {', '.join(required_files)}"
             )
-        self.recognizer = sherpa_onnx.OfflineRecognizer.from_transducer(
+        kwargs: dict[str, Any] = dict(
             encoder=str(model / "encoder.onnx"),
             decoder=str(model / "decoder.onnx"),
             joiner=str(model / "joiner.onnx"),
             tokens=str(model / "tokens.txt"),
             sample_rate=16000,
             feature_dim=80,
-            decoding_method="greedy_search",
+            decoding_method="modified_beam_search",
+            max_active_paths=beam_size,
         )
+        if hotwords_file is not None:
+            kwargs["hotwords_file"] = str(hotwords_file)
+            kwargs["hotwords_score"] = hotwords_score
+        self.recognizer = sherpa_onnx.OfflineRecognizer.from_transducer(**kwargs)
+        self.domain_bias_applied = hotwords_file is not None
 
     def transcribe(self, audio_path: Path, language: str) -> str:
         import soundfile as sf
@@ -135,7 +222,7 @@ def load_manifest(path: Path) -> list[DatasetItem]:
             item["filename"],
             item["language"],
             item["text"],
-            tuple(item.get("keywords", find_domain_keywords(item["text"]))),
+            tuple(item.get("keywords") or find_domain_keywords(item["text"])),
         )
         for item in raw
     ]
@@ -147,8 +234,19 @@ def load_manifest(path: Path) -> list[DatasetItem]:
 
 def build_recognizer(name: str, args: Any) -> Recognizer:
     """Create one backend lazily so missing optional dependencies are isolated."""
+    enable_domain_bias = getattr(args, "enable_domain_bias", False)
+
     if name.startswith("faster-whisper:"):
-        return FasterWhisperRecognizer(name.split(":", 1)[1], args.device, args.compute_type)
+        initial_prompt = getattr(args, "whisper_initial_prompt", None)
+        if initial_prompt is None and enable_domain_bias:
+            initial_prompt = build_domain_prompt()
+        return FasterWhisperRecognizer(
+            name.split(":", 1)[1],
+            args.device,
+            args.compute_type,
+            args.whisper_beam_size,
+            initial_prompt,
+        )
     if name == "vosk":
         model_path = Path(os.environ.get(
             "VOSK_MODEL_DIR", str(APP_DIR / "models" / "vosk-model-small-en-us-0.15")
@@ -165,7 +263,23 @@ def build_recognizer(name: str, args: Any) -> Recognizer:
         ))
         if not model_path.is_dir():
             raise FileNotFoundError(f"sherpa-onnx model directory not found: {model_path}")
-        return SherpaOnnxRecognizer(str(model_path))
+        hotwords_file = None
+        if enable_domain_bias:
+            hotwords_file = build_sherpa_hotwords_file(
+                DOMAIN_KEYWORD_ALIASES.keys(),
+                model_path,
+                CACHE_DIR / "cultura_viva_hotwords.txt",
+            )
+            if hotwords_file is None:
+                print(
+                    f"[INFO] sherpa-onnx: no usable bpe.model in {model_path} "
+                    "(Whisper models never support hotwords; transducer models need "
+                    "one bundled). Running this engine without domain bias — see the "
+                    "README for the recommended transducer model."
+                )
+        return SherpaOnnxRecognizer(
+            str(model_path), beam_size=args.whisper_beam_size, hotwords_file=hotwords_file
+        )
     raise ValueError(f"Unknown engine: {name}")
 
 
@@ -193,32 +307,59 @@ def measure_transcription(recognizer: Recognizer, audio_path: Path, language: st
     return transcription, elapsed, peak[0], error_message
 
 
-def run_benchmark(args: Any) -> list[dict[str, Any]]:
-    """Run all requested engines and return per-utterance measurements."""
+def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Run all requested engines; return per-utterance measurements and, for
+    each engine, the real UTC timestamp of when that engine started running.
+    Logs a per-utterance wandb.Table when args.wandb is set.
+    """
+    use_wandb = getattr(args, "wandb", False)
+    wandb_table = None
+    if use_wandb:
+        import wandb
+
+        wandb_table = wandb.Table(columns=[
+            "engine", "filename", "language", "ground_truth", "raw_transcription",
+            "transcription", "domain_bias_applied", "wer", "cer",
+            "keyword_spotting_accuracy", "inference_latency_ms", "rtf",
+            "peak_ram_mb", "model_size_mb", "error",
+        ])
+
     dataset = load_manifest(Path(args.manifest))
     audio_dir = Path(args.audio_dir)
     results: list[dict[str, Any]] = []
+    engine_started_at: dict[str, str] = {}
     for engine_name in args.engines:
         try:
             recognizer = build_recognizer(engine_name, args)
         except Exception as error:
             print(f"[SKIP] {engine_name}: {error}")
             continue
+        engine_started_at[engine_name] = current_timestamp_utc()
+        engine_model_size_mb = getattr(recognizer, "model_size_mb", None)
         for item in dataset:
-            audio_path = audio_dir / item.filename
-            if not audio_path.exists():
-                print(f"[SKIP] missing audio: {audio_path}")
+            raw_audio_path = audio_dir / item.filename
+            if not raw_audio_path.exists():
+                print(f"[SKIP] missing audio: {raw_audio_path}")
                 continue
+            # Normalize to 16 kHz mono PCM16 before any engine sees it. The
+            # synthetic dataset already comes out this way, but a
+            # human-recorded dataset dropped into data_audio/recorded/ may not
+            # — see utils.ensure_16k_mono_pcm16 for why that silently wrecks
+            # sherpa-onnx accuracy in particular.
+            audio_path = ensure_16k_mono_pcm16(raw_audio_path, NORMALIZED_AUDIO_DIR)
             duration = wav_duration_seconds(audio_path)
-            transcription, elapsed, peak_ram_mb, error_message = measure_transcription(
+            raw_transcription, elapsed, peak_ram_mb, error_message = measure_transcription(
                 recognizer, audio_path, item.language
             )
-            results.append({
+            transcription = canonicalize_domain_entities(raw_transcription)
+            row = {
                 "filename": item.filename,
                 "language": item.language,
                 "engine": engine_name,
                 "ground_truth": item.reference,
+                "raw_transcription": raw_transcription,
                 "transcription": transcription,
+                "domain_bias_applied": recognizer.domain_bias_applied,
                 "inference_time_sec": round(elapsed, 4),
                 "audio_duration_sec": round(duration, 4),
                 "rtf": round(elapsed / duration, 4) if duration else None,
@@ -229,19 +370,41 @@ def run_benchmark(args: Any) -> list[dict[str, Any]]:
                 ) if item.keywords else None,
                 "inference_latency_ms": round(elapsed * 1000, 2),
                 "peak_ram_mb": round(peak_ram_mb, 2),
-                "model_size_mb": model_size_mb(engine_name),
+                "model_size_mb": engine_model_size_mb,
                 "domain_keywords": list(item.keywords),
                 "error": error_message,
-            })
+            }
+            results.append(row)
+            if wandb_table is not None:
+                wandb_table.add_data(
+                    row["engine"], row["filename"], row["language"], row["ground_truth"],
+                    row["raw_transcription"], row["transcription"], row["domain_bias_applied"],
+                    row["wer"], row["cer"], row["keyword_spotting_accuracy"],
+                    row["inference_latency_ms"], row["rtf"], row["peak_ram_mb"],
+                    row["model_size_mb"], row["error"],
+                )
         del recognizer
         gc.collect()
-    return results
+
+    if wandb_table is not None:
+        import wandb
+
+        wandb.log({"predictions": wandb_table})
+
+    return results, engine_started_at
 
 
 def model_size_mb(engine_name: str) -> float | None:
-    """Measure local model assets when the configured engine has a local path."""
+    """Measure local model assets for an engine name alone (no live recognizer).
+
+    Used only as a fallback in export_reports() for legacy result rows that
+    predate the model_size_mb field being captured directly on each
+    recognizer. New runs populate model_size_mb on every row already, so this
+    function is not on the hot path anymore.
+    """
     if engine_name.startswith("faster-whisper:"):
-        return directory_size_mb(Path(engine_name.split(":", 1)[1]))
+        local_path = resolve_faster_whisper_path(engine_name.split(":", 1)[1])
+        return directory_size_mb(Path(local_path)) if local_path else None
     if engine_name == "vosk":
         path = os.environ.get("VOSK_MODEL_DIR", str(APP_DIR / "models" / "vosk-model-small-en-us-0.15"))
         return directory_size_mb(Path(path))
@@ -251,8 +414,60 @@ def model_size_mb(engine_name: str) -> float | None:
     return None
 
 
-def export_reports(results: list[dict[str, Any]], output_dir: Path) -> None:
-    """Export JSON-only reports with one prediction file per engine."""
+def build_summary(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Aggregate per-utterance rows into one row per engine.
+
+    BUG THIS FIXES: export_plots() expects exactly this shape (avg_wer,
+    avg_cer, max_peak_ram_mb, model_size_mb, ...) but nothing in the pipeline
+    ever built it — export_reports() only ever grouped raw per-utterance rows
+    for the JSON prediction files. export_plots() was consequently dead code:
+    it was never called, and even if it had been, it had no valid input to
+    call it with. This is the real reason plots (including the Whisper
+    model-size bars) never rendered — the plotting step never ran at all.
+    """
+    by_engine: dict[str, list[dict[str, Any]]] = {}
+    for row in results:
+        by_engine.setdefault(row["engine"], []).append(row)
+
+    summary = []
+    for engine, rows in by_engine.items():
+        valid_wer = [row["wer"] for row in rows if row["wer"] == row["wer"]]  # drop NaN
+        valid_cer = [row["cer"] for row in rows if row["cer"] == row["cer"]]
+        valid_kw = [
+            row["keyword_spotting_accuracy"] for row in rows
+            if row["keyword_spotting_accuracy"] is not None and row["keyword_spotting_accuracy"] == row["keyword_spotting_accuracy"]
+        ]
+        summary.append({
+            "engine": engine,
+            "avg_wer": sum(valid_wer) / len(valid_wer) if valid_wer else None,
+            "avg_cer": sum(valid_cer) / len(valid_cer) if valid_cer else None,
+            "avg_keyword_spotting_accuracy": sum(valid_kw) / len(valid_kw) if valid_kw else None,
+            "avg_inference_time_sec": sum(row["inference_time_sec"] for row in rows) / len(rows),
+            "avg_inference_latency_ms": sum(row["inference_latency_ms"] for row in rows) / len(rows),
+            "max_peak_ram_mb": max(row["peak_ram_mb"] for row in rows),
+            "model_size_mb": rows[0].get("model_size_mb"),
+            "domain_bias_applied": rows[0].get("domain_bias_applied", False),
+            "num_utterances": len(rows),
+        })
+    return summary
+
+
+def export_reports(
+    results: list[dict[str, Any]],
+    output_dir: Path,
+    engine_started_at: dict[str, str] | None = None,
+    use_wandb: bool = False,
+) -> None:
+    """Write per-engine JSON prediction reports, a per-engine summary.json, and
+    comparison plots. When use_wandb is set, also logs per-engine aggregate
+    metrics and uploads the reports as a wandb artifact.
+    """
+    if not results:
+        print("[WARN] no results to export.")
+        return
+
+    engine_started_at = engine_started_at or {}
+    model_size_cache: dict[str, float | None] = {}
     normalized_results = []
     for source in results:
         result = dict(source)
@@ -263,51 +478,69 @@ def export_reports(results: list[dict[str, Any]], output_dir: Path) -> None:
             round(keyword_spotting_accuracy(result["ground_truth"], result["transcription"], keywords), 4),
         )
         result.setdefault("inference_latency_ms", round(result["inference_time_sec"] * 1000, 2))
-        result.setdefault("model_size_mb", model_size_mb(result["engine"]))
+        result.setdefault("domain_bias_applied", False)
+        if "model_size_mb" not in result:
+            engine = result["engine"]
+            if engine not in model_size_cache:
+                model_size_cache[engine] = model_size_mb(engine)
+            result["model_size_mb"] = model_size_cache[engine]
         result.setdefault("domain_keywords", keywords)
         normalized_results.append(result)
     results = normalized_results
-    metadata = run_metadata()
+    host_metadata = run_metadata()
     by_engine: dict[str, list[dict[str, Any]]] = {}
     for result in results:
         by_engine.setdefault(result["engine"], []).append(result)
     predictions_dir = output_dir / "predictions"
     for engine, rows in by_engine.items():
         filename = re.sub(r"[^A-Za-z0-9_.-]+", "_", engine).strip("_")
+        metadata = {
+            **host_metadata,
+            "execution_timestamp_utc": engine_started_at.get(engine, host_metadata["execution_timestamp_utc"]),
+            "model_name": engine,
+        }
         write_json(predictions_dir / f"{filename}.json", {
             "schema_version": 2,
-            "metadata": {**metadata, "model_name": engine},
+            "metadata": metadata,
             "predictions": rows,
         })
-    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for result in results:
-        grouped.setdefault((result["engine"], result["language"]), []).append(result)
-    summary = []
-    for (engine, language), rows in grouped.items():
-        summary.append({
-            "engine": engine,
-            "language": language,
-            "samples": len(rows),
-            "avg_inference_time_sec": round(
-                sum(row["inference_time_sec"] for row in rows) / len(rows), 4
-            ),
-            "avg_wer": round(sum(row["wer"] for row in rows) / len(rows), 4),
-            "avg_cer": round(sum(row["cer"] for row in rows) / len(rows), 4),
-            "avg_keyword_spotting_accuracy": round(
-                sum(row["keyword_spotting_accuracy"] for row in rows if row["keyword_spotting_accuracy"] is not None)
-                / max(1, sum(row["keyword_spotting_accuracy"] is not None for row in rows)), 4
-            ),
-            "avg_rtf": round(sum(row["rtf"] for row in rows) / len(rows), 4),
-            "avg_inference_latency_ms": round(sum(row["inference_latency_ms"] for row in rows) / len(rows), 2),
-            "max_peak_ram_mb": max(row["peak_ram_mb"] for row in rows),
-            "model_size_mb": next((row["model_size_mb"] for row in rows if row["model_size_mb"] is not None), None),
-        })
+
+    summary = build_summary(results)
     write_json(output_dir / "summary.json", summary)
     export_plots(summary, output_dir / "plots")
+    print(f"Wrote summary for {len(summary)} engine(s) and plots to {output_dir / 'plots'}")
+
+    if use_wandb:
+        import wandb
+
+        for engine, rows in by_engine.items():
+            valid_wer = [row["wer"] for row in rows if row["wer"] == row["wer"]]  # drop NaN
+            valid_cer = [row["cer"] for row in rows if row["cer"] == row["cer"]]
+            valid_kw = [row["keyword_spotting_accuracy"] for row in rows if row["keyword_spotting_accuracy"] is not None]
+            wandb.log({
+                f"{engine}/avg_wer": sum(valid_wer) / len(valid_wer) if valid_wer else None,
+                f"{engine}/avg_cer": sum(valid_cer) / len(valid_cer) if valid_cer else None,
+                f"{engine}/avg_keyword_spotting_accuracy": sum(valid_kw) / len(valid_kw) if valid_kw else None,
+                f"{engine}/avg_inference_latency_ms": sum(row["inference_latency_ms"] for row in rows) / len(rows),
+                f"{engine}/max_peak_ram_mb": max(row["peak_ram_mb"] for row in rows),
+                f"{engine}/model_size_mb": rows[0]["model_size_mb"],
+                f"{engine}/domain_bias_applied": rows[0]["domain_bias_applied"],
+            })
+
+        artifact = wandb.Artifact("predictions", type="results")
+        artifact.add_dir(str(predictions_dir))
+        hotwords_cache = CACHE_DIR / "cultura_viva_hotwords.txt"
+        if hotwords_cache.is_file():
+            artifact.add_file(str(hotwords_cache))
+        wandb.log_artifact(artifact)
 
 
 def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:
-    """Write comparison plots from the JSON summary."""
+    """Write comparison plots from the aggregated per-engine summary."""
+    if not summary:
+        print("[WARN] no summary rows to plot.")
+        return
+
     plots_dir.mkdir(parents=True, exist_ok=True)
     try:
         import matplotlib
@@ -318,15 +551,22 @@ def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:
         print(f"[WARN] plots skipped; install matplotlib: {error}")
         return
 
+    def safe(values: list[float | None]) -> list[float]:
+        # None (e.g. an engine that produced no valid WER at all) used to be
+        # passed straight into matplotlib's bar(), which raises and aborts
+        # every plot for every engine, not just the affected one. Coercing to
+        # 0 keeps a single failed engine from taking the whole report down.
+        return [value if value is not None else 0 for value in values]
+
     labels = [row["engine"] for row in summary]
     positions = list(range(len(labels)))
     figures = (
         (
             "model_quality.png",
             (
-                ([row["avg_wer"] for row in summary], "WER"),
-                ([row["avg_cer"] for row in summary], "CER"),
-                ([row["avg_keyword_spotting_accuracy"] for row in summary], "Keyword accuracy"),
+                (safe([row["avg_wer"] for row in summary]), "WER"),
+                (safe([row["avg_cer"] for row in summary]), "CER"),
+                (safe([row["avg_keyword_spotting_accuracy"] for row in summary]), "Keyword accuracy"),
             ),
             "Recognition quality by engine",
             "Score",
@@ -334,24 +574,24 @@ def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:
         (
             "resource_usage.png",
             (
-                ([row["max_peak_ram_mb"] for row in summary], "Peak RAM (MB)"),
-                ([row["model_size_mb"] or 0 for row in summary], "Model size (MB)"),
+                (safe([row["max_peak_ram_mb"] for row in summary]), "Peak RAM (MB)"),
+                (safe([row["model_size_mb"] for row in summary]), "Model size (MB)"),
             ),
             "Resource usage by engine",
             "MB",
         ),
-            (
-                "avg_inference_time.png",
-                (([row["avg_inference_time_sec"] for row in summary], "Average inference time"),),
-                "Average inference time by engine",
-                "Seconds",
-            ),
-            (
-                "avg_wer.png",
-                (([row["avg_wer"] for row in summary], "Average WER"),),
-                "Average WER by engine",
-                "WER",
-            ),
+        (
+            "avg_inference_time.png",
+            ((safe([row["avg_inference_time_sec"] for row in summary]), "Average inference time"),),
+            "Average inference time by engine",
+            "Seconds",
+        ),
+        (
+            "avg_wer.png",
+            ((safe([row["avg_wer"] for row in summary]), "Average WER"),),
+            "Average WER by engine",
+            "WER",
+        ),
     )
     for filename, series, title, axis_label in figures:
         figure, axis = plt.subplots(figsize=(max(8, len(labels) * 1.5), 5))
@@ -371,7 +611,7 @@ def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:
     for row in summary:
         axis.scatter(
             row["avg_inference_latency_ms"],
-            row["avg_wer"],
+            row["avg_wer"] if row["avg_wer"] is not None else 0,
             s=100,
             label=row["engine"],
         )

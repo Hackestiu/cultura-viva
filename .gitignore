@@ -18,9 +18,11 @@ model-cache/
 *.ct2/
 .cache/
 ~/.cache/
+app/cache
 
 # Generated audio, reports, plots, and deployment archives
 app/data_audio/*.wav
+app/data_audio/**/*.wav
 app/results/edge/
 app/results_computer/*.csv
 app/results_arduino/
@@ -31,3 +33,7 @@ app/results_arduino/
 *.log
 .DS_Store
 .vscode/
+
+# Weights & Biases
+app/wandb/
+*.wandb

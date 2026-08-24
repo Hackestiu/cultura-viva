@@ -14,8 +14,8 @@ dependencies:
   - psutil==6.1.1
   - edge-tts==7.2.8
 environment:
-  AUDIO_DIR: data_audio
-  MANIFEST: data_audio/manifest.json
+  AUDIO_DIR: data_audio/recorded
+  MANIFEST: data_audio/recorded/manifest.json
   OUTPUT_DIR: results_arduino
   VOSK_MODEL_DIR: models/vosk-model-small-en-us-0.15
   SHERPA_ONNX_MODEL_DIR: models/sherpa-onnx-en

@@ -19,6 +19,8 @@ import wave
 from pathlib import Path
 from typing import Any
 
+from utils import find_domain_keywords
+
 APP_DIR = Path(__file__).resolve().parent
 
 QUERIES = [
@@ -187,7 +189,7 @@ async def generate(output_dir: Path) -> None:
             "question": query["text"],
             "text": full_text,
             "pronunciation_hints": {"appreciate": "uh-PREE-shee-ate"} if "appreciate" in full_text else {},
-            "keywords": query.get("keywords", []),
+            "keywords": query.get("keywords") or find_domain_keywords(full_text),
             "audio_effects": effects,
             "speaker": query.get("speaker", SPEAKER_PROFILES[query["voice"]]),
             "voice": query["voice"],

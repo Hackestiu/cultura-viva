@@ -1,45 +1,77 @@
 # Cultura Viva STT Benchmark
 
+Offline English speech-to-text benchmark for Cultura Viva. Compares candidate STT
+engines on recognition quality and resource usage, for local development and for
+deployment on an Arduino UNO Q via Arduino App Lab.
 
-## Dataset & Domain Keywords
+## Repository layout
 
-`app/data_audio/` contains 16 kHz mono WAV visitor queries and `manifest.json` ground truth. The generated corpus varies intent, register, speaker, and duration. Domain entities are annotated per item and include `Gaudí`, `Sagrada Família`, `salamander`, `dragon`, `trencadís`, `Park Güell`, `Casa Batlló`, `Casa Milà`, and `modernisme`.
-
-Regenerate audio and the manifest together after changing query text:
-
-```bash
-cd app
-python dataset_generator.py
-```
+- `app/` — the runnable benchmark. See [app/README.md](app/README.md) for setup,
+  local execution, and Arduino deployment.
+- `colab/` — historical, see "Historical Colab Execution" below.
 
 ## Tested Models
 
 - faster-whisper `tiny.en` and `base.en`
 - Vosk small English
-- sherpa-onnx Whisper English
+- sherpa-onnx `zipformer-small-en`
 
-Engines with missing Python dependencies or model files are skipped. All available candidate models are loaded once and then evaluated over the same manifest.
+See [app/models/README.md](app/models/README.md) for install sources and paths.
+
+## Domain-vocabulary bias
+
+Off by default; enabled with `--enable-domain-bias`. When enabled:
+
+```text
+faster-whisper (tiny.en, base.en)  — yes
+sherpa-onnx (zipformer-small-en)   — yes
+vosk                                — no
+```
+
+Every prediction row records `domain_bias_applied` for the engine that produced it.
+
+## Dataset & Domain Keywords
+
+`app/data_audio/manifest.json` is the synthetic benchmark ground truth; a separate
+recorded human-speech set is distributed outside the repo. See
+[app/data_audio/README.md](app/data_audio/README.md) for the manifest schema and
+generation, and [app/data_audio/recorded/README.md](app/data_audio/recorded/README.md)
+for the recorded set.
 
 ## Evaluation Metrics
 
-Per utterance and aggregate reports include WER, CER, Gaudí keyword spotting accuracy, real-time factor (RTF), inference latency in milliseconds, peak RAM in MB, and model size on disk in MB when the model path is local. Each engine writes a schema-versioned JSON file under `predictions/`, while aggregate metrics are stored in `summary.json`. The benchmark also generates comparison plots and does not generate CSV files.
+Per utterance and aggregate reports include:
 
-Latency and RTF measure transcription after the model has been loaded; model startup time is not included. Peak RAM is the process memory observed during transcription and should be treated as a host-side comparison, not as a complete Arduino deployment measurement.
+- **WER**, **CER** — word/character error rate against the manifest's ground truth.
+- **Domain keyword spotting accuracy** — recovery rate of the canonical heritage
+  entities (Gaudí, Sagrada Família, trencadís, etc.) listed in a clip's `keywords`.
+- **RTF** (real-time factor) and **inference latency** (ms) — measured after model
+  loading; load time is excluded.
+- **Peak RAM** (MB) — host-side process measurement; treat as a comparison signal,
+  not an Arduino deployment measurement.
+- **Model size on disk** (MB), where the model path is local.
+- **`domain_bias_applied`** — whether the domain-vocabulary hint was actually applied
+  for that engine on that run (see "Domain-vocabulary bias" above).
+
+Each engine writes a schema-versioned JSON file under `predictions/`; aggregate
+metrics go in `summary.json`. Comparison plots are
+derived from the JSON reports and are optional.
 
 ## How to Run
 
-See [app/README.md](app/README.md) for Linux, Windows, model installation, and App Lab packaging. The shortest local run is:
-
-```bash
-cd app
-python -m pip install -r requirements.txt
-python main.py --engines faster-whisper:tiny.en
-```
+See [app/README.md](app/README.md) for the full setup and run instructions
+(local computer and Arduino UNO Q). For run-to-run comparison and auditing of
+predictions, see the optional [Weights & Biases section](app/README.md#experiment-tracking-optional)
+there.
 
 ## Results / Findings
 
-Local CPU runs write to `app/results_computer/`; Arduino App Lab runs write to `app/results_arduino/`. Re-run on the target UNO Q before making deployment decisions; host timings and RAM are not edge measurements.
+Local CPU runs write to `app/results_computer/`; Arduino App Lab runs write to
+`app/results_arduino/`. Re-run on the target UNO Q before making deployment
+decisions — host timings and RAM are not edge measurements.
 
 ## Historical Colab Execution
 
-`colab/` is a historical artifact from the offline model-selection phase. It documents the evaluation used to choose models before edge-device integration. It is not production runtime code and should not be mixed with current computer or Arduino reports.
+`colab/` documents the offline model-selection phase that preceded edge-device
+integration. It is not production runtime code and should not be mixed with
+current computer or Arduino reports.

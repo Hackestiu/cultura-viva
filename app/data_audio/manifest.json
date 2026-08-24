@@ -184,7 +184,9 @@
     "question": "Why do the big pillars look like tree branches, and how do they keep the roof from falling down?",
     "text": "Notice how the dragon imagery changes the building's character. Why do the big pillars look like tree branches, and how do they keep the roof from falling down?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "dragon"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0
@@ -241,7 +243,9 @@
     "question": "How does trencadis transform broken ceramic fragments into a deliberate artistic surface, and what purpose does it serve?",
     "text": "Among the colorful details, one Catalan technique stands out. How does trencadis transform broken ceramic fragments into a deliberate artistic surface, and what purpose does it serve?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "trencadís"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0
@@ -280,7 +284,9 @@
     "question": "Would you tell me what the salamander represents and how its ceramic surface fits into the park's design?",
     "text": "During this stop, the park's signature creature deserves attention. Would you tell me what the salamander represents and how its ceramic surface fits into the park's design?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "salamander"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0
@@ -379,7 +385,10 @@
     "question": "Could you tell me which Gaudi works are recognized by UNESCO and what their heritage designation means?",
     "text": "For Casa Mila, the nickname La Pedrera hints at its stone facade. Could you tell me which Gaudi works are recognized by UNESCO and what their heritage designation means?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "Gaudí",
+      "Casa Milà"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0
@@ -418,7 +427,10 @@
     "question": "What economic, social, and design factors explain why the original Park Guell housing plan was not completed?",
     "text": "Comparing these buildings reveals the language of modernisme. What economic, social, and design factors explain why the original Park Guell housing plan was not completed?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "Park Güell",
+      "modernisme"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0

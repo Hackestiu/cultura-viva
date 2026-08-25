@@ -3,7 +3,7 @@ version: 1.0.0
 description: Offline English STT benchmark for Arduino UNO Q
 runtime: python3
 entrypoint: python3 main.py
-workdir: /app
+workdir: /python
 restart: never
 requirements: requirements.txt
 dependencies:

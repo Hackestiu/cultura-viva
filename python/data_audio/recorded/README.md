@@ -23,8 +23,32 @@ committed to Git. To use it:
 If this folder is empty or has no `manifest.json`, the benchmark falls back to the
 synthetic set in `data_audio/` and generates it if missing.
 
-Format: 16 kHz, mono, 16-bit PCM WAV, one row per file in this directory's own
-`manifest.json`.
+## Audio Requirements & Conversion
+
+> **Strict Format Requirement:** All audio files added to this dataset **must be 16 kHz, mono, 16-bit PCM WAV**. 
+
+If your recordings were captured at higher sample rates (e.g., 44.1 kHz or 48 kHz), you must convert/downsample them to 16 kHz before running the benchmark or adding them to `manifest.json`.
+
+### How to Convert Audio to 16 kHz
+
+**Windows (PowerShell)**
+Batch-resample and replace all `.wav` files in your directory using FFmpeg:
+```powershell
+Get-ChildItem *.wav | ForEach-Object { ffmpeg -i $_.FullName -ar 16000 "temp_$($_.Name)" -y; Move-Item "temp_$($_.Name)" $_.FullName -Force }
+```
+
+
+**Linux (Terminal)**
+Using FFmpeg or SoX:
+```bash
+# FFmpeg
+for f in *.wav; do ffmpeg -i "$f" -ar 16000 "16k_$f"; done
+
+# SoX
+for f in *.wav; do sox "$f" -r 16000 "16k_$f"; done
+```
+
+---
 
 ## Manifest schema
 
@@ -60,4 +84,4 @@ cd app
 python main.py --audio-dir data_audio\recorded --manifest data_audio\recorded\manifest.json
 ```
 
-On the Arduino, the same layout is expected at `/app/data_audio/recorded/`.
+On the Arduino, the same layout is expected at `/app/data_audio/recorded/`

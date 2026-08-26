@@ -120,8 +120,8 @@ if it isn't already there, then:
 git clone <this-repo>   # or copy the repo over, e.g. scp
 cd tts-benchmark
 uv sync --extra real                      # pulls in the CPU torch wheel -- the QRB2210 has no CUDA
-uv run benchmark.py                       # all models, 1 warmup + 9 timed runs each (3 per length bucket)
-uv run benchmark.py --models mms-tts-eng,vits-ljs --runs 12   # skip the models that won't fit/are too slow
+uv run benchmark.py                       # all models, uses all CPU cores by default
+uv run benchmark.py --models mms-tts-eng,vits-ljs --runs 3 --threads 4  # customize models, runs, and thread count
 ```
 
 Each model is loaded once, given one untimed warmup call (to absorb model

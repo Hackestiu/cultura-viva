@@ -47,7 +47,8 @@ STATUS_CRITICAL = "#d03b3b"  # reserved status color -- flags a model that won't
 
 BUCKET_LABELS = {"short": "short\n(≤ 8 words)", "medium": "medium\n(9–16 words)", "long": "long\n(17+ words)"}
 
-plt.rcParams["font.family"] = ["Segoe UI", "DejaVu Sans", "sans-serif"]
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Segoe UI", "Arial", "sans-serif"]
 
 
 def load_results(path: Path):

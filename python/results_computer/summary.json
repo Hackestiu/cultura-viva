@@ -1,26 +1,38 @@
 [
   {
     "engine": "faster-whisper:tiny.en",
-    "avg_wer": 0.31969166666666665,
-    "avg_cer": 0.17800000000000002,
-    "avg_keyword_spotting_accuracy": 0.7368421052631579,
-    "avg_inference_time_sec": 0.46952083333333333,
-    "avg_inference_latency_ms": 469.5204166666667,
-    "max_peak_ram_mb": 216.41,
-    "model_size_mb": 74.48,
+    "avg_wer": 0.322375,
+    "avg_cer": 0.18303333333333335,
+    "avg_keyword_spotting_accuracy": 0.7894736842105263,
+    "avg_inference_time_sec": 7.320358333333334,
+    "avg_inference_latency_ms": 7320.361666666667,
+    "max_peak_ram_mb": 307.78,
+    "model_size_mb": 74.47,
     "domain_bias_applied": true,
     "num_utterances": 24
   },
   {
     "engine": "faster-whisper:base.en",
-    "avg_wer": 0.18063333333333334,
-    "avg_cer": 0.10524166666666666,
+    "avg_wer": 0.1751,
+    "avg_cer": 0.10344583333333333,
     "avg_keyword_spotting_accuracy": 1.0,
-    "avg_inference_time_sec": 0.7827291666666666,
-    "avg_inference_latency_ms": 782.7308333333334,
-    "max_peak_ram_mb": 278.83,
-    "model_size_mb": 140.93,
+    "avg_inference_time_sec": 12.896454166666667,
+    "avg_inference_latency_ms": 12896.451666666668,
+    "max_peak_ram_mb": 410.29,
+    "model_size_mb": 140.92,
     "domain_bias_applied": true,
+    "num_utterances": 24
+  },
+  {
+    "engine": "vosk",
+    "avg_wer": 0.6978416666666667,
+    "avg_cer": 0.40976666666666667,
+    "avg_keyword_spotting_accuracy": 0.21052631578947367,
+    "avg_inference_time_sec": 15.763620833333334,
+    "avg_inference_latency_ms": 15763.624166666666,
+    "max_peak_ram_mb": 395.15,
+    "model_size_mb": 67.61,
+    "domain_bias_applied": false,
     "num_utterances": 24
   }
 ]

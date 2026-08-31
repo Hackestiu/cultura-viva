@@ -43,7 +43,7 @@ def resolve_dataset(args: argparse.Namespace) -> None:
         print(f"Using explicit dataset: {args.audio_dir}")
         return
 
-    recorded_dir = APP_DIR / "data_audio" / "recorded"
+    recorded_dir = APP_DIR /"data_audio" / "recorded"
     recorded_manifest = recorded_dir / "manifest.json"
     if dataset_has_audio(recorded_dir, recorded_manifest):
         args.audio_dir = str(recorded_dir)
@@ -87,9 +87,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     parser.add_argument("--compute-type", default="int8")
-    parser.add_argument("--whisper-beam-size", type=int, default=5)
+    parser.add_argument("--cpu-threads", type=int, default=None, help="CPU threads for CTranslate2 / faster-whisper")
+    parser.add_argument("--whisper-beam-size", type=int, default=1, help="Whisper beam size (1 = greedy, fastest)")
     parser.add_argument("--whisper-initial-prompt", default=None)
-    parser.add_argument("--enable-domain-bias", action="store_true")
+    parser.add_argument("--enable-domain-bias", action="store_true", default=True, help="Enable domain prompt and hotwords biasing (default: True)")
+    parser.add_argument("--no-domain-bias", dest="enable_domain_bias", action="store_false", help="Disable domain biasing")
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--wandb-project", default="cultura-viva-stt-benchmark")
     return parser.parse_args()

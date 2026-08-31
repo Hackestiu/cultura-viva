@@ -31,6 +31,7 @@ from utils import (
     wav_duration_seconds,
     word_error_rate,
     write_json,
+    build_hotwords_string
 )
 
 
@@ -57,54 +58,46 @@ class DatasetItem:
 
 
 class FasterWhisperRecognizer:
-    """faster-whisper adapter; CPU INT8 is the default for UNO Q."""
-
     def __init__(
         self,
         model_name: str,
         device: str,
         compute_type: str,
-        beam_size: int,
-        initial_prompt: str | None,
+        beam_size: int = 1,
+        initial_prompt: str | None = None,
+        hotwords: str | None = None,
+        cpu_threads: int | None = None,
     ) -> None:
         from faster_whisper import WhisperModel
 
-        # Resolve the local snapshot ourselves (offline-safe) instead of letting
-        # WhisperModel guess, so the *same* path is used both to load the model
-        # and to measure its size. Previously these could disagree, and the
-        # size lookup done after the fact (by name, with local_files_only=True)
-        # would silently fail on an offline device — the reason Whisper model
-        # sizes were missing from the resource-usage plot.
         local_path = resolve_faster_whisper_path(model_name)
-        self.model = WhisperModel(local_path or model_name, device=device, compute_type=compute_type)
+        threads = cpu_threads or min(8, os.cpu_count() or 4)
+        self.model = WhisperModel(
+            local_path or model_name,
+            device=device,
+            compute_type=compute_type,
+            cpu_threads=threads,
+        )
         self.model_size_mb = directory_size_mb(Path(local_path)) if local_path else None
 
         self.beam_size = beam_size
         self.initial_prompt = initial_prompt
-        self.domain_bias_applied = initial_prompt is not None
+        self.hotwords = hotwords
+        self.domain_bias_applied = (initial_prompt is not None) or (hotwords is not None)
 
     def transcribe(self, audio_path: Path, language: str) -> str:
         segments, _ = self.model.transcribe(
             str(audio_path),
             language=language,
             beam_size=self.beam_size,
+            best_of=1,
             temperature=0.0,
-            vad_filter=True,
-            # Wider speech padding and a shorter required silence gap than the
-            # library defaults: these clips are short (3-20s), single-utterance,
-            # and some intentionally contain a mid-utterance pause or injected
-            # background noise (see dataset_generator.py). The stock VAD
-            # settings are tuned for long-form audio and can clip soft onsets
-            # or misread the injected pause as an utterance boundary, both of
-            # which show up as deletions/substitutions right at a clip's edges.
-            vad_parameters=dict(min_silence_duration_ms=800, speech_pad_ms=300),
-            # Each file here is one independent utterance. Conditioning on
-            # previous text is meant for multi-segment long-form audio; with
-            # short isolated clips it mainly risks hallucinating from an
-            # unrelated previous segment (a known faster-whisper failure mode)
-            # rather than helping, so it's turned off explicitly.
+            suppress_blank=True,
+            without_timestamps=True,
+            vad_filter=False,
             condition_on_previous_text=False,
             initial_prompt=self.initial_prompt,
+            hotwords=self.hotwords,
         )
         return " ".join(segment.text.strip() for segment in segments).strip()
 
@@ -240,14 +233,22 @@ def build_recognizer(name: str, args: Any) -> Recognizer:
 
     if name.startswith("faster-whisper:"):
         initial_prompt = getattr(args, "whisper_initial_prompt", None)
-        if initial_prompt is None and enable_domain_bias:
-            initial_prompt = build_domain_prompt()
+        keywords = list(DOMAIN_KEYWORD_ALIASES.keys())
+
+        hotwords_str = None
+        if enable_domain_bias:
+            if initial_prompt is None:
+                initial_prompt = build_domain_prompt(keywords)
+            hotwords_str = build_hotwords_string(keywords)
+
         return FasterWhisperRecognizer(
             name.split(":", 1)[1],
             args.device,
             args.compute_type,
-            args.whisper_beam_size,
-            initial_prompt,
+            beam_size=getattr(args, "whisper_beam_size", 1),
+            initial_prompt=initial_prompt,
+            hotwords=hotwords_str,
+            cpu_threads=getattr(args, "cpu_threads", None),
         )
     if name == "vosk":
         model_path = Path(os.environ.get(
@@ -291,7 +292,7 @@ def measure_transcription(recognizer: Recognizer, audio_path: Path, language: st
     peak = [current_rss_mb()]
 
     def sample_memory() -> None:
-        while not stop.wait(0.01):
+        while not stop.wait(0.05):
             peak[0] = max(peak[0], current_rss_mb())
 
     sampler = threading.Thread(target=sample_memory, daemon=True)

@@ -1,6 +1,6 @@
 [
   {
-    "filename": "query_01_neutral_materials.wav",
+    "filename": "16k_query_01_neutral_materials.wav",
     "language": "en",
     "intent": "materials",
     "register": "neutral",
@@ -8,7 +8,7 @@
     "keywords": ["Gaudí", "trencadís"]
   },
   {
-    "filename": "query_02_polite_materials.wav",
+    "filename": "16k_query_02_polite_materials.wav",
     "language": "en",
     "intent": "materials",
     "register": "polite",
@@ -16,7 +16,7 @@
     "keywords": []
   },
   {
-    "filename": "query_03_analytical_materials.wav",
+    "filename": "16k_query_03_analytical_materials.wav",
     "language": "en",
     "intent": "materials",
     "register": "analytical",
@@ -24,7 +24,7 @@
     "keywords": ["modernisme"]
   },
   {
-    "filename": "query_04_neutral_architect.wav",
+    "filename": "16k_query_04_neutral_architect.wav",
     "language": "en",
     "intent": "architect",
     "register": "neutral",
@@ -32,7 +32,7 @@
     "keywords": ["Gaudí", "Casa Batlló"]
   },
   {
-    "filename": "query_05_polite_architect.wav",
+    "filename": "16k_query_05_polite_architect.wav",
     "language": "en",
     "intent": "architect",
     "register": "polite",
@@ -40,7 +40,7 @@
     "keywords": []
   },
   {
-    "filename": "query_06_analytical_date.wav",
+    "filename": "16k_query_06_analytical_date.wav",
     "language": "en",
     "intent": "date",
     "register": "analytical",
@@ -48,7 +48,7 @@
     "keywords": []
   },
   {
-    "filename": "query_07_neutral_date.wav",
+    "filename": "16k_query_07_neutral_date.wav",
     "language": "en",
     "intent": "date",
     "register": "neutral",
@@ -56,7 +56,7 @@
     "keywords": []
   },
   {
-    "filename": "query_08_polite_dragon_roof.wav",
+    "filename": "16k_query_08_polite_dragon_roof.wav",
     "language": "en",
     "intent": "dragon_roof",
     "register": "polite",
@@ -64,7 +64,7 @@
     "keywords": ["Casa Batlló", "dragon"]
   },
   {
-    "filename": "query_09_neutral_dragon_roof.wav",
+    "filename": "16k_query_09_neutral_dragon_roof.wav",
     "language": "en",
     "intent": "dragon_roof",
     "register": "neutral",
@@ -72,7 +72,7 @@
     "keywords": ["dragon", "Casa Batlló"]
   },
   {
-    "filename": "query_10_neutral_columns.wav",
+    "filename": "16k_query_10_neutral_columns.wav",
     "language": "en",
     "intent": "columns",
     "register": "neutral",
@@ -80,7 +80,7 @@
     "keywords": ["dragon"]
   },
   {
-    "filename": "query_11_polite_columns.wav",
+    "filename": "16k_query_11_polite_columns.wav",
     "language": "en",
     "intent": "columns",
     "register": "polite",
@@ -88,7 +88,7 @@
     "keywords": []
   },
   {
-    "filename": "query_12_neutral_mosaic.wav",
+    "filename": "16k_query_12_neutral_mosaic.wav",
     "language": "en",
     "intent": "mosaic",
     "register": "neutral",
@@ -96,7 +96,7 @@
     "keywords": ["trencadís", "Park Güell"]
   },
   {
-    "filename": "query_13_analytical_mosaic.wav",
+    "filename": "16k_query_13_analytical_mosaic.wav",
     "language": "en",
     "intent": "mosaic",
     "register": "analytical",
@@ -104,7 +104,7 @@
     "keywords": ["trencadís"]
   },
   {
-    "filename": "query_14_neutral_salamander.wav",
+    "filename": "16k_query_14_neutral_salamander.wav",
     "language": "en",
     "intent": "salamander",
     "register": "neutral",
@@ -112,7 +112,7 @@
     "keywords": ["salamander", "Park Güell"]
   },
   {
-    "filename": "query_15_polite_salamander.wav",
+    "filename": "16k_query_15_polite_salamander.wav",
     "language": "en",
     "intent": "salamander",
     "register": "polite",
@@ -120,7 +120,7 @@
     "keywords": ["salamander"]
   },
   {
-    "filename": "query_16_neutral_construction.wav",
+    "filename": "16k_query_16_neutral_construction.wav",
     "language": "en",
     "intent": "construction",
     "register": "neutral",
@@ -128,7 +128,7 @@
     "keywords": ["Sagrada Família", "Gaudí"]
   },
   {
-    "filename": "query_17_polite_construction.wav",
+    "filename": "16k_query_17_polite_construction.wav",
     "language": "en",
     "intent": "construction",
     "register": "polite",
@@ -136,7 +136,7 @@
     "keywords": []
   },
   {
-    "filename": "query_18_analytical_construction.wav",
+    "filename": "16k_query_18_analytical_construction.wav",
     "language": "en",
     "intent": "construction",
     "register": "analytical",
@@ -144,7 +144,7 @@
     "keywords": ["Gaudí", "Sagrada Família"]
   },
   {
-    "filename": "query_19_neutral_unesco.wav",
+    "filename": "16k_query_19_neutral_unesco.wav",
     "language": "en",
     "intent": "unesco",
     "register": "neutral",
@@ -152,7 +152,7 @@
     "keywords": ["Gaudí", "Casa Milà"]
   },
   {
-    "filename": "query_20_polite_unesco.wav",
+    "filename": "16k_query_20_polite_unesco.wav",
     "language": "en",
     "intent": "unesco",
     "register": "polite",
@@ -160,7 +160,7 @@
     "keywords": ["Gaudí", "Casa Milà"]
   },
   {
-    "filename": "query_21_neutral_park_history.wav",
+    "filename": "16k_query_21_neutral_park_history.wav",
     "language": "en",
     "intent": "park_history",
     "register": "neutral",
@@ -168,7 +168,7 @@
     "keywords": ["Park Güell", "Gaudí"]
   },
   {
-    "filename": "query_22_analytical_park_history.wav",
+    "filename": "16k_query_22_analytical_park_history.wav",
     "language": "en",
     "intent": "park_history",
     "register": "analytical",
@@ -176,7 +176,7 @@
     "keywords": ["Park Güell", "modernisme"]
   },
   {
-    "filename": "query_23_neutral_facades.wav",
+    "filename": "16k_query_23_neutral_facades.wav",
     "language": "en",
     "intent": "facades",
     "register": "neutral",
@@ -184,7 +184,7 @@
     "keywords": ["Sagrada Família", "Gaudí"]
   },
   {
-    "filename": "query_24_polite_facades.wav",
+    "filename": "16k_query_24_polite_facades.wav",
     "language": "en",
     "intent": "facades",
     "register": "polite",

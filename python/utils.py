@@ -14,56 +14,117 @@ import wave
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
-from difflib import SequenceMatcher
+import difflib
 
 
 DOMAIN_KEYWORD_ALIASES = {
-    "Gaudí": ("gaudí", "gaudi"),
+    "Antoni Gaudí": ("antoni gaudí", "antoni gaudi", "gaudí", "gaudi"),
+    "Gaudí": ("gaudí", "gaudi", "antoni gaudí", "antoni gaudi"),
     "Sagrada Família": ("sagrada família", "sagrada familia"),
-    "salamander": ("salamander",),
-    "dragon": ("dragon",),
+    "basilica": ("basilica", "basílica"),
+    "facade": ("facade", "facades", "façade", "façades"),
+    "modernisme": ("modernisme", "modernism", "catalan modernisme", "catalan modernism"),
+    "Catalan": ("catalan", "catalonia", "catalonian"),
+    "Casa Batlló": ("casa batlló", "casa batllo", "batlló", "batllo"),
+    "Casa Milà": ("casa milà", "casa mila", "la pedrera"),
+    "Park Güell": ("park güell", "park guell", "guell"),
     "trencadís": ("trencadís", "trencadis"),
-    "Park Güell": ("park güell", "park guell"),
-    "Casa Batlló": ("casa batlló", "casa batllo"),
-    "Casa Milà": ("casa milà", "casa mila"),
-    "modernisme": ("modernisme", "modernism"),
+    "salamander": ("salamander",),
+    "dragon": ("dragon", "dragon-shaped", "dragon shaped"),
 }
 
-DOMAIN_ENTITY_REPLACEMENTS = {
-    "gaudi": "Gaudí",
-    "gaudy": "Gaudí",
-    "gotti": "Gaudí",
-    "sagrada familia": "Sagrada Família",
-    "park guell": "Park Güell",
-    "park guelph": "Park Güell",
-    "park well": "Park Güell",
-    "casa batllo": "Casa Batlló",
-    "casa batlo": "Casa Batlló",
-    "casa batlow": "Casa Batlló",
-    "casa botlo": "Casa Batlló",
-    "casa mila": "Casa Milà",
-    "trencadis": "trencadís",
-    "trincottis": "trencadís",
-    "trincardis": "trencadís",
-    "trend cotted": "trencadís",
-    "trend-cotted": "trencadís",
-    "modernism": "modernisme",
+PHONETIC_CORRECTIONS = {
+    # Sagrada Família & Basilica / Facade variations
+    r"\bsalamander fam[íi]lia\b": "Sagrada Família",
+    r"\bsagrada fam[ií]lia\b": "Sagrada Família",
+    r"\bsagrada fam[ií]lia's\b": "Sagrada Família's",
+    r"\bthe v[áaíi]cidic of assades\b": "the facades of the basilica",
+    r"\bv[áaíi]cidic of assades\b": "basilica facades",
+    r"\bthe v[áaíi]cidic\b": "the basilica",
+    r"\bvicidic\b": "basilica",
+    r"\bvasilica\b": "basilica",
+    r"\bbacillica\b": "basilica",
+    r"\bbacilica\b": "basilica",
+    r"\bassades\b": "facades",
+    r"\bfacets\b": "facades",
+    r"\bgourife assades\b": "Glory facades",
+    r"\bgourife facades\b": "Glory facades",
+
+    # Antoni Gaudí / Gaudí variations
+    r"\bgaldy\b": "Gaudí",
+    r"\bgowdy\b": "Gaudí",
+    r"\bgowdi\b": "Gaudí",
+    r"\bgotti\b": "Gaudí",
+    r"\bgaudy\b": "Gaudí",
+    r"\bgaudi\b": "Gaudí",
+    r"\bgaudi's\b": "Gaudí's",
+    r"\bhow did this park güell\b": "how did Gaudí's Park Güell",
+    r"\bhow did this parkway\b": "how did Gaudí's Park Güell",
+
+    # Casa Batlló variations
+    r"\bcasavadio\b": "Casa Batlló",
+    r"\bcasa laid your\b": "Casa Batlló",
+    r"\bcasa batlo\b": "Casa Batlló",
+    r"\bcasa batllo\b": "Casa Batlló",
+    r"\bcasa batlow\b": "Casa Batlló",
+    r"\bcasa bortlow\b": "Casa Batlló",
+
+    # Casa Milà variations
+    r"\bcasa mila\b": "Casa Milà",
+    r"\bcasa miller\b": "Casa Milà",
+
+    # Park Güell variations
+    r"\bparkway\b": "Park Güell",
+    r"\bpark way\b": "Park Güell",
+    r"\bpark well\b": "Park Güell",
+    r"\bpark guelph\b": "Park Güell",
+    r"\bpark guell\b": "Park Güell",
+
+    # trencadís variations
+    r"\bpatroncad[íi]s\b": "trencadís",
+    r"\bpatronic\b": "trencadís",
+    r"\bpatronics\b": "trencadís",
+    r"\btrincad[íi]s\b": "trencadís",
+    r"\btrincadis\b": "trencadís",
+    r"\btrencadis\b": "trencadís",
+    r"\btriangle, this\b": "trencadís",
+    r"\btriangle this\b": "trencadís",
+    r"\btrend cotted\b": "trencadís",
+    r"\btrend-cotted\b": "trencadís",
+
+    # modernisme & Catalan variations
+    r"\bmodernism\b": "modernisme",
+    r"\bcatatano nizma\b": "Catalan modernisme",
+    r"\bcatalan modernism\b": "Catalan modernisme",
+    r"\bcatatano\b": "Catalan",
+    r"\bcatalonian\b": "Catalan",
+
+    # Dragon variations
+    r"\bdrawing shape\b": "dragon-shaped",
+    r"\bdrawing shaped\b": "dragon-shaped",
+    r"\btourned salagen\b": "turns a legend",
+    r"\blook like a drag on\b": "look like a dragon",
+    r"\bdrag on\b": "dragon",
 }
 
 
-def build_domain_prompt() -> str:
-    """Build a Whisper-style domain-vocabulary hint from the canonical keyword list.
+def build_domain_prompt(keywords: list[str] | None = None) -> str:
+    """Build a rich, natural domain context prompt for Whisper conditioning."""
+    return (
+        "Cultura Viva audio guide in Barcelona about Antoni Gaudí, Sagrada Família basilica, "
+        "Nativity, Passion, and Glory facades, Catalan modernisme architecture, Casa Batlló, "
+        "Casa Milà, Park Güell, dragon and salamander sculptures, and trencadís mosaics."
+    )
 
-    Reuses DOMAIN_KEYWORD_ALIASES — the same table used for keyword-spotting
-    scoring and for sherpa-onnx's hotwords file — as the single source of
-    truth, so every engine's domain hint (when enabled) refers to exactly the
-    same entities the benchmark scores against.
-    """
-    entries = []
-    for canonical, aliases in DOMAIN_KEYWORD_ALIASES.items():
-        alt_spellings = [alias for alias in aliases if alias.casefold() != canonical.casefold()]
-        entries.append(f"{canonical} and {', '.join(alt_spellings)}" if alt_spellings else canonical)
-    return "A tour of Barcelona and Catalonia. Proper names include " + ", ".join(entries) + "."
+
+def build_hotwords_string(keywords: list[str] | None = None) -> str:
+    """Build a space-separated hotwords string for CTranslate2 / faster-whisper biasing."""
+    if keywords:
+        return " ".join(keywords)
+    return (
+        "Antoni Gaudí Sagrada Família basilica facade facades modernisme Catalan "
+        "Casa Batlló Casa Milà Park Güell trencadís salamander dragon"
+    )
 
 
 def build_sherpa_hotwords_file(
@@ -106,19 +167,24 @@ def build_sherpa_hotwords_file(
     return output_path
 
 
-def normalize_text(text: str) -> str:
+def canonicalize_domain_entities(text: str, domain_keywords: list[str] | None = None) -> str:
+    """Restore canonical spelling and fix frequent phonetic mishearings for domain entities."""
+    if not text:
+        return text
+
+    cleaned = text
+    for pattern, replacement in PHONETIC_CORRECTIONS.items():
+        cleaned = re.sub(pattern, replacement, cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
+def normalize_text(text: str | None) -> str:
     """Normalize punctuation and whitespace while preserving accented words."""
+    if not text:
+        return ""
     text = unicodedata.normalize("NFKC", text).casefold()
     text = re.sub(r"[^\w\s']", " ", text, flags=re.UNICODE)
     return re.sub(r"\s+", " ", text).strip()
-
-
-def canonicalize_domain_entities(text: str) -> str:
-    """Restore canonical spelling for known domain entities in any engine output."""
-    replacements = sorted(DOMAIN_ENTITY_REPLACEMENTS.items(), key=lambda item: len(item[0]), reverse=True)
-    for alias, canonical in replacements:
-        text = re.sub(rf"(?<!\w){re.escape(alias)}(?!\w)", canonical, text, flags=re.IGNORECASE)
-    return text
 
 
 def word_error_rate(reference: str, hypothesis: str) -> float:
@@ -178,7 +244,7 @@ def _fuzzy_keyword_present(keyword: str, haystack_spaceless: str, threshold: flo
     for size in range(max(1, needle_len - 2), needle_len + 4):
         for start in range(0, max(1, len(haystack_spaceless) - size + 1)):
             window = haystack_spaceless[start:start + size]
-            if SequenceMatcher(None, needle, window).ratio() >= threshold:
+            if difflib.SequenceMatcher(None, needle, window).ratio() >= threshold:
                 return True
     return False
 

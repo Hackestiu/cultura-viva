@@ -794,6 +794,7 @@ dependencies = [
     { name = "psutil" },
     { name = "sherpa-onnx" },
     { name = "soundfile" },
+    { name = "tqdm" },
     { name = "vosk" },
 ]
 
@@ -806,6 +807,7 @@ requires-dist = [
     { name = "psutil", specifier = "==6.1.1" },
     { name = "sherpa-onnx", specifier = "==1.12.40" },
     { name = "soundfile", specifier = "==0.13.1" },
+    { name = "tqdm", specifier = ">=4.70.0" },
     { name = "vosk", specifier = "==0.3.45" },
 ]
 

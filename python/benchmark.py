@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from tqdm import tqdm
+
 from utils import (
     DOMAIN_KEYWORD_ALIASES,
     build_domain_prompt,
@@ -328,18 +330,28 @@ def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
     audio_dir = Path(args.audio_dir)
     results: list[dict[str, Any]] = []
     engine_started_at: dict[str, str] = {}
-    for engine_name in args.engines:
+    engines = list(args.engines)
+
+    for engine_idx, engine_name in enumerate(engines, start=1):
         try:
             recognizer = build_recognizer(engine_name, args)
         except Exception as error:
-            print(f"[SKIP] {engine_name}: {error}")
+            tqdm.write(f"[SKIP] {engine_name}: {error}")
             continue
         engine_started_at[engine_name] = current_timestamp_utc()
         engine_model_size_mb = getattr(recognizer, "model_size_mb", None)
-        for item in dataset:
+
+        pbar = tqdm(
+            dataset,
+            desc=f"[{engine_idx}/{len(engines)}] {engine_name}",
+            unit="audio",
+            dynamic_ncols=True,
+            leave=True,
+        )
+        for item in pbar:
             raw_audio_path = audio_dir / item.filename
             if not raw_audio_path.exists():
-                print(f"[SKIP] missing audio: {raw_audio_path}")
+                tqdm.write(f"[SKIP] missing audio: {raw_audio_path}")
                 continue
             # Normalize to 16 kHz mono PCM16 before any engine sees it. The
             # synthetic dataset already comes out this way, but a
@@ -352,6 +364,15 @@ def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
                 recognizer, audio_path, item.language
             )
             transcription = canonicalize_domain_entities(raw_transcription)
+            wer_val = word_error_rate(item.reference, transcription)
+            cer_val = character_error_rate(item.reference, transcription)
+            kw_acc = (
+                keyword_spotting_accuracy(item.reference, transcription, item.keywords)
+                if item.keywords
+                else None
+            )
+            rtf_val = (elapsed / duration) if duration else None
+
             row = {
                 "filename": item.filename,
                 "language": item.language,
@@ -362,12 +383,10 @@ def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
                 "domain_bias_applied": recognizer.domain_bias_applied,
                 "inference_time_sec": round(elapsed, 4),
                 "audio_duration_sec": round(duration, 4),
-                "rtf": round(elapsed / duration, 4) if duration else None,
-                "wer": round(word_error_rate(item.reference, transcription), 4),
-                "cer": round(character_error_rate(item.reference, transcription), 4),
-                "keyword_spotting_accuracy": round(
-                    keyword_spotting_accuracy(item.reference, transcription, item.keywords), 4
-                ) if item.keywords else None,
+                "rtf": round(rtf_val, 4) if rtf_val is not None else None,
+                "wer": round(wer_val, 4),
+                "cer": round(cer_val, 4),
+                "keyword_spotting_accuracy": round(kw_acc, 4) if kw_acc is not None else None,
                 "inference_latency_ms": round(elapsed * 1000, 2),
                 "peak_ram_mb": round(peak_ram_mb, 2),
                 "model_size_mb": engine_model_size_mb,
@@ -375,6 +394,18 @@ def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
                 "error": error_message,
             }
             results.append(row)
+
+            # Update progress bar with live metrics
+            postfix = {
+                "file": item.filename,
+                "WER": f"{wer_val:.1%}",
+                "RTF": f"{rtf_val:.2f}x" if rtf_val is not None else "N/A",
+                "RAM": f"{peak_ram_mb:.0f}MB",
+            }
+            if error_message:
+                postfix["status"] = "ERR"
+            pbar.set_postfix(postfix)
+
             if wandb_table is not None:
                 wandb_table.add_data(
                     row["engine"], row["filename"], row["language"], row["ground_truth"],
@@ -622,3 +653,9 @@ def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:
     figure.tight_layout()
     figure.savefig(plots_dir / "accuracy_latency.png", dpi=150)
     plt.close(figure)
+
+
+if __name__ == "__main__":
+    from main import main
+
+    main()

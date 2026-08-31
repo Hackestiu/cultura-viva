@@ -12,5 +12,6 @@ dependencies = [
     "psutil==6.1.1",
     "sherpa-onnx==1.12.40",
     "soundfile==0.13.1",
+    "tqdm>=4.70.0",
     "vosk==0.3.45",
 ]

@@ -14,9 +14,9 @@ committed to Git. To use it:
 
 1. Download the package from Drive (https://drive.google.com/drive/folders/1Mh7SzZXO3wE7YzRpU9vlUwrwgAqhhxot?usp=sharing). 
 2. Extract its `recorded` folder so its contents land directly under
-   `app/data_audio/recorded/` in this repo — i.e. this file's directory should end
+   `python/data_audio/recorded/` in this repo — i.e. this file's directory should end
    up containing the package's WAV files and `manifest.json` alongside it.
-3. Run `python main.py` from `app/` with no dataset flags — the recorded set is
+3. Run `python main.py` from `python/` with no dataset flags — the recorded set is
    picked up automatically. No extra flags or environment variables are needed for
    local runs.
 
@@ -80,8 +80,8 @@ place), or on the Arduino, where `app.yaml` sets `AUDIO_DIR`/`MANIFEST` to these
 paths explicitly:
 
 ```powershell
-cd app
+cd python
 python main.py --audio-dir data_audio\recorded --manifest data_audio\recorded\manifest.json
 ```
 
-On the Arduino, the same layout is expected at `/app/data_audio/recorded/`
+On the Arduino, the same layout is expected at `/python/data_audio/recorded/` (or via `app.yaml`).

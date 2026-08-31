@@ -182,8 +182,39 @@ intentional no-op here (see `sketch/sketch.ino`) since this benchmark doesn't
 use the board's MCU or the Python↔MCU Bridge.
 
 
-## Results / findings
+## Results / findings & Visualizations
 
 Local CPU runs write to `python/results_computer/`; App Lab runs on the device
 write to `python/results_arduino/`. Re-run on the target UNO Q before making
 deployment decisions — host timings and RAM are not edge measurements.
+
+### Visual performance evaluation (`visualize.py`)
+
+After running the benchmark (on the Arduino UNO Q or computer), run `visualize.py` to generate visual representations and an interactive HTML report:
+
+```powershell
+cd python
+uv run visualize.py
+```
+
+`visualize.py` automatically detects benchmark outputs (prioritizing `results_arduino/`, then `results_computer/`), and generates:
+
+- **Performance Summary Dashboard** (`plots/dashboard_summary.png`): All-in-one scorecard comparing WER/CER accuracy, latency, Real-Time Factor (RTF), and memory footprint.
+- **Accuracy vs. Latency Pareto Frontier** (`plots/accuracy_vs_latency_pareto.png`): Trade-off scatter plot highlighting Pareto-optimal models.
+- **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates edge streaming feasibility against the `RTF = 1.0` real-time boundary.
+- **Per-Utterance Distributions** (`plots/error_distribution_boxplots.png`): Robustness boxplots showing error variance across test clips.
+- **Interactive Evaluation Report** (`plots/evaluation_report.html`): Self-contained HTML report with model rankings and recommendations.
+
+#### Advanced visualization options:
+
+```powershell
+# Explicitly evaluate Arduino results:
+uv run visualize.py --input-dir results_arduino
+
+# Compare Arduino UNO Q vs. Host Computer directly:
+uv run visualize.py --input-dir results_arduino --compare-with results_computer
+
+# Display interactive matplotlib window:
+uv run visualize.py --show
+```
+

@@ -1,7 +1,7 @@
 # Local STT models
 
 Place downloaded model weights and extracted model directories here when running
-the standalone `app/` bundle locally. Model files are ignored by Git.
+the benchmark locally. Model files are ignored by Git.
 
 ```text
 models/
@@ -65,8 +65,8 @@ file (`--enable-domain-bias`); every other feature works without it.
 ## Arduino deployment
 
 Model binaries are not included in the packaged app archive (see
-[../README.md](../README.md)) because of their size. Copy the same directories
-above to the device under `/app/models/`, matching the paths in `app.yaml`; App Lab
+[../../README.md](../../README.md)) because of their size. Copy the same directories
+above to the device under `models/` (or `/python/models/`), matching the paths in `app.yaml`; App Lab
 points `VOSK_MODEL_DIR` and `SHERPA_ONNX_MODEL_DIR` at those locations
 automatically. faster-whisper models may download on first use, depending on the
 device's network access — download them on a computer and copy the Hugging Face

@@ -2,7 +2,7 @@
 name = "cultura-viva-stt-benchmark"
 version = "0.1.0"
 description = "Offline English speech-to-text benchmark for Cultura Viva"
-readme = "README.md"
+readme = "../README.md"
 requires-python = ">=3.10"
 dependencies = [
     "edge-tts==7.2.8",

@@ -1,0 +1,15 @@
+[project]
+name = "cultura-viva-stt-benchmark"
+version = "0.1.0"
+description = "Offline English speech-to-text benchmark for Cultura Viva"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "edge-tts==7.2.8",
+    "faster-whisper==1.1.1",
+    "matplotlib==3.9.4",
+    "psutil==6.1.1",
+    "sherpa-onnx==1.12.40",
+    "soundfile==0.13.1",
+    "vosk==0.3.45",
+]

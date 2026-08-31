@@ -19,7 +19,8 @@ stt-benchmark/
 │   ├── benchmark.py
 │   ├── dataset_generator.py
 │   ├── utils.py
-│   ├── requirements.txt
+│   ├── pyproject.toml
+│   ├── uv.lock
 │   ├── data_audio/      # synthetic manifest + WAVs; data_audio/recorded/ for human speech
 │   ├── models/          # Git-tracked placeholder — downloaded model files stay local
 │   ├── results_computer/ # JSON reports + plots from local runs
@@ -91,10 +92,8 @@ and are optional.
 
 ```powershell
 cd python
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python main.py --engines faster-whisper:tiny.en
+uv sync
+uv run python main.py --engines faster-whisper:tiny.en
 ```
 
 The application prefers the recorded dataset when its manifest and WAV files are
@@ -145,9 +144,9 @@ python main.py --audio-dir data_audio\recorded --manifest data_audio\recorded\ma
 ### Experiment tracking (optional)
 
 ```powershell
-python -m pip install wandb
+uv add wandb
 wandb login
-python main.py --wandb --enable-domain-bias
+uv run python main.py --wandb --enable-domain-bias
 ```
 
 Logs, per run: full CLI config, `dataset_source` (recorded/synthetic) and

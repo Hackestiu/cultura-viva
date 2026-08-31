@@ -5,7 +5,6 @@ runtime: python3
 entrypoint: python3 main.py
 workdir: /python
 restart: never
-requirements: requirements.txt
 dependencies:
   - faster-whisper==1.1.1
   - vosk==0.3.45

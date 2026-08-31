@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "edge-tts==7.2.8",
     "faster-whisper==1.1.1",
+    "gdown>=6.1.0",
     "matplotlib==3.9.4",
     "psutil==6.1.1",
     "sherpa-onnx==1.12.40",

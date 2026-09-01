@@ -4,9 +4,9 @@
     "avg_wer": 0.3248875,
     "avg_cer": 0.18910000000000002,
     "avg_keyword_spotting_accuracy": 0.7894736842105263,
-    "avg_inference_time_sec": 8.099020833333332,
-    "avg_inference_latency_ms": 8099.020416666666,
-    "max_peak_ram_mb": 328.32,
+    "avg_inference_time_sec": 7.8701333333333325,
+    "avg_inference_latency_ms": 7870.127083333333,
+    "max_peak_ram_mb": 330.44,
     "model_size_mb": 74.47,
     "domain_bias_applied": true,
     "num_utterances": 24

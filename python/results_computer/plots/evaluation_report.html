@@ -18,7 +18,7 @@
     <div class="container">
         <div class="header">
             <h1 style="margin:0 0 8px 0; color:#0F172A; font-size:24px;">STT Benchmark Model Evaluation Report</h1>
-            <p style="margin:0; color:#64748B; font-size:14px;">Source: <strong>C:\Users\lucia\Desktop\hackestiu\stt-benchmark\python\results_computer</strong> | Platform: <strong>Linux-7.0.0-g122c2c22d838-aarch64-with-glibc2.41</strong> | Tested Models: <strong>2</strong></p>
+            <p style="margin:0; color:#64748B; font-size:14px;">Source: <strong>/home/arduino/stt-benchmark/python/results_computer</strong> | Platform: <strong>Linux-7.0.0-g122c2c22d838-aarch64-with-glibc2.41</strong> | Tested Models: <strong>1</strong></p>
         </div>
 
         
@@ -26,10 +26,10 @@
             <h3 style="margin:0 0 6px 0; color:#1D4ED8; font-size:16px;">Recommendation for Arduino UNO Q Deployment</h3>
             <p style="margin:0; color:#1E40AF; font-size:14px;">
                 <strong>faster-whisper:base.en</strong> achieves the most balanced edge profile: 
-                <strong>18.1% WER</strong>, 
-                <strong>783 ms latency</strong> 
-                (0.06x RTF), 
-                and <strong>279 MB peak RAM</strong>.
+                <strong>16.3% WER</strong>, 
+                <strong>12865 ms latency</strong> 
+                (0.95x RTF), 
+                and <strong>404 MB peak RAM</strong>.
             </p>
         </div>
         
@@ -57,26 +57,13 @@
         <tr style="border-bottom:1px solid #E2E8F0; background:#F0FDF4;">
             <td style="padding:10px 14px; text-align:center; font-weight:bold;">#1</td>
             <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:base.en</td>
-            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#16A34A;">18.1%</td>
-            <td style="padding:10px 14px; text-align:right;">10.5%</td>
-            <td style="padding:10px 14px; text-align:right;">100.0%</td>
-            <td style="padding:10px 14px; text-align:right; font-weight:bold;">783 ms</td>
-            <td style="padding:10px 14px; text-align:center;">0.058x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
-            <td style="padding:10px 14px; text-align:right;">278.8 MB</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#16A34A;">16.3%</td>
+            <td style="padding:10px 14px; text-align:right;">9.6%</td>
+            <td style="padding:10px 14px; text-align:right;">94.7%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">12865 ms</td>
+            <td style="padding:10px 14px; text-align:center;">0.954x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">404.1 MB</td>
             <td style="padding:10px 14px; text-align:right;">140.9 MB</td>
-            <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
-        </tr>
-        
-        <tr style="border-bottom:1px solid #E2E8F0; ">
-            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#2</td>
-            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:tiny.en</td>
-            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">32.0%</td>
-            <td style="padding:10px 14px; text-align:right;">17.8%</td>
-            <td style="padding:10px 14px; text-align:right;">73.7%</td>
-            <td style="padding:10px 14px; text-align:right; font-weight:bold;">470 ms</td>
-            <td style="padding:10px 14px; text-align:center;">0.035x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
-            <td style="padding:10px 14px; text-align:right;">216.4 MB</td>
-            <td style="padding:10px 14px; text-align:right;">74.5 MB</td>
             <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
         </tr>
         

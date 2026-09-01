@@ -1,5 +1,0 @@
-name: Bluetooth Audio - Automated VOX
-description: Automatic Bluetooth audio transceiver with button mute and pairing controls for Arduino UNO Q.
-version: "1.0.0"
-ports: []
-bricks: []

@@ -50,6 +50,8 @@ To run Whisper Base smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor 
 - **Quantization (q5_1 / int8):** Reduces model memory footprint while cutting memory bandwidth pressure. The benchmark keeps q5_1 as the accuracy-first whisper.cpp target.
 - **CPU Threads (`--cpu-threads 2` by default):** Uses a conservative two-thread profile on the UNO Q; use `--cpu-threads 4` on a capable host after measuring memory.
 - **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
+- **Whisper.cpp keyword bias:** whisper.cpp does not expose faster-whisper-style hotwords; the shared Cultura Viva vocabulary is supplied through `initial_prompt` and carried into each decode window.
+- **CPU backend:** whisper.cpp GPU probing is disabled for predictable CPU execution on the UNO Q.
 - **Environment Management with uv:** Python dependencies are locked by UV. Large model files are downloaded into `models/`; they are intentionally not embedded in `uv.lock` or Git.
 
 ## Domain-Vocabulary Bias

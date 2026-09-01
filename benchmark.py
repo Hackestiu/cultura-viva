@@ -127,7 +127,14 @@ class WhisperCppRecognizer:
         self.cpu_threads = cpu_threads or 2
 
         # Native C++ model load through the Python wrapper.
-        self.model = Model(model_target, n_threads=self.cpu_threads)
+        self.model = Model(
+            model_target,
+            n_threads=self.cpu_threads,
+            context_params={"use_gpu": False},
+            print_progress=False,
+            print_realtime=False,
+            print_timestamps=False,
+        )
 
         self.model_path = resolved_model
         self.model_size_mb = directory_size_mb(Path(resolved_model)) if resolved_model else None
@@ -140,12 +147,21 @@ class WhisperCppRecognizer:
 
         kwargs: dict[str, Any] = {
             "language": language,
+            "no_context": True,
+            "no_timestamps": True,
+            "suppress_blank": True,
+            "temperature": 0.0,
+            "carry_initial_prompt": True,
             "strategy": (
                 _pywhispercpp.WHISPER_SAMPLING_BEAM_SEARCH
                 if self.beam_size > 1
                 else _pywhispercpp.WHISPER_SAMPLING_GREEDY
             ),
         }
+        if self.beam_size > 1:
+            kwargs["beam_search"] = {"beam_size": self.beam_size}
+        else:
+            kwargs["greedy"] = {"best_of": 1}
         if self.initial_prompt:
             kwargs["initial_prompt"] = self.initial_prompt
 

@@ -164,3 +164,5 @@ The production project should copy one adapter into its `microphone_module.py`
 or hold one instance on `MicrophoneManager`; do not construct the model for
 every utterance. Both adapters apply the same Cultura Viva prompt and final
 domain-entity canonicalization. Faster-whisper additionally receives hotwords.
+domain-entity canonicalization. Faster-whisper additionally receives hotwords;
+whisper.cpp uses its supported initial prompt and carries it into each decode window.

@@ -22,7 +22,7 @@ class FasterWhisperBaseSTT:
         *,
         device: str = "cpu",
         compute_type: str = "int8",
-        cpu_threads: int = 4,
+        cpu_threads: int = 2,
         beam_size: int = 1,
         initial_prompt: str = DOMAIN_PROMPT,
     ) -> None:

@@ -36,6 +36,7 @@ class WhisperCppBaseQ5_1STT:
             self._model = Model(
                 str(self.model_path),
                 n_threads=self.cpu_threads,
+                context_params={"use_gpu": False},
                 print_progress=False,
                 print_realtime=False,
                 print_timestamps=False,
@@ -49,7 +50,13 @@ class WhisperCppBaseQ5_1STT:
         segments = self._load().transcribe(
             str(audio_path),
             language=language,
+            no_context=True,
+            no_timestamps=True,
+            suppress_blank=True,
+            temperature=0.0,
+            carry_initial_prompt=True,
             strategy=_pywhispercpp.WHISPER_SAMPLING_GREEDY,
+            greedy={"best_of": 1},
             initial_prompt=self.initial_prompt,
         )
         return transcribe_result(" ".join(segment.text.strip() for segment in segments))

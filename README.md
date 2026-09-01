@@ -1,24 +1,27 @@
 # Cultura Viva STT Benchmark
 
-Offline English speech-to-text benchmark for Cultura Viva. Compares candidate STT
-engines on recognition quality and resource usage, for local development and for
-deployment on an Arduino UNO Q via Arduino App Lab.
+Offline English speech-to-text benchmark for Cultura Viva. Compares and evaluates 
+STT engines on recognition quality and resource usage, optimized for deployment on 
+an **Arduino UNO Q** (Qualcomm Dragonwing QRB2210 - 4x ARM Cortex-A53 @ 2.0 GHz) 
+via Arduino App Lab.
 
-This repository is itself a runnable Arduino App Lab app: the whole
-`stt-benchmark/` folder — `app.yaml`, `python/`, and `sketch/` — can be copied
-onto a UNO Q as-is and started with App Lab once models and
-recordings are in place.
+This repository is a runnable Arduino App Lab app: the whole `stt-benchmark/` folder 
+— `app.yaml`, `python/`, and `sketch/` — can be copied onto a UNO Q as-is and started 
+with App Lab once models and recordings are in place.
+
+---
 
 ## Repository layout
 
 ```text
 stt-benchmark/
 ├── app.yaml            # App Lab manifest (Python entry point + MCU linkage)
-├── python/              # the runnable benchmark (MPU / Debian Linux side)
+├── python/             # Runnable benchmark (MPU / Debian Linux side)
 │   ├── main.py
 │   ├── benchmark.py
 │   ├── dataset_generator.py
 │   ├── utils.py
+│   ├── visualize.py
 │   ├── pyproject.toml
 │   ├── uv.lock
 │   ├── data_audio/      # synthetic manifest + WAVs; data_audio/recorded/ for human speech
@@ -30,191 +33,109 @@ stt-benchmark/
 │   └── sketch.yaml
 ```
 
-- `app.yaml` is the App Lab manifest for this app. It points to the Python
-  entry point (`python/main.py`), declares output/model paths for the device,
-  and links the MCU sketch under `sketch/` so App Lab can
-  build and run both halves together. On the device it sets `OUTPUT_DIR:
-  results_arduino` and points `VOSK_MODEL_DIR`/`SHERPA_ONNX_MODEL_DIR` at the
-  on-device model paths automatically.
-- `sketch/sketch.ino` and `sketch/sketch.yaml` exist only so this is a valid
-  App Lab app structure. The MCU side is not used by this benchmark — see the
-  comments in `sketch.ino`.
+---
 
-## Tested models
+## Target Model & Optimizations (Arduino UNO Q)
 
-- faster-whisper `tiny.en` and `base.en`
-- Vosk small English
-- sherpa-onnx `zipformer-small-en`
+The primary target model for deployment is **Whisper Base** (`faster-whisper:base.en`).
 
-See `python/models/README.md` for install sources and paths.
+To run `Whisper Base` smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor without thermal throttling or high latency, the following optimizations are applied:
+
+1. **INT8 Quantization (`--compute-type int8`):** Reduces RAM usage to ~200 MB and leverages ARM NEON vector processing.
+2. **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor math parallelly across all 4 CPU cores.
+3. **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
+4. **Voice Activity Detection (`vad_filter=True`):** Pre-filters audio silences to skip non-speech segments before hitting the Whisper decoder.
+
+---
 
 ## Domain-vocabulary bias
 
-Off by default; enabled with `--enable-domain-bias`. When enabled:
-
-```text
-faster-whisper (tiny.en, base.en)  — yes
-sherpa-onnx (zipformer-small-en)   — yes
-vosk                                — no
-```
+Off by default; enabled with `--enable-domain-bias`. 
+When enabled, domain-specific keywords (Gaudí, Sagrada Família, trencadís, etc.) are injected as initial prompts/hotwords.
 
 Every prediction row records `domain_bias_applied` for the engine that produced it.
 
-## Dataset & domain keywords
+---
 
-`python/data_audio/manifest.json` is the synthetic benchmark ground truth; a
-separate recorded human-speech set is distributed outside the repo. See
-`python/data_audio/recorded/README.md` for the recorded set.
+## Dataset & Domain Keywords
 
-Audio must be 16 kHz, mono, 16-bit PCM WAV, matching the manifest schema. If you
-change a query, regenerate the WAV files and manifest together.
+`python/data_audio/manifest.json` contains synthetic benchmark ground truth; real human speech recordings should be placed under `python/data_audio/recorded/`.
 
-## Evaluation metrics
+Audio files **must** be 16 kHz, mono, 16-bit PCM WAV.
 
-Per utterance and aggregate reports include:
+---
 
-- **WER**, **CER** — word/character error rate against the manifest's ground truth.
-- **Domain keyword spotting accuracy** — recovery rate of the canonical heritage
-  entities (Gaudí, Sagrada Família, trencadís, etc.) listed in a clip's `keywords`.
-- **RTF** (real-time factor) and **inference latency** (ms) — measured after model
-  loading; load time is excluded.
-- **Peak RAM** (MB) — host-side process measurement; treat as a comparison signal,
-  not an Arduino deployment measurement.
-- **Model size on disk** (MB), where the model path is local.
-- **`domain_bias_applied`** — whether the domain-vocabulary hint was actually applied
-  for that engine on that run (see "Domain-vocabulary bias" above).
+## Arduino UNO Q Execution Guide
 
-Each engine writes a schema-versioned JSON file under `predictions/`; aggregate
-metrics go in `summary.json`. Comparison plots are derived from the JSON reports
-and are optional.
+Follow these steps to execute the **Whisper Base** benchmark on the Arduino UNO Q Linux environment.
 
-## Local execution (computer)
+### Step 1: System Performance Configuration
+Before running the benchmark, open a terminal on the Arduino UNO Q (Debian Linux side) and lock all 4 CPU cores to maximum clock frequency (2.0 GHz) and set OpenMP threads:
 
-```powershell
+```bash
+# Set CPU governor to maximum performance
+sudo echo "performance" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+
+# Set OpenMP and OpenBLAS thread limits to match physical cores
+export OMP_NUM_THREADS=4
+export OPENBLAS_NUM_THREADS=4
+```
+
+### Step 2: Prepare Recorded Audio Dataset
+Copy the recorded WAV audio files and manifest to the board:
+```text
+~/ArduinoApps/stt-benchmark/python/data_audio/recorded/*.wav
+~/ArduinoApps/stt-benchmark/python/data_audio/recorded/manifest.json
+```
+
+### Step 3: Run Benchmark (Whisper Base)
+Navigate to the `python` directory and execute the runner specifying **Whisper Base** with INT8 precision:
+
+```bash
+cd python
+
+# Execution:
+uv run python main.py \
+  --engines faster-whisper:base.en \
+  --compute-type int8 \
+  --cpu-threads 4 \
+  --whisper-beam-size 1 \
+  --enable-domain-bias \
+  --output-dir results_arduino
+
+---
+
+## Local Execution (Host Computer)
+
+For baseline testing or computer-side comparisons:
+
+```bash
 cd python
 uv sync
-uv run python main.py --engines faster-whisper:tiny.en
+uv run python main.py --engines faster-whisper:base.en --compute-type int8
 ```
 
-The application prefers the recorded dataset when its manifest and WAV files are
-present; otherwise it uses the synthetic set, generating it first if needed
-(requires internet access for Edge TTS — intended for a computer, not the Arduino).
+Results will be written to `python/results_computer/`.
 
-Results are written to `python/results_computer/`: per-engine predictions under
-`results_computer/predictions/<engine>.json`, aggregate metrics in
-`results_computer/summary.json`, and plots under `results_computer/plots/`.
+---
 
-To compare all configured engines:
+## Results & Visualizations (`visualize.py`)
 
-```powershell
-python main.py
-```
+After the benchmark finishes executing on the Arduino UNO Q, run `visualize.py` to generate visual performance reports and an interactive HTML dashboard.
 
-To apply the domain-vocabulary hint to every engine that supports it (see
-"Domain-vocabulary bias" above for which engines that is):
-
-```powershell
-python main.py --enable-domain-bias
-```
-
-Engines with missing Python dependencies or model files are skipped with a
-message — at least one installed engine and model is required for a useful run.
-
-### Engine model paths
-
-The runner looks for bundled model files under `python/models/` by default. If
-your models live elsewhere, set their paths before running (see
-`python/models/README.md` for what each path must contain):
-
-```powershell
-$env:VOSK_MODEL_DIR = 'D:\models\vosk-model-small-en-us-0.15'
-$env:SHERPA_ONNX_MODEL_DIR = 'D:\models\sherpa-onnx-en'
-python main.py --engines vosk sherpa-onnx
-```
-
-### Recorded audio set
-
-To test the recorded package on a computer, extract it under
-`python/data_audio/recorded/` (see `python/data_audio/recorded/README.md`) and run:
-
-```powershell
-python main.py --audio-dir data_audio\recorded --manifest data_audio\recorded\manifest.json
-```
-
-### Experiment tracking (optional)
-
-```powershell
-uv add wandb
-wandb login
-uv run python main.py --wandb --enable-domain-bias
-```
-
-Logs, per run: full CLI config, `dataset_source` (recorded/synthetic) and
-`domain-bias-on`/`domain-bias-off` as tags, a per-utterance predictions table
-(including `raw_transcription` vs. the canonicalized `transcription`, so cosmetic
-name-fixing can be distinguished from real recognition errors), per-engine
-aggregate metrics, and the `predictions/` JSON files plus the domain-bias hotwords
-file (when used) as a versioned artifact. Off by default — nothing changes if
-you don't pass `--wandb`.
-
-## Arduino App Lab deployment
-
-This repo's root is laid out as an App Lab app (`app.yaml` + `python/` + `sketch/`),
-so the whole `stt-benchmark/` folder is what you deploy — no separate packaging
-step is required. Models, the recorded audio set, and previous local results are
-kept out of git and are copied to the device separately, alongside the code.
-
-1. **Install App Lab** and run it at least once against your UNO Q to configure
-   the board and update its packages/firmware.
-2. **Get the app onto the device.** 
-3. **Copy models and the recorded audio set onto the device separately**, laid
-   out as:
-   ```text
-   ~/ArduinoApps/stt-benchmark/python/data_audio/recorded/*.wav
-   ~/ArduinoApps/stt-benchmark/python/data_audio/recorded/manifest.json
-   ```
-   and the models as documented in `python/models/README.md`, matching the
-   device paths referenced in `app.yaml`.
-4. **Run the app.** 
-
-`sketch/` is only present because App Lab apps require an MCU half; it's an
-intentional no-op here (see `sketch/sketch.ino`) since this benchmark doesn't
-use the board's MCU or the Python↔MCU Bridge.
-
-
-## Results / findings & Visualizations
-
-Local CPU runs write to `python/results_computer/`; App Lab runs on the device
-write to `python/results_arduino/`. Re-run on the target UNO Q before making
-deployment decisions — host timings and RAM are not edge measurements.
-
-### Visual performance evaluation (`visualize.py`)
-
-After running the benchmark (on the Arduino UNO Q or computer), run `visualize.py` to generate visual representations and an interactive HTML report:
-
-```powershell
+```bash
 cd python
-uv run visualize.py
-```
-
-`visualize.py` automatically detects benchmark outputs (prioritizing `results_arduino/`, then `results_computer/`), and generates:
-
-- **Performance Summary Dashboard** (`plots/dashboard_summary.png`): All-in-one scorecard comparing WER/CER accuracy, latency, Real-Time Factor (RTF), and memory footprint.
-- **Accuracy vs. Latency Pareto Frontier** (`plots/accuracy_vs_latency_pareto.png`): Trade-off scatter plot highlighting Pareto-optimal models.
-- **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates edge streaming feasibility against the `RTF = 1.0` real-time boundary.
-- **Per-Utterance Distributions** (`plots/error_distribution_boxplots.png`): Robustness boxplots showing error variance across test clips.
-- **Interactive Evaluation Report** (`plots/evaluation_report.html`): Self-contained HTML report with model rankings and recommendations.
-
-#### Advanced visualization options:
-
-```powershell
-# Explicitly evaluate Arduino results:
 uv run visualize.py --input-dir results_arduino
-
-# Compare Arduino UNO Q vs. Host Computer directly:
-uv run visualize.py --input-dir results_arduino --compare-with results_computer
-
-# Display interactive matplotlib window:
-uv run visualize.py --show
 ```
 
+This generates:
+- **Performance Summary Dashboard** (`plots/dashboard_summary.png`): Combined WER/CER, Latency, RTF, and Peak RAM footprint.
+- **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates execution speed relative to real-time audio playback (`RTF < 1.0`).
+- **Interactive Evaluation Report** (`plots/evaluation_report.html`): Self-contained HTML report.
+
+### Comparing Host Computer vs. Arduino UNO Q:
+If you have run the benchmark on both a PC and the Arduino board:
+
+```bash
+uv run visualize.py --input-dir results_arduino --compare-with results_computer
+```

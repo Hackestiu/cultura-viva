@@ -71,11 +71,12 @@ class FasterWhisperRecognizer:
         from faster_whisper import WhisperModel
 
         local_path = resolve_faster_whisper_path(model_name)
-        threads = cpu_threads or min(8, os.cpu_count() or 4)
+        threads = cpu_threads or 4
+        
         self.model = WhisperModel(
             local_path or model_name,
             device=device,
-            compute_type=compute_type,
+            compute_type=compute_type, 
             cpu_threads=threads,
         )
         self.model_size_mb = directory_size_mb(Path(local_path)) if local_path else None
@@ -94,7 +95,8 @@ class FasterWhisperRecognizer:
             temperature=0.0,
             suppress_blank=True,
             without_timestamps=True,
-            vad_filter=False,
+            vad_filter=True, 
+            vad_parameters=dict(min_silence_duration_ms=500),
             condition_on_previous_text=False,
             initial_prompt=self.initial_prompt,
             hotwords=self.hotwords,

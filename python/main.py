@@ -81,17 +81,22 @@ def parse_args() -> argparse.Namespace:
         "--engines",
         nargs="+",
         default=[
-            "faster-whisper:tiny.en", "faster-whisper:base.en",
-            "vosk", "sherpa-onnx"
+            "whisper.cpp:base.en-q5_0",
+            # Other engines preserved in codebase (pass via CLI or uncomment):
+            # "whisper.cpp:base.en-q4_0",
+            # "faster-whisper:base.en",
+            # "faster-whisper:tiny.en",
+            # "vosk",
+            # "sherpa-onnx",
         ],
+        help="STT engines to benchmark (default: whisper.cpp:base.en-q5_0)",
     )
     parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     parser.add_argument("--compute-type", default="int8")
-    parser.add_argument("--cpu-threads", type=int, default=None, help="CPU threads for CTranslate2 / faster-whisper")
+    parser.add_argument("--cpu-threads", type=int, default=4, help="CPU threads for inference (default: 4)")
     parser.add_argument("--whisper-beam-size", type=int, default=1, help="Whisper beam size (1 = greedy, fastest)")
-    parser.add_argument("--whisper-initial-prompt", default=None)
-    parser.add_argument("--enable-domain-bias", action="store_true", default=True, help="Enable domain prompt and hotwords biasing (default: True)")
-    parser.add_argument("--no-domain-bias", dest="enable_domain_bias", action="store_false", help="Disable domain biasing")
+    parser.add_argument("--whisper-initial-prompt", default=None, help="Custom prompt override (domain bias prompt is used by default)")
+    parser.add_argument("--whisper-cpp-bin", default=os.getenv("WHISPER_CPP_BIN"), help="Path to whisper-cli binary")
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--wandb-project", default="cultura-viva-stt-benchmark")
     return parser.parse_args()
@@ -111,7 +116,7 @@ def main() -> None:
             config=vars(args),
             tags=[
                 dataset_source,
-                "domain-bias-on" if args.enable_domain_bias else "domain-bias-off",
+                "domain-bias",
                 args.device,
             ],
         )

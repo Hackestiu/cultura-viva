@@ -185,35 +185,36 @@ def load_benchmark_data(results_dir: Path) -> BenchmarkData:
             predictions=preds,
         )
 
-    # If summary was missing, construct from predictions
-    if not engines and by_engine_preds:
-        for eng_name, preds in by_engine_preds.items():
-            wer_list = [p["wer"] for p in preds if "wer" in p and p["wer"] == p["wer"]]
-            cer_list = [p["cer"] for p in preds if "cer" in p and p["cer"] == p["cer"]]
-            lat_list = [p["inference_latency_ms"] for p in preds if "inference_latency_ms" in p]
-            rtf_list = [p["rtf"] for p in preds if "rtf" in p and p["rtf"] is not None]
-            kw_list = [p["keyword_spotting_accuracy"] for p in preds if p.get("keyword_spotting_accuracy") is not None]
-            ram_list = [p["peak_ram_mb"] for p in preds if "peak_ram_mb" in p]
-            
-            engines[eng_name] = EngineSummary(
-                engine=eng_name,
-                avg_wer=sum(wer_list) / len(wer_list) if wer_list else 0.0,
-                avg_cer=sum(cer_list) / len(cer_list) if cer_list else 0.0,
-                avg_keyword_spotting_accuracy=sum(kw_list) / len(kw_list) if kw_list else None,
-                avg_inference_time_sec=(sum(lat_list) / len(lat_list) / 1000.0) if lat_list else 0.0,
-                avg_inference_latency_ms=sum(lat_list) / len(lat_list) if lat_list else 0.0,
-                avg_rtf=sum(rtf_list) / len(rtf_list) if rtf_list else None,
-                max_peak_ram_mb=max(ram_list) if ram_list else 0.0,
-                model_size_mb=preds[0].get("model_size_mb") if preds else None,
-                domain_bias_applied=preds[0].get("domain_bias_applied", False) if preds else False,
-                num_utterances=len(preds),
-                wer_list=wer_list,
-                cer_list=cer_list,
-                latency_ms_list=lat_list,
-                rtf_list=rtf_list,
-                keyword_accuracy_list=kw_list,
-                predictions=preds,
-            )
+    # Also include any engines present in predictions/ that weren't in summary.json
+    for eng_name, preds in by_engine_preds.items():
+        if eng_name in engines:
+            continue
+        wer_list = [p["wer"] for p in preds if "wer" in p and p["wer"] == p["wer"]]
+        cer_list = [p["cer"] for p in preds if "cer" in p and p["cer"] == p["cer"]]
+        lat_list = [p["inference_latency_ms"] for p in preds if "inference_latency_ms" in p]
+        rtf_list = [p["rtf"] for p in preds if "rtf" in p and p["rtf"] is not None]
+        kw_list = [p["keyword_spotting_accuracy"] for p in preds if p.get("keyword_spotting_accuracy") is not None]
+        ram_list = [p["peak_ram_mb"] for p in preds if "peak_ram_mb" in p]
+
+        engines[eng_name] = EngineSummary(
+            engine=eng_name,
+            avg_wer=sum(wer_list) / len(wer_list) if wer_list else 0.0,
+            avg_cer=sum(cer_list) / len(cer_list) if cer_list else 0.0,
+            avg_keyword_spotting_accuracy=sum(kw_list) / len(kw_list) if kw_list else None,
+            avg_inference_time_sec=(sum(lat_list) / len(lat_list) / 1000.0) if lat_list else 0.0,
+            avg_inference_latency_ms=sum(lat_list) / len(lat_list) if lat_list else 0.0,
+            avg_rtf=sum(rtf_list) / len(rtf_list) if rtf_list else None,
+            max_peak_ram_mb=max(ram_list) if ram_list else 0.0,
+            model_size_mb=preds[0].get("model_size_mb") if preds else None,
+            domain_bias_applied=preds[0].get("domain_bias_applied", False) if preds else False,
+            num_utterances=len(preds),
+            wer_list=wer_list,
+            cer_list=cer_list,
+            latency_ms_list=lat_list,
+            rtf_list=rtf_list,
+            keyword_accuracy_list=kw_list,
+            predictions=preds,
+        )
 
     return BenchmarkData(
         source_dir=results_dir,

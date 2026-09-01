@@ -22,10 +22,11 @@ stt-benchmark/
 │   ├── dataset_generator.py
 │   ├── utils.py
 │   ├── visualize.py
+│   ├── setup_whisper_cpp.sh # Lean compilation script for Arduino UNO Q
 │   ├── pyproject.toml
 │   ├── uv.lock
 │   ├── data_audio/      # synthetic manifest + WAVs; data_audio/recorded/ for human speech
-│   ├── models/          # Git-tracked placeholder — downloaded model files stay local
+│   ├── models/          # Compiled whisper-cli binary & downloaded model weights
 │   ├── results_computer/ # JSON reports + plots from local runs
 │   └── results_arduino/  # written by App Lab runs on the UNO Q, per app.yaml
 ├── sketch/               # MCU (Zephyr) side — placeholder, this app is Python-only
@@ -35,25 +36,37 @@ stt-benchmark/
 
 ---
 
-## Target Model & Optimizations (Arduino UNO Q)
+## Benchmark Models
 
-The primary target model for deployment is **Whisper Base** (`faster-whisper:base.en`).
+The benchmark evaluates edge-capable English STT models optimized for the **Arduino UNO Q** (4x ARM Cortex-A53 @ 2.0 GHz):
 
-To run `Whisper Base` smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor without thermal throttling or high latency, the following optimizations are applied:
-
-1. **INT8 Quantization (`--compute-type int8`):** Reduces RAM usage to ~200 MB and leverages ARM NEON vector processing.
-2. **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor math parallelly across all 4 CPU cores.
-3. **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
-4. **Voice Activity Detection (`vad_filter=True`):** Pre-filters audio silences to skip non-speech segments before hitting the Whisper decoder.
+- **Primary Target Model (Default):** `whisper.cpp:base.en-q5_0` (Whisper Base 5-bit quantized GGML model running natively in C++ with ARM NEON SIMD vector optimization).
+- **Other Available Models (Preserved in Codebase):**
+  - `whisper.cpp:base.en-q4_0` (Whisper Base 4-bit quantized GGML model).
+  - `faster-whisper:base.en` (Whisper Base in CTranslate2 INT8).
+  - `faster-whisper:tiny.en` (Whisper Tiny in CTranslate2 INT8).
+  - `vosk` (Kaldi acoustic model for English).
+  - `sherpa-onnx` (Zipformer Transducer ONNX model).
 
 ---
 
-## Domain-vocabulary bias
+## Target Optimizations (Arduino UNO Q)
 
-Off by default; enabled with `--enable-domain-bias`. 
-When enabled, domain-specific keywords (Gaudí, Sagrada Família, trencadís, etc.) are injected as initial prompts/hotwords.
+To run `Whisper Base` smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor with minimal latency and low RAM footprint, the following optimizations are applied:
 
-Every prediction row records `domain_bias_applied` for the engine that produced it.
+1. **ARM NEON SIMD & Native C++ (`whisper.cpp`):** Direct 128-bit vector processing on ARMv8 CPU cores without Python runtime overhead.
+2. **Quantization (`q5_0` / `q4_0` / `int8`):** Reduces model memory footprint to ~60 MB (`q5_0`) or ~45 MB (`q4_0`), cutting memory bandwidth pressure while preserving high transcription accuracy.
+3. **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor computation parallelly across all 4 physical CPU cores.
+4. **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
+5. **Minimal Disk Footprint with `uv`:** The compiled `whisper-cli` binary is stripped to ~2.5 MB, and intermediate build files are cleaned up, avoiding heavy disk usage on the board.
+
+---
+
+## Domain-Vocabulary Bias 
+
+Domain vocabulary bias is always enabled by default. It injects Cultura Viva domain keywords (*Antoni Gaudí, Sagrada Família, basilica, facade, modernisme, Catalan, Casa Batlló, Casa Milà, Park Güell, trencadís, salamander, dragon, Barcelona, Passeig de Gràcia*) as contextual prompts and hotwords, and applies phonetic entity canonicalization to ensure top accuracy on cultural terms.
+
+Every exported prediction record indicates `domain_bias_applied: true` for compatible engines.
 
 ---
 
@@ -61,16 +74,16 @@ Every prediction row records `domain_bias_applied` for the engine that produced 
 
 `python/data_audio/manifest.json` contains synthetic benchmark ground truth; real human speech recordings should be placed under `python/data_audio/recorded/`.
 
-Audio files **must** be 16 kHz, mono, 16-bit PCM WAV.
+Audio files **must** be 16 kHz, mono, 16-bit PCM WAV (the benchmark automatically normalizes other formats if needed).
 
 ---
 
 ## Arduino UNO Q Execution Guide
 
-Follow these steps to execute the **Whisper Base** benchmark on the Arduino UNO Q Linux environment.
+Follow these steps to setup, compile, and execute the benchmark on the Arduino UNO Q Debian Linux environment.
 
 ### Step 1: System Performance Configuration
-Before running the benchmark, open a terminal on the Arduino UNO Q (Debian Linux side) and lock all 4 CPU cores to maximum clock frequency (2.0 GHz) and set OpenMP threads:
+Open a terminal on the Arduino UNO Q and lock all 4 CPU cores to maximum clock frequency (2.0 GHz) and set OpenMP / OpenBLAS thread limits:
 
 ```bash
 # Set CPU governor to maximum performance
@@ -88,20 +101,43 @@ Copy the recorded WAV audio files and manifest to the board:
 ~/ArduinoApps/stt-benchmark/python/data_audio/recorded/manifest.json
 ```
 
-### Step 3: Run Benchmark (Whisper Base)
-Navigate to the `python` directory and execute the runner specifying **Whisper Base** with INT8 precision:
+### Step 3: Setup & Compile whisper.cpp with ARM NEON
+Navigate to the `python` directory and execute the lean setup script to compile `whisper-cli` with ARM NEON optimizations and download the quantized model (~60 MB):
 
 ```bash
-cd python
+cd ~/ArduinoApps/stt-benchmark/python
 
-# Execution:
-uv run python main.py \
-  --engines faster-whisper:base.en \
-  --compute-type int8 \
-  --cpu-threads 4 \
-  --whisper-beam-size 1 \
-  --enable-domain-bias \
-  --output-dir results_arduino
+# Compiles whisper.cpp with ARM NEON and downloads ggml-base.en-q5_0.bin:
+bash setup_whisper_cpp.sh base.en-q5_0
+```
+
+### Step 4: Sync Python Dependencies with `uv`
+```bash
+uv sync
+```
+
+### Step 5: Run Benchmark
+By default, the benchmark runs the optimized **`whisper.cpp:base.en-q5_0`** model:
+
+```bash
+# Optimized execution:
+uv run python main.py --output-dir results_arduino
+```
+
+#### Running Other Available Models:
+To run 4-bit quantization or compare against other preserved engines, pass the `--engines` argument:
+
+```bash
+# Run 4-bit quantized Whisper Base:
+# (First download the model with: bash setup_whisper_cpp.sh base.en-q4_0)
+uv run python main.py --engines whisper.cpp:base.en-q4_0 --output-dir results_arduino
+
+# Compare against faster-whisper Base INT8:
+uv run python main.py --engines faster-whisper:base.en --output-dir results_arduino
+
+# Run Vosk or Sherpa-ONNX:
+uv run python main.py --engines vosk sherpa-onnx --output-dir results_arduino
+```
 
 ---
 
@@ -112,7 +148,7 @@ For baseline testing or computer-side comparisons:
 ```bash
 cd python
 uv sync
-uv run python main.py --engines faster-whisper:base.en --compute-type int8
+uv run python main.py --output-dir results_computer
 ```
 
 Results will be written to `python/results_computer/`.
@@ -121,14 +157,14 @@ Results will be written to `python/results_computer/`.
 
 ## Results & Visualizations (`visualize.py`)
 
-After the benchmark finishes executing on the Arduino UNO Q, run `visualize.py` to generate visual performance reports and an interactive HTML dashboard.
+After the benchmark finishes executing on the Arduino UNO Q, run `visualize.py` to generate visual performance reports and an interactive HTML dashboard across all benchmarked models:
 
 ```bash
 cd python
 uv run visualize.py --input-dir results_arduino
 ```
 
-This generates:
+This generates in `results_arduino/plots/`:
 - **Performance Summary Dashboard** (`plots/dashboard_summary.png`): Combined WER/CER, Latency, RTF, and Peak RAM footprint.
 - **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates execution speed relative to real-time audio playback (`RTF < 1.0`).
 - **Interactive Evaluation Report** (`plots/evaluation_report.html`): Self-contained HTML report.

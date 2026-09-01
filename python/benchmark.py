@@ -27,6 +27,8 @@ from utils import (
     find_domain_keywords,
     keyword_spotting_accuracy,
     resolve_faster_whisper_path,
+    resolve_whisper_cpp_model_path,
+    resolve_whisper_cpp_binary,
     run_metadata,
     wav_duration_seconds,
     word_error_rate,
@@ -102,6 +104,76 @@ class FasterWhisperRecognizer:
             hotwords=self.hotwords,
         )
         return " ".join(segment.text.strip() for segment in segments).strip()
+
+
+class WhisperCppRecognizer:
+    """whisper.cpp adapter compiled with ARM NEON optimizations and supporting GGML quantized models."""
+
+    def __init__(
+        self,
+        model_name: str,
+        binary_path: str | None = None,
+        cpu_threads: int | None = None,
+        beam_size: int = 1,
+        initial_prompt: str | None = None,
+    ) -> None:
+        import subprocess
+
+        self.binary_path = binary_path or resolve_whisper_cpp_binary()
+        if not self.binary_path or not Path(self.binary_path).is_file():
+            raise FileNotFoundError(
+                f"whisper.cpp binary not found. "
+                "Compile it with 'bash setup_whisper_cpp.sh' or set WHISPER_CPP_BIN."
+            )
+        resolved_model = resolve_whisper_cpp_model_path(model_name)
+        if not resolved_model:
+            raise FileNotFoundError(
+                f"whisper.cpp model '{model_name}' not found. "
+                f"Place ggml-{model_name}.bin in models/ or download it with 'bash setup_whisper_cpp.sh'."
+            )
+        self.model_path = resolved_model
+        self.model_size_mb = directory_size_mb(Path(self.model_path))
+        self.cpu_threads = cpu_threads or 4
+        self.beam_size = beam_size
+        self.initial_prompt = initial_prompt
+        self.domain_bias_applied = initial_prompt is not None
+
+    def transcribe(self, audio_path: Path, language: str) -> str:
+        import subprocess
+
+        cmd = [
+            str(self.binary_path),
+            "-m", str(self.model_path),
+            "-f", str(audio_path),
+            "-t", str(self.cpu_threads),
+            "-l", language,
+            "-bs", str(self.beam_size),
+            "-nt",  # no timestamps in output
+            "-np",  # no progress output
+        ]
+        if self.initial_prompt:
+            cmd.extend(["--prompt", self.initial_prompt])
+
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=True,
+        )
+
+        lines = []
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if not line or line.startswith("whisper_") or line.startswith("system_info:") or line.startswith("main:"):
+                continue
+            cleaned = re.sub(r"\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]", "", line).strip()
+            if cleaned:
+                lines.append(cleaned)
+        return " ".join(lines).strip()
+
 
 
 class VoskRecognizer:
@@ -231,18 +303,22 @@ def load_manifest(path: Path) -> list[DatasetItem]:
 
 def build_recognizer(name: str, args: Any) -> Recognizer:
     """Create one backend lazily so missing optional dependencies are isolated."""
-    enable_domain_bias = getattr(args, "enable_domain_bias", False)
+    keywords = list(DOMAIN_KEYWORD_ALIASES.keys())
+    domain_prompt = build_domain_prompt(keywords)
+    hotwords_str = build_hotwords_string(keywords)
 
+    if name.startswith("whisper.cpp:"):
+        model_name = name.split(":", 1)[1]
+        initial_prompt = getattr(args, "whisper_initial_prompt", None) or domain_prompt
+        return WhisperCppRecognizer(
+            model_name=model_name,
+            binary_path=getattr(args, "whisper_cpp_bin", None),
+            cpu_threads=getattr(args, "cpu_threads", 4),
+            beam_size=getattr(args, "whisper_beam_size", 1),
+            initial_prompt=initial_prompt,
+        )
     if name.startswith("faster-whisper:"):
-        initial_prompt = getattr(args, "whisper_initial_prompt", None)
-        keywords = list(DOMAIN_KEYWORD_ALIASES.keys())
-
-        hotwords_str = None
-        if enable_domain_bias:
-            if initial_prompt is None:
-                initial_prompt = build_domain_prompt(keywords)
-            hotwords_str = build_hotwords_string(keywords)
-
+        initial_prompt = getattr(args, "whisper_initial_prompt", None) or domain_prompt
         return FasterWhisperRecognizer(
             name.split(":", 1)[1],
             args.device,
@@ -268,20 +344,18 @@ def build_recognizer(name: str, args: Any) -> Recognizer:
         ))
         if not model_path.is_dir():
             raise FileNotFoundError(f"sherpa-onnx model directory not found: {model_path}")
-        hotwords_file = None
-        if enable_domain_bias:
-            hotwords_file = build_sherpa_hotwords_file(
-                DOMAIN_KEYWORD_ALIASES.keys(),
-                model_path,
-                CACHE_DIR / "cultura_viva_hotwords.txt",
+        hotwords_file = build_sherpa_hotwords_file(
+            DOMAIN_KEYWORD_ALIASES.keys(),
+            model_path,
+            CACHE_DIR / "cultura_viva_hotwords.txt",
+        )
+        if hotwords_file is None:
+            print(
+                f"[INFO] sherpa-onnx: no usable bpe.model in {model_path} "
+                "(Whisper models never support hotwords; transducer models need "
+                "one bundled). Running this engine without domain bias — see the "
+                "README for the recommended transducer model."
             )
-            if hotwords_file is None:
-                print(
-                    f"[INFO] sherpa-onnx: no usable bpe.model in {model_path} "
-                    "(Whisper models never support hotwords; transducer models need "
-                    "one bundled). Running this engine without domain bias — see the "
-                    "README for the recommended transducer model."
-                )
         return SherpaOnnxRecognizer(
             str(model_path), beam_size=args.whisper_beam_size, hotwords_file=hotwords_file
         )
@@ -436,6 +510,9 @@ def model_size_mb(engine_name: str) -> float | None:
     recognizer. New runs populate model_size_mb on every row already, so this
     function is not on the hot path anymore.
     """
+    if engine_name.startswith("whisper.cpp:"):
+        local_path = resolve_whisper_cpp_model_path(engine_name.split(":", 1)[1])
+        return directory_size_mb(Path(local_path)) if local_path else None
     if engine_name.startswith("faster-whisper:"):
         local_path = resolve_faster_whisper_path(engine_name.split(":", 1)[1])
         return directory_size_mb(Path(local_path)) if local_path else None

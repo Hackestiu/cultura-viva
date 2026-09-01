@@ -18,18 +18,18 @@
     <div class="container">
         <div class="header">
             <h1 style="margin:0 0 8px 0; color:#0F172A; font-size:24px;">STT Benchmark Model Evaluation Report</h1>
-            <p style="margin:0; color:#64748B; font-size:14px;">Source: <strong>/home/arduino/stt-benchmark/python/results_computer</strong> | Platform: <strong>Linux-7.0.0-g122c2c22d838-aarch64-with-glibc2.41</strong> | Tested Models: <strong>1</strong></p>
+            <p style="margin:0; color:#64748B; font-size:14px;">Source: <strong>C:\Users\lucia\Desktop\hackestiu\stt-benchmark\python\results_computer</strong> | Platform: <strong>Linux-7.0.0-g122c2c22d838-aarch64-with-glibc2.41</strong> | Tested Models: <strong>4</strong></p>
         </div>
 
         
         <div class="recommendation">
             <h3 style="margin:0 0 6px 0; color:#1D4ED8; font-size:16px;">Recommendation for Arduino UNO Q Deployment</h3>
             <p style="margin:0; color:#1E40AF; font-size:14px;">
-                <strong>faster-whisper:base.en</strong> achieves the most balanced edge profile: 
-                <strong>16.3% WER</strong>, 
-                <strong>13319 ms latency</strong> 
-                (0.99x RTF), 
-                and <strong>406 MB peak RAM</strong>.
+                <strong>faster-whisper:tiny.en</strong> achieves the most balanced edge profile: 
+                <strong>32.5% WER</strong>, 
+                <strong>7870 ms latency</strong> 
+                (0.58x RTF), 
+                and <strong>330 MB peak RAM</strong>.
             </p>
         </div>
         
@@ -56,6 +56,19 @@
                         
         <tr style="border-bottom:1px solid #E2E8F0; background:#F0FDF4;">
             <td style="padding:10px 14px; text-align:center; font-weight:bold;">#1</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:tiny.en</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">32.5%</td>
+            <td style="padding:10px 14px; text-align:right;">18.9%</td>
+            <td style="padding:10px 14px; text-align:right;">78.9%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">7870 ms</td>
+            <td style="padding:10px 14px; text-align:center;">0.581x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">330.4 MB</td>
+            <td style="padding:10px 14px; text-align:right;">74.5 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#2</td>
             <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:base.en</td>
             <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#16A34A;">16.3%</td>
             <td style="padding:10px 14px; text-align:right;">9.6%</td>
@@ -65,6 +78,32 @@
             <td style="padding:10px 14px; text-align:right;">406.4 MB</td>
             <td style="padding:10px 14px; text-align:right;">140.9 MB</td>
             <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#3</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">sherpa-onnx</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">35.9%</td>
+            <td style="padding:10px 14px; text-align:right;">19.5%</td>
+            <td style="padding:10px 14px; text-align:right;">50.0%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">912 ms</td>
+            <td style="padding:10px 14px; text-align:center;">0.065x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">464.0 MB</td>
+            <td style="padding:10px 14px; text-align:right;">206.9 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#64748B;">No</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#4</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">vosk</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">69.8%</td>
+            <td style="padding:10px 14px; text-align:right;">41.0%</td>
+            <td style="padding:10px 14px; text-align:right;">21.1%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">15764 ms</td>
+            <td style="padding:10px 14px; text-align:center;">1.158x (<span style="color:#DC2626;font-weight:bold;">Lagging</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">395.1 MB</td>
+            <td style="padding:10px 14px; text-align:right;">67.6 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#64748B;">No</span></td>
         </tr>
         
                     </tbody>

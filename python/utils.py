@@ -17,24 +17,74 @@ from typing import Any, Iterable
 import difflib
 
 
+APP_DIR = Path(__file__).resolve().parent
+
 DOMAIN_KEYWORD_ALIASES = {
     "Antoni Gaudí": ("antoni gaudí", "antoni gaudi", "gaudí", "gaudi"),
     "Gaudí": ("gaudí", "gaudi", "antoni gaudí", "antoni gaudi"),
-    "Sagrada Família": ("sagrada família", "sagrada familia"),
+    "Barcelona": ("barcelona", "barcelona city"),
+    "Passeig de Gràcia": (
+        "passeig de gràcia",
+        "passeig de gracia",
+        "paseo de gracia",
+        "passaic de gracia",
+        "gràcia",
+        "gracia",
+    ),
+    "Temple Expiatori": (
+        "temple expiatori",
+        "expiatory temple",
+        "expiatory church",
+        "expiatori",
+    ),
+    "Sagrada Família": (
+        "sagrada família",
+        "sagrada familia",
+        "basilica of the sagrada familia",
+    ),
     "basilica": ("basilica", "basílica"),
     "facade": ("facade", "facades", "façade", "façades"),
-    "modernisme": ("modernisme", "modernism", "catalan modernisme", "catalan modernism"),
+    "Nativity facade": ("nativity facade", "nativity façade", "nativity"),
+    "Passion facade": ("passion facade", "passion façade", "passion"),
+    "Glory facade": ("glory facade", "glory façade", "glory"),
+    "modernisme": (
+        "modernisme",
+        "modernism",
+        "catalan modernisme",
+        "catalan modernism",
+    ),
     "Catalan": ("catalan", "catalonia", "catalonian"),
     "Casa Batlló": ("casa batlló", "casa batllo", "batlló", "batllo"),
-    "Casa Milà": ("casa milà", "casa mila", "la pedrera"),
+    "Casa Milà": (
+        "casa milà",
+        "casa mila",
+        "la pedrera",
+        "pedrera",
+        "the quarry",
+    ),
+    "La Pedrera": ("la pedrera", "pedrera", "the quarry"),
     "Park Güell": ("park güell", "park guell", "guell"),
-    "trencadís": ("trencadís", "trencadis"),
-    "salamander": ("salamander",),
-    "dragon": ("dragon", "dragon-shaped", "dragon shaped"),
+    "Eixample": ("eixample", "eixample district", "example district"),
+    "trencadís": ("trencadís", "trencadis", "broken tile mosaic"),
+    "salamander": ("salamander", "el drac", "dragon salamander"),
+    "dragon": ("dragon", "dragon-shaped", "dragon shaped", "dragon roof"),
+    "catenary arch": ("catenary arch", "catenary arches", "parabolic arch"),
 }
 
 PHONETIC_CORRECTIONS = {
-    # Sagrada Família & Basilica / Facade variations
+    # Barcelona & Locations
+    r"\bbarselona\b": "Barcelona",
+    r"\bbarcelone\b": "Barcelona",
+    r"\bpass[ei]ig de gr[aá]cia\b": "Passeig de Gràcia",
+    r"\bpassage de gracia\b": "Passeig de Gràcia",
+    r"\bpassic de gracia\b": "Passeig de Gràcia",
+    r"\bpassaic de gracia\b": "Passeig de Gràcia",
+    r"\bpaseo de gracia\b": "Passeig de Gràcia",
+    r"\bexample district\b": "Eixample district",
+    r"\baixample\b": "Eixample",
+    # Sagrada Família & Expiatory Temple
+    r"\btemple expiator[iy]\b": "Temple Expiatori",
+    r"\bexpiatory temple\b": "Expiatory Temple",
     r"\bsalamander fam[íi]lia\b": "Sagrada Família",
     r"\bsagrada fam[ií]lia\b": "Sagrada Família",
     r"\bsagrada fam[ií]lia's\b": "Sagrada Família's",
@@ -49,7 +99,6 @@ PHONETIC_CORRECTIONS = {
     r"\bfacets\b": "facades",
     r"\bgourife assades\b": "Glory facades",
     r"\bgourife facades\b": "Glory facades",
-
     # Antoni Gaudí / Gaudí variations
     r"\bgaldy\b": "Gaudí",
     r"\bgowdy\b": "Gaudí",
@@ -60,27 +109,28 @@ PHONETIC_CORRECTIONS = {
     r"\bgaudi's\b": "Gaudí's",
     r"\bhow did this park güell\b": "how did Gaudí's Park Güell",
     r"\bhow did this parkway\b": "how did Gaudí's Park Güell",
-
     # Casa Batlló variations
     r"\bcasavadio\b": "Casa Batlló",
     r"\bcasa laid your\b": "Casa Batlló",
     r"\bcasa batlo\b": "Casa Batlló",
     r"\bcasa batllo\b": "Casa Batlló",
+    r"\bcasa batio\b": "Casa Batlló",
     r"\bcasa batlow\b": "Casa Batlló",
     r"\bcasa bortlow\b": "Casa Batlló",
-
-    # Casa Milà variations
+    # Casa Milà & La Pedrera variations
     r"\bcasa mila\b": "Casa Milà",
     r"\bcasa miller\b": "Casa Milà",
-
-    # Park Güell variations
+    r"\bd'apadrada\b": "La Pedrera",
+    r"\bla padrera\b": "La Pedrera",
+    r"\bthe quarry\b": "La Pedrera",
+    # Park Güell & Salamander variations
     r"\bparkway\b": "Park Güell",
     r"\bpark way\b": "Park Güell",
     r"\bpark well\b": "Park Güell",
     r"\bpark guelph\b": "Park Güell",
     r"\bpark guell\b": "Park Güell",
-
-    # trencadís variations
+    r"\bbalacic notor gritte\b": "park's signature creature",
+    # trencadís & Materials
     r"\bpatroncad[íi]s\b": "trencadís",
     r"\bpatronic\b": "trencadís",
     r"\bpatronics\b": "trencadís",
@@ -91,20 +141,21 @@ PHONETIC_CORRECTIONS = {
     r"\btriangle this\b": "trencadís",
     r"\btrend cotted\b": "trencadís",
     r"\btrend-cotted\b": "trencadís",
-
+    r"\bfusse-dynamic\b": "ceramic",
     # modernisme & Catalan variations
     r"\bmodernism\b": "modernisme",
     r"\bcatatano nizma\b": "Catalan modernisme",
     r"\bcatalan modernism\b": "Catalan modernisme",
     r"\bcatatano\b": "Catalan",
     r"\bcatalonian\b": "Catalan",
-
-    # Dragon variations
+    # Dragon & Architectural term hallucinations
     r"\bdrawing shape\b": "dragon-shaped",
     r"\bdrawing shaped\b": "dragon-shaped",
     r"\btourned salagen\b": "turns a legend",
     r"\blook like a drag on\b": "look like a dragon",
     r"\bdrag on\b": "dragon",
+    r"\barchitector\b": "architect",
+    r"\bat suez grands\b": "at first glance",
 }
 
 
@@ -360,6 +411,57 @@ def resolve_faster_whisper_path(model_name_or_path: str) -> str | None:
         if snapshots:
             return str(snapshots[-1])
     return None
+
+
+def resolve_whisper_cpp_model_path(model_name_or_path: str) -> str | None:
+    """Resolve a whisper.cpp GGML model name or path to a local file."""
+    candidate = Path(model_name_or_path)
+    if candidate.is_file():
+        return str(candidate)
+
+    models_dir = APP_DIR / "models"
+    options = [
+        models_dir / model_name_or_path,
+        models_dir / f"{model_name_or_path}.bin",
+        models_dir / f"ggml-{model_name_or_path}.bin",
+        models_dir / "whisper.cpp" / "models" / model_name_or_path,
+        models_dir / "whisper.cpp" / "models" / f"{model_name_or_path}.bin",
+        models_dir / "whisper.cpp" / "models" / f"ggml-{model_name_or_path}.bin",
+    ]
+    for opt in options:
+        if opt.is_file():
+            return str(opt)
+    return None
+
+
+def resolve_whisper_cpp_binary() -> str | None:
+    """Find the compiled whisper.cpp CLI executable."""
+    env_bin = os.getenv("WHISPER_CPP_BIN")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+
+    candidates = [
+        APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
+        APP_DIR / "whisper.cpp" / "build" / "bin" / "whisper-cli",
+        APP_DIR / "models" / "whisper.cpp" / "whisper-cli",
+        APP_DIR / "models" / "whisper.cpp" / "main",
+        APP_DIR / "whisper.cpp" / "main",
+    ]
+    if os.name == "nt":
+        candidates.extend([
+            APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "Release" / "whisper-cli.exe",
+            APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "whisper-cli.exe",
+            APP_DIR / "whisper.cpp" / "build" / "bin" / "whisper-cli.exe",
+        ])
+
+    for cand in candidates:
+        if cand.is_file():
+            return str(cand)
+
+    import shutil
+
+    return shutil.which("whisper-cli") or shutil.which("whisper-cpp") or shutil.which("main")
+
 
 
 def current_rss_mb() -> float:

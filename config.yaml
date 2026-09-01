@@ -1,39 +1,48 @@
 dataset:
-  name: culturaviva/gaudi_image
+  name: culturaviva/image_1080
   val_size: 0.15
   test_size: 0.15
   seed: 42
- 
+
 # defaults applied to every (monument, model) run, unless overridden
 training_defaults:
-  num_epochs: 100
-  batch_size: 8
-  learning_rate: 3e-5
- 
+  num_epochs: 8
+  batch_size: 16
+  learning_rate: 2e-5
+
 wandb:
   project: cultura-viva
- 
+
 # one entry per monument. data_dir is the subfolder under dataset.name
 # (culturaviva/gaudi_image/<data_dir>). Classes ("elements") are auto-detected
-# per monument from its own subfolders, so N can differ between monuments.
+# per monument from its own subfolders, so N can differ between monuments:
+#   - casa_batllo (2 classes): pla_frontal, pla_inferior
+#   - park_guell (7 classes): 3_viaductes, casa_museu, escalinata_drac, pavellons_consergeria, placa_natura, sala_hipostila, turo_3_creus
+#   - pedrera (3 classes): facana_1, facana_2, facana_3
+#   - sagrada_familia (6 classes): cupula, facana_naixement, facana_passio, laterals, posterior, torres
 monuments:
-  - name: sagrada_familia
-    data_dir: sagrada_familia
   - name: casa_batllo
     data_dir: casa_batllo
+
   - name: park_guell
     data_dir: park_guell
-  - name: casa_mila
-    data_dir: casa_mila
- 
+
+  - name: pedrera
+    data_dir: pedrera
+
+  - name: sagrada_familia
+    data_dir: sagrada_familia
+
 # one entry per model to train. Only "name" and "vision_model_name" are
 # required -- everything else falls back to training_defaults, and
-# output_dir/run_name are auto-derived from "name" if omitted.
+# output_dir/run_name are auto-derived from "<monument>-<model>" if omitted.
 models:
   - name: mobilenetv2
     vision_model_name: google/mobilenet_v2_1.0_224
-    run_name: mobilenetv2-run-07-newdatabase
- 
+
+  - name: vit
+    vision_model_name: google/vit-base-patch16-224
+    learning_rate: 2e-5
+
   # - name: resnet50
   #   vision_model_name: microsoft/resnet-50
-  #   run_name: resnet50-run-07-newdatabase

@@ -7,10 +7,13 @@ import math
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import unicodedata
+import urllib.request
 import wave
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -18,6 +21,18 @@ import difflib
 
 
 APP_DIR = Path(__file__).resolve().parent
+
+WHISPER_CPP_REPOSITORY = "ggerganov/whisper.cpp"
+WHISPER_CPP_MODEL_FILES = {
+    "base.en-q5_1": "ggml-base.en-q5_1.bin",
+    "base.en-q5_0": "ggml-base.en-q5_0.bin",
+    "base.en": "ggml-base.en.bin",
+}
+VOSK_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+SHERPA_ONNX_MODEL_URL = (
+    "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/"
+    "sherpa-onnx-zipformer-small-en-2023-06-26.tar.bz2"
+)
 
 DOMAIN_KEYWORD_ALIASES = {
     "Antoni Gaudí": ("antoni gaudí", "antoni gaudi", "gaudí", "gaudi"),
@@ -238,6 +253,95 @@ def normalize_text(text: str | None) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def ensure_whisper_model(model_name: str = "base.en-q5_1") -> str:
+    """Download a supported whisper.cpp model into the app's local model cache."""
+    models_dir = Path(__file__).parent / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+
+    file_name = WHISPER_CPP_MODEL_FILES.get(model_name)
+    if file_name is None:
+        raise ValueError(
+            f"Unsupported whisper.cpp model '{model_name}'. "
+            f"Choose one of: {', '.join(WHISPER_CPP_MODEL_FILES)}"
+        )
+    model_path = models_dir / file_name
+
+    if not model_path.exists():
+        from huggingface_hub import hf_hub_download
+
+        print(f"Downloading {file_name} from {WHISPER_CPP_REPOSITORY}...")
+        downloaded_path = hf_hub_download(
+            repo_id=WHISPER_CPP_REPOSITORY,
+            filename=file_name,
+            local_dir=str(models_dir),
+            local_dir_use_symlinks=False,
+        )
+        model_path = Path(downloaded_path)
+    return str(model_path)
+
+
+def ensure_faster_whisper_model(model_name: str) -> str:
+    """Download a faster-whisper snapshot into the app's local model cache."""
+    target = APP_DIR / "models" / f"faster-whisper-{model_name}"
+    if target.is_dir():
+        return str(target)
+    from huggingface_hub import snapshot_download
+
+    print(f"Downloading Systran/faster-whisper-{model_name}...")
+    snapshot_download(
+        repo_id=f"Systran/faster-whisper-{model_name}",
+        local_dir=str(target),
+        local_dir_use_symlinks=False,
+    )
+    return str(target)
+
+
+def ensure_vosk_model() -> str:
+    """Download and extract the standard English Vosk model if needed."""
+    models_dir = APP_DIR / "models"
+    target = models_dir / "vosk-model-small-en-us-0.15"
+    if target.is_dir():
+        return str(target)
+    archive = models_dir / "vosk-model-small-en-us-0.15.zip"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    print("Downloading Vosk small English model...")
+    urllib.request.urlretrieve(VOSK_MODEL_URL, archive)
+    with zipfile.ZipFile(archive) as package:
+        package.extractall(models_dir)
+    archive.unlink()
+    return str(target)
+
+
+def ensure_sherpa_onnx_model() -> str:
+    """Download and extract the standard sherpa-onnx model if needed."""
+    models_dir = APP_DIR / "models"
+    target = models_dir / "sherpa-onnx-en"
+    if target.is_dir():
+        return str(target)
+    archive = models_dir / "sherpa-onnx-en.tar.bz2"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    print("Downloading sherpa-onnx Zipformer English model...")
+    urllib.request.urlretrieve(SHERPA_ONNX_MODEL_URL, archive)
+    shutil.unpack_archive(str(archive), models_dir)
+    extracted = models_dir / "sherpa-onnx-zipformer-small-en-2023-06-26"
+    extracted.rename(target)
+    archive.unlink()
+    return str(target)
+
+
+def ensure_engine_models(engine_names: Iterable[str]) -> None:
+    """Provision only the model files required by the selected engines."""
+    for engine_name in dict.fromkeys(engine_names):
+        if engine_name.startswith("whisper.cpp:"):
+            ensure_whisper_model(engine_name.split(":", 1)[1])
+        elif engine_name.startswith("faster-whisper:"):
+            ensure_faster_whisper_model(engine_name.split(":", 1)[1])
+        elif engine_name == "vosk":
+            ensure_vosk_model()
+        elif engine_name == "sherpa-onnx":
+            ensure_sherpa_onnx_model()
+
+
 def word_error_rate(reference: str, hypothesis: str) -> float:
     """Calculate WER with a compact dynamic-programming implementation."""
     reference_words = normalize_text(reference).split()
@@ -397,6 +501,10 @@ def resolve_faster_whisper_path(model_name_or_path: str) -> str | None:
     if candidate.is_dir():
         return str(candidate)
 
+    local_path = APP_DIR / "models" / f"faster-whisper-{model_name_or_path}"
+    if local_path.is_dir():
+        return str(local_path)
+
     try:
         from faster_whisper.utils import download_model
 
@@ -414,7 +522,13 @@ def resolve_faster_whisper_path(model_name_or_path: str) -> str | None:
 
 
 def resolve_whisper_cpp_model_path(model_name_or_path: str) -> str | None:
-    """Resolve a whisper.cpp GGML model name or path to a local file."""
+    """Resolve a whisper.cpp GGML model name or path to a local file.
+
+    Also checks HF_HOME's huggingface cache (where ensure_whisper_model /
+    hf_hub_download place files by default) so a model fetched via
+    ensure_whisper_model() is found here too, not just files manually copied
+    into models/.
+    """
     candidate = Path(model_name_or_path)
     if candidate.is_file():
         return str(candidate)
@@ -431,37 +545,15 @@ def resolve_whisper_cpp_model_path(model_name_or_path: str) -> str | None:
     for opt in options:
         if opt.is_file():
             return str(opt)
+
+    cache_root = Path(os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))) / "hub"
+    model_cache = cache_root / "models--ggerganov--whisper.cpp" / "snapshots"
+    if model_cache.is_dir():
+        for snapshot in sorted(model_cache.iterdir(), reverse=True):
+            cached_file = snapshot / WHISPER_CPP_MODEL_FILES.get(model_name_or_path, "")
+            if cached_file.is_file():
+                return str(cached_file)
     return None
-
-
-def resolve_whisper_cpp_binary() -> str | None:
-    """Find the compiled whisper.cpp CLI executable."""
-    env_bin = os.getenv("WHISPER_CPP_BIN")
-    if env_bin and Path(env_bin).is_file():
-        return env_bin
-
-    candidates = [
-        APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "whisper-cli",
-        APP_DIR / "whisper.cpp" / "build" / "bin" / "whisper-cli",
-        APP_DIR / "models" / "whisper.cpp" / "whisper-cli",
-        APP_DIR / "models" / "whisper.cpp" / "main",
-        APP_DIR / "whisper.cpp" / "main",
-    ]
-    if os.name == "nt":
-        candidates.extend([
-            APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "Release" / "whisper-cli.exe",
-            APP_DIR / "models" / "whisper.cpp" / "build" / "bin" / "whisper-cli.exe",
-            APP_DIR / "whisper.cpp" / "build" / "bin" / "whisper-cli.exe",
-        ])
-
-    for cand in candidates:
-        if cand.is_file():
-            return str(cand)
-
-    import shutil
-
-    return shutil.which("whisper-cli") or shutil.which("whisper-cpp") or shutil.which("main")
-
 
 
 def current_rss_mb() -> float:

@@ -244,6 +244,9 @@
     "text": "Among the colorful details, one Catalan technique stands out. How does trencadis transform broken ceramic fragments into a deliberate artistic surface, and what purpose does it serve?",
     "pronunciation_hints": {},
     "keywords": [
+      "Gaudí",
+      "facade",
+      "Catalan",
       "trencadís"
     ],
     "audio_effects": {
@@ -285,6 +288,7 @@
     "text": "During this stop, the park's signature creature deserves attention. Would you tell me what the salamander represents and how its ceramic surface fits into the park's design?",
     "pronunciation_hints": {},
     "keywords": [
+      "facade",
       "salamander"
     ],
     "audio_effects": {
@@ -325,7 +329,9 @@
     "question": "Could you explain why construction continued for so many years, including changes of architect, funding, and interruptions?",
     "text": "Beyond the present-day view, several architects shaped the project. Could you explain why construction continued for so many years, including changes of architect, funding, and interruptions?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "Gaudí"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0
@@ -386,8 +392,12 @@
     "text": "For Casa Mila, the nickname La Pedrera hints at its stone facade. Could you tell me which Gaudi works are recognized by UNESCO and what their heritage designation means?",
     "pronunciation_hints": {},
     "keywords": [
+      "Antoni Gaudí",
       "Gaudí",
-      "Casa Milà"
+      "facade",
+      "Passion facade",
+      "Casa Milà",
+      "La Pedrera"
     ],
     "audio_effects": {
       "pause_ms": 0,
@@ -428,8 +438,9 @@
     "text": "Comparing these buildings reveals the language of modernisme. What economic, social, and design factors explain why the original Park Guell housing plan was not completed?",
     "pronunciation_hints": {},
     "keywords": [
-      "Park Güell",
-      "modernisme"
+      "modernisme",
+      "Catalan",
+      "Park Güell"
     ],
     "audio_effects": {
       "pause_ms": 0,
@@ -469,7 +480,12 @@
     "question": "Would you please compare the Nativity, Passion, and Glory facades and explain the story represented by each one?",
     "text": "Finally, the Nativity, Passion, and Glory facades complete the comparison. Would you please compare the Nativity, Passion, and Glory facades and explain the story represented by each one?",
     "pronunciation_hints": {},
-    "keywords": [],
+    "keywords": [
+      "facade",
+      "Nativity facade",
+      "Passion facade",
+      "Glory facade"
+    ],
     "audio_effects": {
       "pause_ms": 0,
       "background_noise_level": 0

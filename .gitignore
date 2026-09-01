@@ -7,9 +7,8 @@ venv/
 
 # Downloaded model weights and native model caches
 models/*
-python/models/*
-!python/models/README.md
-!python/models/.gitkeep
+!models/README.md
+!models/.gitkeep
 model-cache/
 *.bin
 *.ggml
@@ -18,14 +17,13 @@ model-cache/
 *.ct2/
 .cache/
 ~/.cache/
-python/cache
+cache/
 
 # Generated audio, reports, plots, and deployment archives
-python/data_audio/*.wav
-python/data_audio/**/*.wav
-python/results/edge/
-python/results_computer/*.csv
-python/results_arduino/
+data_audio/*.wav
+data_audio/**/*.wav
+results/edge/
+results_computer/*.csv
 *.zip
 *.tar.gz
 
@@ -35,5 +33,5 @@ python/results_arduino/
 .vscode/
 
 # Weights & Biases
-python/wandb/
+wandb/
 *.wandb

@@ -1,0 +1,14 @@
+[
+  {
+    "engine": "whisper.cpp:base.en-q5_1",
+    "avg_wer": 0.0319625,
+    "avg_cer": 0.008804166666666667,
+    "avg_keyword_spotting_accuracy": 0.9736842105263158,
+    "avg_inference_time_sec": 1.2321333333333333,
+    "avg_inference_latency_ms": 1232.1375,
+    "max_peak_ram_mb": 241.4,
+    "model_size_mb": 56.95,
+    "domain_bias_applied": true,
+    "num_utterances": 24
+  }
+]

@@ -10,8 +10,16 @@ import sys
 from pathlib import Path
 
 from benchmark import export_reports, run_benchmark
+from utils import ensure_engine_models
 
 APP_DIR = Path(__file__).resolve().parent
+ALL_ENGINES = (
+    "whisper.cpp:base.en-q5_1",
+    "faster-whisper:base.en",
+    "faster-whisper:tiny.en",
+    "vosk",
+    "sherpa-onnx",
+)
 
 
 def dataset_has_audio(audio_dir: Path, manifest_path: Path) -> bool:
@@ -30,9 +38,8 @@ def dataset_has_audio(audio_dir: Path, manifest_path: Path) -> bool:
 def resolve_dataset(args: argparse.Namespace) -> None:
     """Resolve which dataset to run.
 
-    An explicit --audio-dir/--manifest (flag or AUDIO_DIR/MANIFEST env var, as
-    App Lab sets for Arduino) is used as-is and never overridden. Otherwise —
-    the plain `python main.py` case — this prefers the recorded human-speech
+    An explicit --audio-dir/--manifest is used as-is and never overridden. Otherwise —
+    the plain `uv run main.py` case — this prefers the recorded human-speech
     set at data_audio/recorded/ over the synthetic one, since real speech is
     the more representative test; it falls back to the synthetic set,
     generating it first if needed, only when no usable recorded set is found.
@@ -43,7 +50,7 @@ def resolve_dataset(args: argparse.Namespace) -> None:
         print(f"Using explicit dataset: {args.audio_dir}")
         return
 
-    recorded_dir = APP_DIR /"data_audio" / "recorded"
+    recorded_dir = APP_DIR / "data_audio" / "recorded"
     recorded_manifest = recorded_dir / "manifest.json"
     if dataset_has_audio(recorded_dir, recorded_manifest):
         args.audio_dir = str(recorded_dir)
@@ -81,22 +88,15 @@ def parse_args() -> argparse.Namespace:
         "--engines",
         nargs="+",
         default=[
-            "whisper.cpp:base.en-q5_0",
-            # Other engines preserved in codebase (pass via CLI or uncomment):
-            # "whisper.cpp:base.en-q4_0",
-            # "faster-whisper:base.en",
-            # "faster-whisper:tiny.en",
-            # "vosk",
-            # "sherpa-onnx",
+            "whisper.cpp:base.en-q5_1",
         ],
-        help="STT engines to benchmark (default: whisper.cpp:base.en-q5_0)",
+        help="STT engines to benchmark; use 'all' for every configured engine",
     )
     parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     parser.add_argument("--compute-type", default="int8")
     parser.add_argument("--cpu-threads", type=int, default=4, help="CPU threads for inference (default: 4)")
     parser.add_argument("--whisper-beam-size", type=int, default=1, help="Whisper beam size (1 = greedy, fastest)")
     parser.add_argument("--whisper-initial-prompt", default=None, help="Custom prompt override (domain bias prompt is used by default)")
-    parser.add_argument("--whisper-cpp-bin", default=os.getenv("WHISPER_CPP_BIN"), help="Path to whisper-cli binary")
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--wandb-project", default="cultura-viva-stt-benchmark")
     return parser.parse_args()
@@ -105,6 +105,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Run and export the configured benchmark, optionally tracked in Weights & Biases."""
     args = parse_args()
+    if "all" in args.engines:
+        args.engines = list(ALL_ENGINES)
+    ensure_engine_models(args.engines)
     resolve_dataset(args)
 
     if args.wandb:

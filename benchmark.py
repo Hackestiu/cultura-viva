@@ -24,11 +24,12 @@ from utils import (
     current_timestamp_utc,
     directory_size_mb,
     ensure_16k_mono_pcm16,
+    ensure_engine_models,
+    ensure_whisper_model,
     find_domain_keywords,
     keyword_spotting_accuracy,
     resolve_faster_whisper_path,
     resolve_whisper_cpp_model_path,
-    resolve_whisper_cpp_binary,
     run_metadata,
     wav_duration_seconds,
     word_error_rate,
@@ -107,72 +108,51 @@ class FasterWhisperRecognizer:
 
 
 class WhisperCppRecognizer:
-    """whisper.cpp adapter compiled with ARM NEON optimizations and supporting GGML quantized models."""
+    """whisper.cpp adapter running natively via pywhispercpp Python bindings with ARM NEON SIMD."""
 
     def __init__(
         self,
         model_name: str,
-        binary_path: str | None = None,
         cpu_threads: int | None = None,
         beam_size: int = 1,
         initial_prompt: str | None = None,
     ) -> None:
-        import subprocess
+        from pywhispercpp.model import Model
 
-        self.binary_path = binary_path or resolve_whisper_cpp_binary()
-        if not self.binary_path or not Path(self.binary_path).is_file():
-            raise FileNotFoundError(
-                f"whisper.cpp binary not found. "
-                "Compile it with 'bash setup_whisper_cpp.sh' or set WHISPER_CPP_BIN."
-            )
         resolved_model = resolve_whisper_cpp_model_path(model_name)
-        if not resolved_model:
-            raise FileNotFoundError(
-                f"whisper.cpp model '{model_name}' not found. "
-                f"Place ggml-{model_name}.bin in models/ or download it with 'bash setup_whisper_cpp.sh'."
-            )
-        self.model_path = resolved_model
-        self.model_size_mb = directory_size_mb(Path(self.model_path))
+        if resolved_model is None:
+            resolved_model = ensure_whisper_model(model_name)
+        model_target = resolved_model
+
         self.cpu_threads = cpu_threads or 4
+
+        # Native C++ model load through the Python wrapper.
+        self.model = Model(model_target, n_threads=self.cpu_threads)
+
+        self.model_path = resolved_model
+        self.model_size_mb = directory_size_mb(Path(resolved_model)) if resolved_model else None
         self.beam_size = beam_size
         self.initial_prompt = initial_prompt
         self.domain_bias_applied = initial_prompt is not None
 
     def transcribe(self, audio_path: Path, language: str) -> str:
-        import subprocess
+        import _pywhispercpp
 
-        cmd = [
-            str(self.binary_path),
-            "-m", str(self.model_path),
-            "-f", str(audio_path),
-            "-t", str(self.cpu_threads),
-            "-l", language,
-            "-bs", str(self.beam_size),
-            "-nt",  # no timestamps in output
-            "-np",  # no progress output
-        ]
+        kwargs: dict[str, Any] = {
+            "language": language,
+            "strategy": (
+                _pywhispercpp.WHISPER_SAMPLING_BEAM_SEARCH
+                if self.beam_size > 1
+                else _pywhispercpp.WHISPER_SAMPLING_GREEDY
+            ),
+        }
         if self.initial_prompt:
-            cmd.extend(["--prompt", self.initial_prompt])
+            kwargs["initial_prompt"] = self.initial_prompt
 
-        result = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=True,
-        )
+        # Direct transcription, no subprocess/CLI round-trip.
+        segments = self.model.transcribe(str(audio_path), **kwargs)
 
-        lines = []
-        for line in result.stdout.splitlines():
-            line = line.strip()
-            if not line or line.startswith("whisper_") or line.startswith("system_info:") or line.startswith("main:"):
-                continue
-            cleaned = re.sub(r"\[\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\]", "", line).strip()
-            if cleaned:
-                lines.append(cleaned)
-        return " ".join(lines).strip()
+        return " ".join(segment.text.strip() for segment in segments).strip()
 
 
 
@@ -312,7 +292,6 @@ def build_recognizer(name: str, args: Any) -> Recognizer:
         initial_prompt = getattr(args, "whisper_initial_prompt", None) or domain_prompt
         return WhisperCppRecognizer(
             model_name=model_name,
-            binary_path=getattr(args, "whisper_cpp_bin", None),
             cpu_threads=getattr(args, "cpu_threads", 4),
             beam_size=getattr(args, "whisper_beam_size", 1),
             initial_prompt=initial_prompt,

@@ -1,4 +1,4 @@
-"""Comprehensive visualization tool for STT benchmark results on Arduino UNO Q & Computer.
+"""Comprehensive visualization tool for STT benchmark results.
 
 Usage:
     uv run visualize.py
@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 APP_DIR = Path(__file__).resolve().parent
-REPO_DIR = APP_DIR.parent
+REPO_DIR = APP_DIR
 
 # Set modern plotting aesthetic
 plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
@@ -94,19 +94,14 @@ class BenchmarkData:
 
 
 def find_default_results_dir() -> Path:
-    """Find the most relevant results directory (prefers results_arduino, falls back to results_computer)."""
-    candidates = [
-        APP_DIR / "results_arduino",
-        REPO_DIR / "results_arduino",
-        APP_DIR / "results_computer",
-        REPO_DIR / "results_computer",
-    ]
+    """Find the most relevant results directory."""
+    candidates = [APP_DIR / "results_arduino", APP_DIR / "results_computer"]
     for path in candidates:
         if path.is_dir() and (
             (path / "summary.json").is_file() or (path / "predictions").is_dir()
         ):
             return path
-    return APP_DIR / "results_arduino"
+    return APP_DIR / "results_computer"
 
 
 def load_benchmark_data(results_dir: Path) -> BenchmarkData:

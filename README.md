@@ -1,13 +1,10 @@
 # Cultura Viva STT Benchmark
 
-Offline English speech-to-text benchmark for Cultura Viva. Compares and evaluates 
-STT engines on recognition quality and resource usage, optimized for deployment on 
-an **Arduino UNO Q** (Qualcomm Dragonwing QRB2210 - 4x ARM Cortex-A53 @ 2.0 GHz) 
-via Arduino App Lab.
+Offline English speech-to-text benchmark for Cultura Viva. Compares STT engines on
+recognition quality, keyword accuracy, latency, RAM, and model size.
 
-This repository is a runnable Arduino App Lab app: the whole `stt-benchmark/` folder 
-— `app.yaml`, `python/`, and `sketch/` — can be copied onto a UNO Q as-is and started 
-with App Lab once models and recordings are in place.
+The primary target is `whisper.cpp:base.en-q5_1`, using the native `pywhispercpp`
+binding. `q5_1` is a quantization variant, not a Whisper model version.
 
 ---
 
@@ -15,161 +12,112 @@ with App Lab once models and recordings are in place.
 
 ```text
 stt-benchmark/
-├── app.yaml            # App Lab manifest (Python entry point + MCU linkage)
-├── python/             # Runnable benchmark (MPU / Debian Linux side)
-│   ├── main.py
-│   ├── benchmark.py
-│   ├── dataset_generator.py
-│   ├── utils.py
-│   ├── visualize.py
-│   ├── setup_whisper_cpp.sh # Lean compilation script for Arduino UNO Q
-│   ├── pyproject.toml
-│   ├── uv.lock
-│   ├── data_audio/      # synthetic manifest + WAVs; data_audio/recorded/ for human speech
-│   ├── models/          # Compiled whisper-cli binary & downloaded model weights
-│   ├── results_computer/ # JSON reports + plots from local runs
-│   └── results_arduino/  # written by App Lab runs on the UNO Q, per app.yaml
-├── sketch/               # MCU (Zephyr) side — placeholder, this app is Python-only
-│   ├── sketch.ino
-│   └── sketch.yaml
+├── main.py              # Benchmark entry point
+├── benchmark.py         # Engines, measurements, and report export
+├── utils.py             # Models, scoring, keywords, and audio helpers
+├── dataset_generator.py # Synthetic dataset generator
+├── visualize.py         # Result visualizations
+├── pyproject.toml       # UV project definition
+├── uv.lock              # Locked Python dependencies
+├── data_audio/          # Synthetic and recorded datasets
+├── models/              # Downloaded model weights
+└── results_computer/    # JSON reports and plots
 ```
-
----
 
 ## Benchmark Models
 
-The benchmark evaluates edge-capable English STT models optimized for the **Arduino UNO Q** (4x ARM Cortex-A53 @ 2.0 GHz):
+The benchmark evaluates local English STT engines:
 
-- **Primary Target Model (Default):** `whisper.cpp:base.en-q5_0` (Whisper Base 5-bit quantized GGML model running natively in C++ with ARM NEON SIMD vector optimization).
-- **Other Available Models (Preserved in Codebase):**
-  - `whisper.cpp:base.en-q4_0` (Whisper Base 4-bit quantized GGML model).
-  - `faster-whisper:base.en` (Whisper Base in CTranslate2 INT8).
-  - `faster-whisper:tiny.en` (Whisper Tiny in CTranslate2 INT8).
-  - `vosk` (Kaldi acoustic model for English).
-  - `sherpa-onnx` (Zipformer Transducer ONNX model).
+**Primary Target Model (Default):** `whisper.cpp:base.en-q5_1` (Whisper Base 5-bit quantized GGML model running natively via pywhispercpp Python bindings with ARM NEON SIMD vector optimization). `q5_1` is a quantization variant, not a Whisper model version; it is the current official Base English Q5_1 file available from the whisper.cpp model repository.
 
----
+**Other Available Models (Preserved in Codebase):**
 
-## Target Optimizations (Arduino UNO Q)
+- `whisper.cpp:base.en-q5_0` (legacy Q5 comparison model, when available in the selected whisper.cpp mirror).
+- `faster-whisper:base.en` (Whisper Base in CTranslate2 INT8).
+- `faster-whisper:tiny.en` (Whisper Tiny in CTranslate2 INT8).
+- `vosk` (Kaldi acoustic model for English).
+- `sherpa-onnx` (Zipformer Transducer ONNX model).
 
-To run `Whisper Base` smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor with minimal latency and low RAM footprint, the following optimizations are applied:
+## Target Optimizations
 
-1. **ARM NEON SIMD & Native C++ (`whisper.cpp`):** Direct 128-bit vector processing on ARMv8 CPU cores without Python runtime overhead.
-2. **Quantization (`q5_0` / `q4_0` / `int8`):** Reduces model memory footprint to ~60 MB (`q5_0`) or ~45 MB (`q4_0`), cutting memory bandwidth pressure while preserving high transcription accuracy.
-3. **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor computation parallelly across all 4 physical CPU cores.
-4. **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
-5. **Minimal Disk Footprint with `uv`:** The compiled `whisper-cli` binary is stripped to ~2.5 MB, and intermediate build files are cleaned up, avoiding heavy disk usage on the board.
+To run Whisper Base smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor with minimal latency and low RAM footprint, the following optimizations are applied:
 
----
+- **ARM NEON SIMD & Native Bindings (pywhispercpp):** Direct 128-bit vector processing on ARMv8 CPU cores integrated smoothly through Python bindings.
+- **Quantization (q5_1 / int8):** Reduces model memory footprint while cutting memory bandwidth pressure. The benchmark keeps q5_1 as the accuracy-first whisper.cpp target.
+- **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor computation parallelly across all 4 physical CPU cores.
+- **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
+- **Environment Management with uv:** Python dependencies are locked by UV. Large model files are downloaded into `models/`; they are intentionally not embedded in `uv.lock` or Git.
 
-## Domain-Vocabulary Bias 
+## Domain-Vocabulary Bias
 
-Domain vocabulary bias is always enabled by default. It injects Cultura Viva domain keywords (*Antoni Gaudí, Sagrada Família, basilica, facade, modernisme, Catalan, Casa Batlló, Casa Milà, Park Güell, trencadís, salamander, dragon, Barcelona, Passeig de Gràcia*) as contextual prompts and hotwords, and applies phonetic entity canonicalization to ensure top accuracy on cultural terms.
+Domain vocabulary bias is always enabled by default. It injects Cultura Viva domain keywords (Antoni Gaudí, Sagrada Família, basilica, facade, modernisme, Catalan, Casa Batlló, Casa Milà, Park Güell, trencadís, salamander, dragon, Barcelona, Passeig de Gràcia) as contextual prompts and hotwords, and applies phonetic entity canonicalization to ensure top accuracy on cultural terms.
 
 Every exported prediction record indicates `domain_bias_applied: true` for compatible engines.
 
----
-
 ## Dataset & Domain Keywords
 
-`python/data_audio/manifest.json` contains synthetic benchmark ground truth; real human speech recordings should be placed under `python/data_audio/recorded/`.
+`data_audio/manifest.json` contains synthetic benchmark ground truth; real human speech recordings should be placed under `data_audio/recorded/`.
 
-Audio files **must** be 16 kHz, mono, 16-bit PCM WAV (the benchmark automatically normalizes other formats if needed).
+Audio files must be 16 kHz, mono, 16-bit PCM WAV (the benchmark automatically normalizes other formats if needed).
 
----
+## Setup and Execution
 
-## Arduino UNO Q Execution Guide
+From the repository root, install the locked environment and run the benchmark:
 
-Follow these steps to setup, compile, and execute the benchmark on the Arduino UNO Q Debian Linux environment.
-
-### Step 1: System Performance Configuration
-Open a terminal on the Arduino UNO Q and lock all 4 CPU cores to maximum clock frequency (2.0 GHz) and set OpenMP / OpenBLAS thread limits:
-
-```bash
-# Set CPU governor to maximum performance
-sudo echo "performance" | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-
-# Set OpenMP and OpenBLAS thread limits to match physical cores
-export OMP_NUM_THREADS=4
-export OPENBLAS_NUM_THREADS=4
-```
-
-### Step 2: Prepare Recorded Audio Dataset
-Copy the recorded WAV audio files and manifest to the board:
-```text
-~/ArduinoApps/stt-benchmark/python/data_audio/recorded/*.wav
-~/ArduinoApps/stt-benchmark/python/data_audio/recorded/manifest.json
-```
-
-### Step 3: Setup & Compile whisper.cpp with ARM NEON
-Navigate to the `python` directory and execute the lean setup script to compile `whisper-cli` with ARM NEON optimizations and download the quantized model (~60 MB):
-
-```bash
-cd ~/ArduinoApps/stt-benchmark/python
-
-# Compiles whisper.cpp with ARM NEON and downloads ggml-base.en-q5_0.bin:
-bash setup_whisper_cpp.sh base.en-q5_0
-```
-
-### Step 4: Sync Python Dependencies with `uv`
 ```bash
 uv sync
+uv run main.py
 ```
 
-### Step 5: Run Benchmark
-By default, the benchmark runs the optimized **`whisper.cpp:base.en-q5_0`** model:
+`main.py` downloads missing model weights for the selected engines into
+`models/`. UV manages packages; model weights are runtime data and cannot
+be declared in TOML.
+
+### Running Other Available Models
+
+To compare engines, pass the `--engines` argument:
 
 ```bash
-# Optimized execution:
-uv run python main.py --output-dir results_arduino
-```
+# Run every configured engine sequentially:
+uv run main.py --engines all --output-dir results_arduino
 
-#### Running Other Available Models:
-To run 4-bit quantization or compare against other preserved engines, pass the `--engines` argument:
-
-```bash
-# Run 4-bit quantized Whisper Base:
-# (First download the model with: bash setup_whisper_cpp.sh base.en-q4_0)
-uv run python main.py --engines whisper.cpp:base.en-q4_0 --output-dir results_arduino
+# Run both supported whisper.cpp Base variants in one benchmark:
+uv run main.py --engines whisper.cpp:base.en-q5_1 whisper.cpp:base.en-q5_0 --output-dir results_arduino
 
 # Compare against faster-whisper Base INT8:
-uv run python main.py --engines faster-whisper:base.en --output-dir results_arduino
+uv run main.py --engines faster-whisper:base.en --output-dir results_arduino
 
 # Run Vosk or Sherpa-ONNX:
-uv run python main.py --engines vosk sherpa-onnx --output-dir results_arduino
+uv run main.py --engines vosk sherpa-onnx --output-dir results_arduino
 ```
-
----
 
 ## Local Execution (Host Computer)
 
 For baseline testing or computer-side comparisons:
 
 ```bash
-cd python
 uv sync
 uv run python main.py --output-dir results_computer
 ```
 
-Results will be written to `python/results_computer/`.
+Results will be written to `results_computer/`.
 
----
+## Results & Visualizations (visualize.py)
 
-## Results & Visualizations (`visualize.py`)
-
-After the benchmark finishes executing on the Arduino UNO Q, run `visualize.py` to generate visual performance reports and an interactive HTML dashboard across all benchmarked models:
+After the benchmark finishes, run `visualize.py` to generate visual performance reports and an interactive HTML dashboard across all benchmarked models:
 
 ```bash
-cd python
 uv run visualize.py --input-dir results_arduino
 ```
 
 This generates in `results_arduino/plots/`:
+
 - **Performance Summary Dashboard** (`plots/dashboard_summary.png`): Combined WER/CER, Latency, RTF, and Peak RAM footprint.
-- **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates execution speed relative to real-time audio playback (`RTF < 1.0`).
+- **Real-Time Factor (RTF) Analysis** (`plots/rtf_realtime_factor.png`): Evaluates execution speed relative to real-time audio playback (RTF < 1.0).
 - **Interactive Evaluation Report** (`plots/evaluation_report.html`): Self-contained HTML report.
 
 ### Comparing Host Computer vs. Arduino UNO Q:
+
 If you have run the benchmark on both a PC and the Arduino board:
 
 ```bash

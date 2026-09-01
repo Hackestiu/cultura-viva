@@ -24,6 +24,10 @@ stt-benchmark/
 └── results_computer/    # JSON reports and plots
 ```
 
+The reusable production STT adapters live in `pipeline/`. They contain the
+benchmark-validated implementations for `faster-whisper:base.en` and
+`whisper.cpp:base.en-q5_1`, while the benchmark runner remains at the root.
+
 ## Benchmark Models
 
 The benchmark evaluates local English STT engines:
@@ -44,7 +48,7 @@ To run Whisper Base smoothly on the Arduino UNO Q's 4x ARM Cortex-A53 processor 
 
 - **ARM NEON SIMD & Native Bindings (pywhispercpp):** Direct 128-bit vector processing on ARMv8 CPU cores integrated smoothly through Python bindings.
 - **Quantization (q5_1 / int8):** Reduces model memory footprint while cutting memory bandwidth pressure. The benchmark keeps q5_1 as the accuracy-first whisper.cpp target.
-- **4 CPU Threads (`--cpu-threads 4`):** Spreads the tensor computation parallelly across all 4 physical CPU cores.
+- **CPU Threads (`--cpu-threads 2` by default):** Uses a conservative two-thread profile on the UNO Q; use `--cpu-threads 4` on a capable host after measuring memory.
 - **Greedy Search (`--whisper-beam-size 1`):** Fast single-pass decoding without exploring candidate branches.
 - **Environment Management with uv:** Python dependencies are locked by UV. Large model files are downloaded into `models/`; they are intentionally not embedded in `uv.lock` or Git.
 

@@ -124,7 +124,7 @@ class WhisperCppRecognizer:
             resolved_model = ensure_whisper_model(model_name)
         model_target = resolved_model
 
-        self.cpu_threads = cpu_threads or 4
+        self.cpu_threads = cpu_threads or 2
 
         # Native C++ model load through the Python wrapper.
         self.model = Model(model_target, n_threads=self.cpu_threads)

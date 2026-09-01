@@ -94,7 +94,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     parser.add_argument("--compute-type", default="int8")
-    parser.add_argument("--cpu-threads", type=int, default=4, help="CPU threads for inference (default: 4)")
+    parser.add_argument("--cpu-threads", type=int, default=2, help="CPU threads for inference (default: 2; use 4 on a capable host)")
     parser.add_argument("--whisper-beam-size", type=int, default=1, help="Whisper beam size (1 = greedy, fastest)")
     parser.add_argument("--whisper-initial-prompt", default=None, help="Custom prompt override (domain bias prompt is used by default)")
     parser.add_argument("--wandb", action="store_true")

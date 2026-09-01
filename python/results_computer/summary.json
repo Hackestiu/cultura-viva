@@ -1,13 +1,13 @@
 [
   {
-    "engine": "faster-whisper:base.en",
-    "avg_wer": 0.16260416666666666,
-    "avg_cer": 0.09550833333333332,
-    "avg_keyword_spotting_accuracy": 0.9473684210526315,
-    "avg_inference_time_sec": 12.8650375,
-    "avg_inference_latency_ms": 12865.041666666666,
-    "max_peak_ram_mb": 404.12,
-    "model_size_mb": 140.92,
+    "engine": "faster-whisper:tiny.en",
+    "avg_wer": 0.3248875,
+    "avg_cer": 0.18910000000000002,
+    "avg_keyword_spotting_accuracy": 0.7894736842105263,
+    "avg_inference_time_sec": 8.099020833333332,
+    "avg_inference_latency_ms": 8099.020416666666,
+    "max_peak_ram_mb": 328.32,
+    "model_size_mb": 74.47,
     "domain_bias_applied": true,
     "num_utterances": 24
   }

@@ -1,25 +1,26 @@
 #pragma once
 
-// Welcome screens "Cultura Viva": intro, options, 3 tutorial pages and
-// personality selection. Use the same global `tft` already initialised in
-// sketch.ino (INITR_GREENTAB, rotation(1), 160x128).
-//
-// Requires `struct RGB { uint8_t r,g,b; };` already declared
-// (comes from tilemap.h) -- include tilemap.h BEFORE this file.
-
+#include <stdint.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
 #include "logo_bitmap.h"
 
-// ---------- "Cultura Viva" colour palette ----------
-const RGB UI_CREAM   = { 245, 243, 239 };  // #F5F3EF -- general background
-const RGB UI_DARK    = { 38,  38,  38  };  // #262626 -- primary text
-const RGB UI_SLATE   = { 73,  119, 141 };  // #49778D -- secondary text
-const RGB UI_MEDGREY = { 102, 102, 102 };  // #666666 -- tertiary text
-const RGB UI_TEAL    = { 63,  129, 121 };  // #3F8179 -- accent (button A)
-const RGB UI_PEACH   = { 222, 156, 105 };  // #DE9C69 -- accent (button B)
-const RGB UI_NAVY    = { 31,  64,  86  };  // #1F4056 -- accent (titles)
-const RGB UI_MUSTARD = { 227, 181, 82  };  // #E3B552 -- accent (button C)
+// Forward declaration of global tft defined in sketch.ino
+extern Adafruit_ST7735 tft;
 
-inline uint16_t uiColor(const RGB& c) {
+// ---------- "Cultura Viva" colour palette ----------
+struct UiRGB { uint8_t r, g, b; };
+
+const UiRGB UI_CREAM   = { 245, 243, 239 };  // #F5F3EF -- general background
+const UiRGB UI_DARK    = { 38,  38,  38  };  // #262626 -- primary text
+const UiRGB UI_SLATE   = { 73,  119, 141 };  // #49778D -- secondary text
+const UiRGB UI_MEDGREY = { 102, 102, 102 };  // #666666 -- tertiary text
+const UiRGB UI_TEAL    = { 63,  129, 121 };  // #3F8179 -- accent (button A)
+const UiRGB UI_PEACH   = { 222, 156, 105 };  // #DE9C69 -- accent (button B)
+const UiRGB UI_NAVY    = { 31,  64,  86  };  // #1F4056 -- accent (titles)
+const UiRGB UI_MUSTARD = { 227, 181, 82  };  // #E3B552 -- accent (button C)
+
+inline uint16_t uiColor(const UiRGB& c) {
   return tft.color565(c.r, c.g, c.b);
 }
 
@@ -85,8 +86,6 @@ void drawScreenIntro() {
   tft.drawRGBBitmap(0, 0, LOGO_BITMAP, LOGO_W, LOGO_H);
   introPromptVisible = true;
   lastIntroBlinkMillis = millis();
-  // The footer ("press button to continue") is drawn by blinkIntroPrompt(),
-  // called from loop() while in this screen state.
   const char* msg = "PRESS ANY BUTTON";
   int16_t textW = (int16_t)strlen(msg) * 6;
   tft.setTextSize(1);
@@ -95,7 +94,7 @@ void drawScreenIntro() {
   tft.print(msg);
 }
 
-// Blinks "press button" message -- call every loop() iteration while in SCR_INTRO.
+// Blinks "press button" message -- call every loop() iteration while in UI_BOOT_INTRO.
 void blinkIntroPrompt() {
   unsigned long now = millis();
   if (now - lastIntroBlinkMillis < INTRO_BLINK_MS) return;

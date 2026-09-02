@@ -75,7 +75,6 @@
 #include <TinyGPSPlus.h>
 #include "landmarks.h"
 #include "tilemap.h"
-#include "ui_screens.h"
 
 // ---------- Pins LCD (SPI per maquinari) ----------
 #define TFT_CS   10
@@ -84,6 +83,8 @@
 #define TFT_BL    5   // Backlight
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+
+#include "ui_screens.h"
 
 // ---------- Botó extern (foto) ----------
 #define EXT_BUTTON_PIN 7

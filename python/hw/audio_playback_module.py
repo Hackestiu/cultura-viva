@@ -65,13 +65,12 @@ class AudioPlayer:
         return self._device or "default"
 
     def set_volume(self, volume_percent: int) -> bool:
-        """Sets the system audio output volume percentage (0 - 100%) using amixer.
-        Tries common ALSA control names ('Master', 'Headphone', 'Speaker', 'PCM').
-        """
+        """Sets the system audio output volume, clamped to [0, 100].
+        Always returns True; if no ALSA mixer control accepts the value, the
+        level is tracked in software only."""
         clamped = max(0, min(100, int(volume_percent)))
         self._current_volume = clamped
 
-        # Try setting volume on common ALSA mixer control channels
         mixer_controls = ["Master", "Headphone", "Speaker", "PCM"]
         success = False
 
@@ -130,16 +129,12 @@ class AudioPlayer:
         return out_file
 
     def synthesize_and_play(self, text: str, personality: str | None = None) -> bool:
-        """Synthesises text with the Piper voice matching the given personality and plays it.
+        """Synthesizes text as speech using the voice associated with personality,
+        saves the result to RESPONSES_DIR, and plays it through the configured audio device.
+        Returns True on success, False if text is empty or any step fails.
 
-        Voice selection (from tts-benchmark pipeline):
-            'artistic'  -> libriTTS_r_medium  (en-US, neutral)
-            'technical' -> semaine_spike      (en-GB, male)
-            'child'     -> semaine_prudence   (en-GB, female)
-
-        :param text:        The sentence(s) to speak.
-        :param personality: 'artistic' | 'technical' | 'child', or None for default.
-        :returns:           True on success, False on any recoverable error.
+        :param text:        The text to speak.
+        :param personality: 'artistic' | 'technical' | 'child', or None for the default voice.
         """
         if not text or not text.strip():
             print("[WARN] AudioPlayer: synthesize_and_play called with empty text — skipping.")
@@ -154,10 +149,8 @@ class AudioPlayer:
         return self.play(out_file)
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
-        """Run Piper synthesis into a BytesIO WAV buffer.
-
-        :returns: Raw WAV bytes, or None if the voice could not be loaded or synthesis failed.
-        """
+        """Returns WAV audio bytes for text spoken in the voice identified by voice_key,
+        or None if the voice cannot be loaded or synthesis fails."""
         voice_obj = self._load_voice(voice_key)
         if voice_obj is None:
             return None
@@ -178,10 +171,9 @@ class AudioPlayer:
             return None
 
     def _load_voice(self, voice_key: str) -> Optional[object]:
-        """Return a cached PiperVoice for voice_key, loading it from disk on first call.
-
-        :returns: PiperVoice instance, or None if files are missing or piper-tts is not installed.
-        """
+        """Returns the PiperVoice instance for voice_key,
+        or None if the voice is unknown, the model files are missing,
+        or piper-tts is not installed."""
         if voice_key in self._voices:
             return self._voices[voice_key]
 

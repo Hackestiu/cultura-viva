@@ -46,13 +46,10 @@ LOCATION_MODEL_DIRS: dict[str, Path] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Preprocessing helpers (matches the val/test transforms used during training)
-# ---------------------------------------------------------------------------
-
 def _preprocess(image_path: Path, size: int, mean: list, std: list) -> np.ndarray:
-    """Resize (shortest side to `size`), center-crop (size x size),
-    normalize, and convert HWC -> NCHW float32 for ONNX Runtime."""
+    """Returns a normalized NCHW float32 array ready for ONNX Runtime inference.
+    The image is resized so its shortest side equals size, then center-cropped to size×size,
+    normalized using mean and std per channel, and reshaped to NCHW with a batch dimension of 1."""
     from PIL import Image
 
     img = Image.open(image_path).convert("RGB")
@@ -64,11 +61,11 @@ def _preprocess(image_path: Path, size: int, mean: list, std: list) -> np.ndarra
     top  = (h - size) // 2
     img  = img.crop((left, top, left + size, top + size))
 
-    arr = np.asarray(img).astype(np.float32) / 255.0            # HWC  [0, 1]
+    arr = np.asarray(img).astype(np.float32) / 255.0
     arr = (arr - np.array(mean, dtype=np.float32)) \
-               / np.array(std,  dtype=np.float32)                # normalize
-    arr = arr.transpose(2, 0, 1)                                 # CHW
-    return np.expand_dims(arr, 0).astype(np.float32)             # NCHW
+               / np.array(std,  dtype=np.float32)
+    arr = arr.transpose(2, 0, 1)
+    return np.expand_dims(arr, 0).astype(np.float32)
 
 
 def _softmax(x: np.ndarray) -> np.ndarray:
@@ -81,28 +78,23 @@ def _softmax(x: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 class VisionClassifier:
-    """Classifies a photo to detect which Gaudí element is present.
+    """Classifies a photo to detect which Gaudí architectural element is present.
 
-    Called from main.py:
-        element = vision.classify(site, camera.last_photo_path)
-
-    Returns a string such as 'torres' or 'escalinata_drac', or None if no
-    element is detected with sufficient confidence (or if the model is unavailable).
-
-    Models are loaded lazily on the first call for each location and reused
-    thereafter (ONNX Runtime session + metadata dict).
+    Returns the element label (e.g. 'torres', 'escalinata_drac') for the location's
+    model, or None if no element is detected with sufficient confidence or if the
+    model for that location is unavailable.
     """
 
     def __init__(self):
-        # { location_name: (ort.InferenceSession, meta_dict) | None }
         self._sessions: dict = {}
 
     def classify(self, location: str, photo_path) -> str | None:
-        """Returns the Gaudí element detected in the photo, or None.
+        """Returns the label of the Gaudí element detected in the photo at photo_path
+        for the given location, or None if photo_path is None, the file does not exist,
+        no model is available for location, or the top prediction is below CONFIDENCE_THRESHOLD.
 
-        :param location:   'park_guell' or 'sagrada_familia'
-                           (returned by location_module.LocationRegistry.current())
-        :param photo_path: path to the .jpg file (Path or str) of the last captured photo
+        :param location:   'park_guell' or 'sagrada_familia'.
+        :param photo_path: Path or str to a .jpg image file, or None.
         """
         if photo_path is None:
             return None
@@ -124,9 +116,8 @@ class VisionClassifier:
     # -----------------------------------------------------------------------
 
     def _load_session(self, location: str):
-        """Lazily loads the ONNX Runtime session for the given location.
-        Returns (InferenceSession, meta_dict) or None if the model is missing.
-        """
+        """Returns the (InferenceSession, meta_dict) pair for location,
+        or None if the model files are missing or onnxruntime is not installed."""
         if location in self._sessions:
             return self._sessions[location]
 

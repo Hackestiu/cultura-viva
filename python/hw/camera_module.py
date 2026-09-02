@@ -44,8 +44,7 @@ class CameraManager:
             print(f"[ERROR] Could not open camera at index {CAMERA_DEVICE_INDEX}")
             return None
 
-        # Many USB webcams only offer 1080p with MJPG fourcc.
-        # Set fourcc BEFORE width/height properties.
+        # fourcc must be set before width/height; required for 1080p on this webcam
         fourcc = cv2.VideoWriter_fourcc(*CAMERA_FOURCC)
         cap.set(cv2.CAP_PROP_FOURCC, fourcc)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_PHOTO_WIDTH)
@@ -74,7 +73,6 @@ class CameraManager:
         cap = self.ensure_open()
         if cap is None:
             return None
-        # Flush buffer to capture the freshest frame
         for _ in range(flush):
             cap.grab()
         ret, frame = cap.retrieve()
@@ -85,8 +83,9 @@ class CameraManager:
 
     # ---------- Photos (Button D7) ----------
     def take_photo(self):
-        """Captures and saves a photo.
-        Returns the saved file path, or None on failure."""
+        """Captures a frame from the camera and saves it as a JPEG to PHOTOS_DIR.
+        The filename encodes the timestamp and actual frame dimensions.
+        Returns the saved file path, or None if the camera is unavailable or capture fails."""
         frame = self._grab_frame(flush=5)
         if frame is None:
             return None

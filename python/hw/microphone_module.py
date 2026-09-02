@@ -67,7 +67,9 @@ def build_hotwords() -> str:
 
 
 def canonicalize_domain_entities(text: str) -> str:
-    """Normalize common ASR spellings without changing unrelated speech."""
+    """Applies regex-based spelling corrections to domain-specific proper nouns in text
+    (e.g. 'gaudi' -> 'Gaudí', 'park guell' -> 'Park Güell').
+    Returns the corrected text. Substrings not matching any known pattern are left unchanged."""
     for pattern, replacement in _CORRECTIONS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text.strip()
@@ -119,10 +121,9 @@ class MicrophoneManager:
 
     @staticmethod
     def save(button_id: str, model_name: str, audio: np.ndarray):
-        """Saves audio to RECORDINGS_DIR as a valid WAV file (16-bit PCM, 16 kHz mono),
-        tagged with button/model identifier in the filename.
-        Writing a proper WAV header is required so that Whisper (pywhispercpp)
-        can read the file -- raw PCM bytes would silently produce empty transcriptions."""
+        """Saves audio to RECORDINGS_DIR as a 16-bit PCM, 16 kHz mono WAV file.
+        The filename encodes the timestamp, button_id, and model_name.
+        Returns the path of the saved file."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
         samples = audio.astype(np.int16)
@@ -135,20 +136,11 @@ class MicrophoneManager:
         return out_file
 
     def transcribe(self, audio_path) -> str:
-        """Transcribes a recorded .wav file using faster-whisper.
-        Returns the transcribed text as a string, or '' if the model is unavailable.
-
-        Optimizations applied (from stt-benchmark pipeline):
-        - compute_type='int8', cpu_threads=4  (Cortex-A53 tuned)
-        - beam_size=1, temperature=0.0        (greedy — faster, more deterministic)
-        - vad_filter=True                     (removes silence, reduces hallucinations)
-        - initial_prompt=DOMAIN_PROMPT        (biases ASR to Gaudí vocabulary)
-        - hotwords=build_hotwords()           (domain keyword list)
-        - canonicalize_domain_entities()      (post-correction of ASR spelling errors)
-
-        The faster-whisper model is loaded lazily on the first call and reused thereafter.
-        Does not alter record_while_held() or save().
-        """
+        """Transcribes the WAV file at audio_path using faster-whisper, with domain
+        biasing toward Gaudí-related vocabulary and post-correction of common ASR spelling errors.
+        Returns the transcribed text as a string, or '' if the model is unavailable
+        or transcription fails.
+        The faster-whisper model is loaded on the first call and reused thereafter."""
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
@@ -159,7 +151,6 @@ class MicrophoneManager:
             )
             return ""
 
-        # Lazy load model instance
         if not hasattr(self, "_whisper"):
             try:
                 from faster_whisper import WhisperModel
@@ -184,7 +175,6 @@ class MicrophoneManager:
             return ""
 
         try:
-            # Greedy search + VAD + domain biasing (from stt-benchmark pipeline)
             segments, _ = self._whisper.transcribe(
                 str(audio_path),
                 language="en",

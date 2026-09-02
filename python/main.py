@@ -108,9 +108,7 @@ def run_app() -> None:
         except Exception as exc:
             print(f"[ERROR] Sending camera frame chunks: {exc}")
 
-        # --- Toggle Recording with D7 (minimap mode) ---
-        # Handled via 'is_recording_active' (D7 toggle) +
-        # 'get_personality_index' (selected with A/B/C).
+        # --- Toggle Recording (D7 in minimap mode) ---
         try:
             if Bridge.call("is_recording_active"):
                 personality_index = Bridge.call("get_personality_index")  # 0/1/2

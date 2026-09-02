@@ -69,18 +69,9 @@ class ModelRegistry:
     def models_dir(self):
         return MODELS_DIR
 
-    # ------------------------------------------------------------------
-    # Methods for the Cultura Viva pipeline.
-    # name_for() and existing methods remain untouched.
-    # ------------------------------------------------------------------
-
     def get_kg_context(self, element: str) -> str:
-        """Queries the Gaudí knowledge graph for the detected element.
-        Returns a string of factual context, or '' if the element is not found
-        in the KG or if the KG file does not exist yet.
-
-        The KG is loaded lazily on the first call.
-        """
+        """Returns a string of factual context for element from the Gaudí knowledge graph,
+        or '' if element is not found or the knowledge graph file does not exist."""
         from config import KG_PATH
 
         if not KG_PATH.exists():
@@ -105,9 +96,9 @@ class ModelRegistry:
             print(f"[WARN] Element '{element}' not found in knowledge graph.")
             return ""
 
-        # Convert entry into plain text for inclusion in the SLM prompt
         lines = []
         for k, v in entry.items():
+            # 'curiositats' is the legacy Catalan key; both map to 'curiosities' in output
             if k == "curiosities" and isinstance(v, list):
                 lines.append(f"curiosities: {'; '.join(str(c) for c in v)}")
             elif k == "curiositats" and isinstance(v, list):
@@ -123,15 +114,15 @@ class ModelRegistry:
         personality: str,
         kg_context: str,
     ) -> str:
-        """Inference with SLM (Qwen2.5 via llama-cpp-python) using the
-        system prompt of the selected Personality.
-        Returns the generated response text, or a descriptive error message
-        if the model is unavailable (no exception is raised).
+        """Generates a spoken response to question, adopting the tone defined by personality
+        and grounded in kg_context and element when provided.
+        Returns the generated text, or a descriptive error string if the model is unavailable
+        (no exception is raised).
 
-        :param question:    transcribed text from Whisper (user question)
-        :param element:     detected element from VisionClassifier, or None
-        :param personality: 'artistic' | 'technical' | 'child' (name_for(button_id))
-        :param kg_context:  factual context from KG (get_kg_context())
+        :param question:    The user's transcribed question.
+        :param element:     Gaudí element detected in the last photo, or None.
+        :param personality: 'artistic' | 'technical' | 'child' (from name_for(button_id)).
+        :param kg_context:  Factual context string from get_kg_context(), or ''.
         """
         from config import SLM_MODEL_PATH
 

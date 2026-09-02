@@ -1,28 +1,17 @@
 """
-Gestio de l'estat del minimapa de Park Guell (switch D6 OFF).
+Minimap state management for the Park Güell map display (switch D6 OFF).
 
-DIFERENCIA CLAU respecte a la versio standalone original d'aquest
-sketch: alla, un script separat (mark_visited.py) es connectava per
-PORT SERIE des d'un PC extern i enviava linies de text ("V3",
-"P40,90", "R"...). Aqui el Python ja corre DINS de la UNO Q i parla
-amb el sketch pel mateix Bridge RPC que fan servir la resta de
-moduls (camera_module.py, etc.) -- no hi ha cap port serie extern
-de per mig.
-
-Aquest modul nomes fa de traductor entre una etiqueta humana
-("DR", 3, "@DR", "@40,110", "reset") i les crides RPC que exposa el
-sketch:
+This module translates human-readable landmark identifiers (e.g. 'DR', 3)
+into RPC calls exposed by the sketch:
     mark_landmark_visited(id)
     set_location_by_id(id)
     set_location_xy(x, y)
     reset_minimap()
 
-D'ON VE EL TRIGGER (quin event marca un landmark com a visitat o
-mou el "you are here")? Es queda FORA d'abast d'aquest modul, tal
-com ja ho era a l'script original -- pot ser GPS, un boto, el Knob,
-proximitat... el que decideixis, nomes has de cridar els metodes
-d'aquesta classe (mark_visited/set_position/reset) des d'on calgui
-(p.ex. main.py).
+The trigger that decides when to mark a landmark as visited or move the
+'you are here' marker is outside the scope of this module. Call
+mark_visited(), set_position(), or reset() from main.py or wherever
+the triggering event occurs (GPS, button, knob, proximity, etc.).
 """
 
 import json
@@ -43,15 +32,16 @@ class MinimapManager:
 
     def _load_landmarks(self):
         if not LANDMARKS_FILE.exists():
-            print(f"[WARN] No s'ha trobat {LANDMARKS_FILE}")
+            print(f"[WARN] Landmarks file not found: {LANDMARKS_FILE}")
             return []
         with open(LANDMARKS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data["landmarks"]
 
     def _resolve_id(self, label: str):
-        """Tradueix un codi ('DR'), un nom, o un id numeric a l'id
-        numeric del landmark. Retorna None si no es reconeix."""
+        """Returns the numeric landmark id for a landmark code (e.g. 'DR'),
+        a numeric index as a string, or a landmark name.
+        Returns None if label does not match any known landmark."""
         label = label.strip()
         if not label:
             return None
@@ -64,13 +54,15 @@ class MinimapManager:
                 return idx
         return None
 
-    # ---------- API publica ----------
+    # ---------- Public API ----------
     def mark_visited(self, label: str) -> bool:
-        """Marca un landmark com a visitat (per codi, p.ex. 'DR', o
-        per id numeric). Retorna True si s'ha pogut resoldre i enviar."""
+        """Marks the landmark identified by label as visited.
+        label may be a landmark code (e.g. 'DR') or a numeric index as a string.
+        Returns True if the landmark was resolved and the RPC call was dispatched,
+        False if label does not match any known landmark."""
         landmark_id = self._resolve_id(label)
         if landmark_id is None:
-            print(f"[WARN] Landmark desconegut: {label!r}")
+            print(f"[WARN] Unknown landmark: {label!r}")
             return False
         if Bridge is None:
             print(f"[dry run] mark_landmark_visited({landmark_id})")
@@ -78,8 +70,10 @@ class MinimapManager:
         return bool(Bridge.call("mark_landmark_visited", landmark_id))
 
     def set_position(self, label_or_xy) -> bool:
-        """Mou el marcador 'you are here'. Accepta un codi/id de
-        landmark, o una tupla/llista (x, y) per una posicio arbitraria."""
+        """Moves the 'you are here' marker on the minimap.
+        label_or_xy may be a landmark code or numeric index (str or int),
+        or a tuple/list (x, y) for an arbitrary pixel position.
+        Returns True if the position was set, False if the landmark is unknown."""
         if isinstance(label_or_xy, (tuple, list)) and len(label_or_xy) == 2:
             x, y = label_or_xy
             if Bridge is None:
@@ -89,7 +83,7 @@ class MinimapManager:
 
         landmark_id = self._resolve_id(str(label_or_xy))
         if landmark_id is None:
-            print(f"[WARN] Landmark desconegut: {label_or_xy!r}")
+            print(f"[WARN] Unknown landmark: {label_or_xy!r}")
             return False
         if Bridge is None:
             print(f"[dry run] set_location_by_id({landmark_id})")
@@ -97,7 +91,8 @@ class MinimapManager:
         return bool(Bridge.call("set_location_by_id", landmark_id))
 
     def reset(self) -> bool:
-        """Neteja tots els landmarks visitats i la posicio actual."""
+        """Clears all visited landmarks and the current position marker.
+        Returns True if the reset RPC call was dispatched successfully."""
         if Bridge is None:
             print("[dry run] reset_minimap()")
             return True

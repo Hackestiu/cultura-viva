@@ -1,22 +1,64 @@
 """
-Audio playback management -- designed for TTS synthesized voice responses
-from the Cultura Viva pipeline played through 3.5mm jack headphones (or ALSA speaker),
-with volume controlled dynamically via the Modulino Knob.
+Audio playback management — TTS synthesized voice responses from the Cultura Viva
+pipeline played through 3.5mm jack headphones (or ALSA speaker), with volume
+controlled dynamically via the Modulino Knob.
 
-Uses 'aplay' (alsa-utils) and 'amixer' via subprocess.
+TTS engine: Piper (piper-tts Python library, in-process synthesis via PiperVoice).
+Three personality voices are supported (from tts-benchmark pipeline):
+
+    artistic  -> libriTTS_r_medium  (en-US, neutral American English)
+    technical -> semaine_spike      (en-GB, male British English)
+    child     -> semaine_prudence   (en-GB, female British English)
+
+Voice models (.onnx + .onnx.json) must be placed in python/models/tts/.
+See models/tts/README.md for download instructions.
+
+Uses 'aplay' (alsa-utils) and 'amixer' via subprocess for playback and volume.
 """
 
+import os
 import subprocess
 import time
+import wave
+from io import BytesIO
 from pathlib import Path
+from typing import Optional
 
-from config import DEFAULT_VOLUME_PERCENT, PLAYBACK_DEVICE, RESPONSES_DIR
+from config import DEFAULT_VOLUME_PERCENT, MODELS_DIR, PLAYBACK_DEVICE, RESPONSES_DIR
 
+
+# ---------------------------------------------------------------------------
+# Voice registry — maps voice keys to (onnx_stem, speaker_id)
+# Semaine shares one ONNX pair; speaker IDs are defined by the downloaded JSON.
+# ---------------------------------------------------------------------------
+
+_VOICE_REGISTRY: dict[str, tuple[str, Optional[int]]] = {
+    "libriTTS_r_medium": ("en_US-libritts_r-medium", None),
+    "semaine_spike":     ("en_GB-semaine-medium", 0),
+    "semaine_prudence":  ("en_GB-semaine-medium", 1),
+}
+
+PERSONALITY_VOICE: dict[str, str] = {
+    "artistic":  "libriTTS_r_medium",
+    "technical": "semaine_spike",
+    "child":     "semaine_prudence",
+}
+
+DEFAULT_VOICE = "libriTTS_r_medium"
+
+_DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
+
+
+# ---------------------------------------------------------------------------
+# AudioPlayer
+# ---------------------------------------------------------------------------
 
 class AudioPlayer:
     def __init__(self):
         self._device = PLAYBACK_DEVICE or "default"
         self._current_volume = DEFAULT_VOLUME_PERCENT
+        self._tts_models_dir = _DEFAULT_TTS_MODELS_DIR
+        self._voices: dict[str, object] = {}
 
     def _resolve_device(self):
         """Returns the ALSA device string for aplay (-D flag)."""
@@ -87,79 +129,106 @@ class AudioPlayer:
         print(f"[OK] TTS response saved to: {out_file}")
         return out_file
 
-    def synthesize_and_play(self, text: str) -> bool:
-        """Synthesizes text to speech with Piper TTS, saves the .wav to RESPONSES_DIR,
-        and plays it through 3.5mm jack headphones.
-        Returns True if successful, False otherwise.
+    def synthesize_and_play(self, text: str, personality: str | None = None) -> bool:
+        """Synthesises text with the Piper voice matching the given personality and plays it.
+
+        Voice selection (from tts-benchmark pipeline):
+            'artistic'  -> libriTTS_r_medium  (en-US, neutral)
+            'technical' -> semaine_spike      (en-GB, male)
+            'child'     -> semaine_prudence   (en-GB, female)
+
+        :param text:        The sentence(s) to speak.
+        :param personality: 'artistic' | 'technical' | 'child', or None for default.
+        :returns:           True on success, False on any recoverable error.
         """
-        from config import TTS_CONFIG_PATH, TTS_MODEL_PATH
-
-        if not TTS_MODEL_PATH.exists():
-            print(
-                f"[WARN] Piper TTS model not found at {TTS_MODEL_PATH}. "
-                "Download it following instructions in audio_playback_module.README.md. "
-                "No response will be played."
-            )
+        if not text or not text.strip():
+            print("[WARN] AudioPlayer: synthesize_and_play called with empty text — skipping.")
             return False
 
-        if not TTS_CONFIG_PATH.exists():
-            print(
-                f"[WARN] Piper TTS config not found at {TTS_CONFIG_PATH}. "
-                "Ensure the .onnx.json file is present next to the .onnx model. "
-                "No response will be played."
-            )
+        voice_key = PERSONALITY_VOICE.get(personality, DEFAULT_VOICE) if personality else DEFAULT_VOICE
+        wav_bytes = self._synthesize(text, voice_key)
+        if wav_bytes is None:
             return False
 
-        if not text.strip():
-            print("[WARN] synthesize_and_play: text is empty, nothing to synthesize.")
-            return False
-
-        try:
-            result = subprocess.run(
-                [
-                    "piper",
-                    "--model", str(TTS_MODEL_PATH),
-                    "--config", str(TTS_CONFIG_PATH),
-                    "--output_raw",
-                ],
-                input=text.encode("utf-8"),
-                capture_output=True,
-                check=True,
-                timeout=30,
-            )
-        except FileNotFoundError:
-            print(
-                "[ERROR] 'piper' binary not found on system. "
-                "Install piper-tts (pip install piper-tts or from official repo)."
-            )
-            return False
-        except subprocess.CalledProcessError as exc:
-            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
-            print(f"[ERROR] Piper TTS failed: {stderr.strip()}")
-            return False
-        except subprocess.TimeoutExpired:
-            print("[ERROR] Piper TTS timed out (>30s) — interrupted.")
-            return False
-
-        audio_bytes = _pcm_to_wav(result.stdout, sample_rate=22050)
-        out_file = self.save_response(audio_bytes)
+        out_file = self.save_response(wav_bytes)
         return self.play(out_file)
 
+    def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
+        """Run Piper synthesis into a BytesIO WAV buffer.
 
-# ---------------------------------------------------------------------------
-# Helper function (wraps raw PCM into valid WAV container)
-# ---------------------------------------------------------------------------
+        :returns: Raw WAV bytes, or None if the voice could not be loaded or synthesis failed.
+        """
+        voice_obj = self._load_voice(voice_key)
+        if voice_obj is None:
+            return None
 
-def _pcm_to_wav(pcm_bytes: bytes, sample_rate: int = 22050,
-                channels: int = 1, sampwidth: int = 2) -> bytes:
-    """Wraps raw PCM bytes (int16 little-endian emitted by Piper --output_raw)
-    into a valid WAV byte stream that aplay can directly execute."""
-    import io
-    import wave
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as wf:
-        wf.setnchannels(channels)
-        wf.setsampwidth(sampwidth)
-        wf.setframerate(sample_rate)
-        wf.writeframes(pcm_bytes)
-    return buf.getvalue()
+        _, speaker_id = _VOICE_REGISTRY[voice_key]
+        try:
+            buf = BytesIO()
+            with wave.open(buf, "wb") as wf:
+                wf.setframerate(voice_obj.config.sample_rate)
+                wf.setsampwidth(2)
+                wf.setnchannels(1)
+                voice_obj.synthesize_wav(text, wf, speaker_id=speaker_id)
+            wav_bytes = buf.getvalue()
+            print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")
+            return wav_bytes
+        except Exception as exc:
+            print(f"[ERROR] AudioPlayer: synthesis failed for voice '{voice_key}': {exc}")
+            return None
+
+    def _load_voice(self, voice_key: str) -> Optional[object]:
+        """Return a cached PiperVoice for voice_key, loading it from disk on first call.
+
+        :returns: PiperVoice instance, or None if files are missing or piper-tts is not installed.
+        """
+        if voice_key in self._voices:
+            return self._voices[voice_key]
+
+        entry = _VOICE_REGISTRY.get(voice_key)
+        if entry is None:
+            print(f"[WARN] AudioPlayer: unknown voice '{voice_key}'. Available: {', '.join(_VOICE_REGISTRY)}")
+            return None
+
+        onnx_stem, _ = entry
+        onnx_file = self._tts_models_dir / f"{onnx_stem}.onnx"
+        json_file  = self._tts_models_dir / f"{onnx_stem}.onnx.json"
+
+        if not onnx_file.is_file():
+            print(
+                f"[WARN] AudioPlayer: ONNX model not found at {onnx_file}. "
+                "Download it following the instructions in models/tts/README.md. "
+                "Returning empty audio."
+            )
+            return None
+        if not json_file.is_file():
+            print(f"[WARN] AudioPlayer: ONNX config not found at {json_file}.")
+            return None
+
+        if not hasattr(self, "_piper_available"):
+            try:
+                from piper import PiperVoice  # type: ignore[import]
+                self._piper_available = True
+            except ImportError:
+                print(
+                    "[WARN] AudioPlayer: piper-tts is not installed. "
+                    "Add 'piper-tts>=1.2.0' to requirements.txt and reinstall. "
+                    "Returning empty audio."
+                )
+                self._piper_available = False
+
+        if not self._piper_available:
+            return None
+
+        try:
+            from piper import PiperVoice  # type: ignore[import]
+            print(f"[OK] AudioPlayer: loading voice '{voice_key}' ...")
+            voice_obj = PiperVoice.load(str(onnx_file), str(json_file))
+            self._voices[voice_key] = voice_obj
+            print(f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz).")
+            return voice_obj
+        except Exception as exc:
+            print(f"[ERROR] AudioPlayer: failed to load voice '{voice_key}': {exc}")
+            return None
+
+

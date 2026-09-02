@@ -77,8 +77,9 @@ POLL_INTERVAL = 0.1
 # All paths point inside MODELS_DIR to keep paths centralized.
 # If you change models or filenames, update them here.
 
-# STT: Whisper GGML model (pywhispercpp).
-STT_MODEL_PATH = MODELS_DIR / "stt" / "ggml-small.bin"
+# STT: faster-whisper model directory (contains model.bin, config.json, vocabulary.txt).
+# See models/stt/README.md for download instructions.
+STT_MODEL_PATH = MODELS_DIR / "stt" / "faster-whisper-base.en"
 
 # SLM: Qwen2.5 model in GGUF format (llama-cpp-python).
 SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
@@ -86,9 +87,10 @@ SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 # KG: Gaudí Knowledge Graph in JSON.
 KG_PATH = MODELS_DIR / "knowledge" / "gaudi_kg.json"
 
-# TTS: Piper model (Catalan/English voice). Requires .onnx and .onnx.json.
-TTS_MODEL_PATH  = MODELS_DIR / "tts" / "ca_ES-upc_pau-medium.onnx"
-TTS_CONFIG_PATH = MODELS_DIR / "tts" / "ca_ES-upc_pau-medium.onnx.json"
+# TTS: Piper voice models (.onnx + .onnx.json pairs) live in MODELS_DIR / "tts".
+# The AudioPlayer in hw/audio_playback_module.py discovers them automatically via
+# its voice registry (PERSONALITY_VOICE). No single-file path is needed here.
+# See models/tts/README.md for download instructions.
 
 # Vision: Vision Transformer directory containing model.safetensors and config.json
 VISION_MODEL_DIR = MODELS_DIR / "vision"

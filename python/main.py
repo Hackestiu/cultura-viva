@@ -139,7 +139,7 @@ def run_app() -> None:
                         personality=model_name,
                         kg_context=kg_context,
                     )
-                    player.synthesize_and_play(answer)
+                    player.synthesize_and_play(answer, personality=model_name)
                 else:
                     print("[WARN] Empty recording (0 chunks captured)")
         except Exception as exc:

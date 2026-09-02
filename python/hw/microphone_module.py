@@ -5,10 +5,13 @@ or D7 toggle button. Recordings are saved to RECORDINGS_DIR tagged with the sele
 Technical note: The Microphone API exposes record_wav(duration=X) without streaming start/stop.
 Variable-length recording is achieved by recording short consecutive chunks (RECORD_CHUNK_SECONDS)
 while is_still_held() remains True, then concatenating them into a single .wav file.
+
+STT: faster-whisper with Gaudí domain optimizations (see transcribe()).
 """
 
 import time
 import wave
+import re
 
 import numpy as np
 
@@ -19,6 +22,60 @@ try:
 except ModuleNotFoundError:
     Microphone = None
 
+
+# ---------------------------------------------------------------------------
+# Gaudí domain vocabulary — used by faster-whisper to bias recognition
+# towards terms that appear frequently in the audioguide context.
+# ---------------------------------------------------------------------------
+
+DOMAIN_PROMPT = (
+    "Cultura Viva audio guide in Barcelona about Antoni Gaudí, Sagrada Família basilica, "
+    "Nativity, Passion, and Glory facades, Catalan modernisme architecture, Casa Batlló, "
+    "Casa Milà, Park Güell, dragon and salamander sculptures, and trencadís mosaics."
+)
+
+DOMAIN_KEYWORD_ALIASES = [
+    "Antoni Gaudí", "Gaudí", "Barcelona", "Passeig de Gràcia", "Temple Expiatori",
+    "Sagrada Família", "basilica", "facade", "Nativity facade", "Passion facade",
+    "Glory facade", "modernisme", "Catalan", "Casa Batlló", "Casa Milà",
+    "La Pedrera", "Park Güell", "Eixample", "trencadís", "salamander", "dragon",
+    "catenary arch"
+]
+
+# Post-transcription corrections: ASR commonly misspells these proper nouns.
+_CORRECTIONS = {
+    r"\bgaudi\b": "Gaudí",
+    r"\bgaudy\b": "Gaudí",
+    r"\bcasa batl[óo]\b": "Casa Batlló",
+    r"\bcasa batio\b": "Casa Batlló",
+    r"\bcasa batlow\b": "Casa Batlló",
+    r"\bcasa bortlow\b": "Casa Batlló",
+    r"\bcasa mila\b": "Casa Milà",
+    r"\bpark guell\b": "Park Güell",
+    r"\bparkway\b": "Park Güell",
+    r"\btrencadis\b": "trencadís",
+    r"\btrincadis\b": "trencadís",
+    r"\bmodernism\b": "modernisme",
+    r"\bcatalonian\b": "Catalan",
+    r"\bdrag on\b": "dragon",
+}
+
+
+def build_hotwords() -> str:
+    """Return the shared domain vocabulary for faster-whisper hotword biasing."""
+    return " ".join(DOMAIN_KEYWORD_ALIASES)
+
+
+def canonicalize_domain_entities(text: str) -> str:
+    """Normalize common ASR spellings without changing unrelated speech."""
+    for pattern, replacement in _CORRECTIONS.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+# ---------------------------------------------------------------------------
+# MicrophoneManager
+# ---------------------------------------------------------------------------
 
 class MicrophoneManager:
     def __init__(self):
@@ -78,18 +135,26 @@ class MicrophoneManager:
         return out_file
 
     def transcribe(self, audio_path) -> str:
-        """Transcribes a recorded .wav file using Whisper.
+        """Transcribes a recorded .wav file using faster-whisper.
         Returns the transcribed text as a string, or '' if the model is unavailable.
 
-        The Whisper model is loaded lazily on the first call and reused thereafter.
+        Optimizations applied (from stt-benchmark pipeline):
+        - compute_type='int8', cpu_threads=4  (Cortex-A53 tuned)
+        - beam_size=1, temperature=0.0        (greedy — faster, more deterministic)
+        - vad_filter=True                     (removes silence, reduces hallucinations)
+        - initial_prompt=DOMAIN_PROMPT        (biases ASR to Gaudí vocabulary)
+        - hotwords=build_hotwords()           (domain keyword list)
+        - canonicalize_domain_entities()      (post-correction of ASR spelling errors)
+
+        The faster-whisper model is loaded lazily on the first call and reused thereafter.
         Does not alter record_while_held() or save().
         """
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
             print(
-                f"[WARN] Whisper model not found at {STT_MODEL_PATH}. "
-                "Download it following the instructions in microphone_module.README.md. "
+                f"[WARN] faster-whisper model not found at {STT_MODEL_PATH}. "
+                "Download it following the instructions in models/stt/README.md. "
                 "Returning empty transcription string."
             )
             return ""
@@ -97,13 +162,20 @@ class MicrophoneManager:
         # Lazy load model instance
         if not hasattr(self, "_whisper"):
             try:
-                from pywhispercpp.model import Model as WhisperModel
-                self._whisper = WhisperModel(str(STT_MODEL_PATH))
-                print(f"[OK] Whisper model loaded: {STT_MODEL_PATH.name}")
+                from faster_whisper import WhisperModel
+
+                # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
+                self._whisper = WhisperModel(
+                    str(STT_MODEL_PATH),
+                    device="cpu",
+                    compute_type="int8",
+                    cpu_threads=4,
+                )
+                print(f"[OK] faster-whisper model loaded: {STT_MODEL_PATH.name}")
             except ImportError:
                 print(
-                    "[WARN] pywhispercpp is not installed. "
-                    "Add 'pywhispercpp' to requirements.txt and reinstall. "
+                    "[WARN] faster-whisper is not installed. "
+                    "Add 'faster-whisper>=1.0.0' to requirements.txt and reinstall. "
                     "Returning empty transcription string."
                 )
                 self._whisper = None
@@ -112,10 +184,22 @@ class MicrophoneManager:
             return ""
 
         try:
-            segments = self._whisper.transcribe(str(audio_path))
-            text = " ".join(s.text for s in segments).strip()
+            # Greedy search + VAD + domain biasing (from stt-benchmark pipeline)
+            segments, _ = self._whisper.transcribe(
+                str(audio_path),
+                language="en",
+                beam_size=1,
+                temperature=0.0,
+                vad_filter=True,
+                vad_parameters=dict(min_silence_duration_ms=500),
+                condition_on_previous_text=False,
+                initial_prompt=DOMAIN_PROMPT,
+                hotwords=build_hotwords(),
+            )
+            raw_text = " ".join(s.text for s in segments).strip()
+            text = canonicalize_domain_entities(raw_text)
             print(f"[OK] Transcription: '{text[:80]}{'...' if len(text) > 80 else ''}'")
             return text
         except Exception as exc:
-            print(f"[ERROR] Whisper failed transcribing {audio_path}: {exc}")
+            print(f"[ERROR] faster-whisper failed transcribing {audio_path}: {exc}")
             return ""

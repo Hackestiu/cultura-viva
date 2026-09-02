@@ -116,6 +116,7 @@ class WhisperCppRecognizer:
         cpu_threads: int | None = None,
         beam_size: int = 1,
         initial_prompt: str | None = None,
+        use_gpu: bool = False,
     ) -> None:
         from pywhispercpp.model import Model
 
@@ -124,13 +125,14 @@ class WhisperCppRecognizer:
             resolved_model = ensure_whisper_model(model_name)
         model_target = resolved_model
 
-        self.cpu_threads = cpu_threads or 2
+        # QRB2210 es quad-core: por defecto usamos los 4 hilos en vez de 2.
+        self.cpu_threads = cpu_threads or 4
 
         # Native C++ model load through the Python wrapper.
         self.model = Model(
             model_target,
             n_threads=self.cpu_threads,
-            context_params={"use_gpu": False},
+            context_params={"use_gpu": use_gpu},
             print_progress=False,
             print_realtime=False,
             print_timestamps=False,
@@ -142,8 +144,28 @@ class WhisperCppRecognizer:
         self.initial_prompt = initial_prompt
         self.domain_bias_applied = initial_prompt is not None
 
+    @staticmethod
+    def _dynamic_audio_ctx(duration_sec: float) -> int:
+        """Return an audio_ctx sized to the clip, never smaller than it needs to be.
+
+        whisper.cpp's encoder always evaluates a fixed 1500-frame (30s) window
+        unless told otherwise, so short clips waste most of that computation on
+        padding. audio_ctx lets us shrink that window, but only shrinking it
+        below what the clip actually needs makes the decoder degenerate (see
+        ggml-org/whisper.cpp#297 and #1855), so we round UP to the nearest
+        multiple of 64 with a safety margin, and never touch it for clips
+        close to 30s where there's nothing to gain.
+        """
+        if duration_sec >= 28:
+            return 0  # 0 = use the model's full default context, no override
+        raw = (duration_sec / 30.0) * 1500 + 128
+        return min(1500, int(math.ceil(raw / 64.0) * 64))
+
     def transcribe(self, audio_path: Path, language: str) -> str:
         import _pywhispercpp
+
+        duration_sec = wav_duration_seconds(audio_path)
+        audio_ctx = self._dynamic_audio_ctx(duration_sec)
 
         kwargs: dict[str, Any] = {
             "language": language,
@@ -158,6 +180,8 @@ class WhisperCppRecognizer:
                 else _pywhispercpp.WHISPER_SAMPLING_GREEDY
             ),
         }
+        if audio_ctx:
+            kwargs["audio_ctx"] = audio_ctx
         if self.beam_size > 1:
             kwargs["beam_search"] = {"beam_size": self.beam_size}
         else:
@@ -169,34 +193,6 @@ class WhisperCppRecognizer:
         segments = self.model.transcribe(str(audio_path), **kwargs)
 
         return " ".join(segment.text.strip() for segment in segments).strip()
-
-
-
-class VoskRecognizer:
-    """Vosk adapter using a local model directory and the standard WAV reader.
-
-    Vosk's runtime grammar mechanism restricts recognition to a fixed closed
-    vocabulary rather than softly biasing an open one (see alphacep/vosk-api
-    issue #878), so it has no equivalent to faster-whisper's initial_prompt or
-    sherpa-onnx's hotwords and always runs with domain_bias_applied = False.
-    """
-
-    def __init__(self, model_path: str) -> None:
-        from vosk import KaldiRecognizer, Model
-
-        self._recognizer_type = KaldiRecognizer
-        self.model = Model(model_path)
-        self.domain_bias_applied = False
-        self.model_size_mb = directory_size_mb(Path(model_path))
-
-    def transcribe(self, audio_path: Path, language: str) -> str:
-        import wave
-
-        with wave.open(str(audio_path), "rb") as audio:
-            recognizer = self._recognizer_type(self.model, audio.getframerate())
-            while chunk := audio.readframes(4000):
-                recognizer.AcceptWaveform(chunk)
-            return json.loads(recognizer.FinalResult()).get("text", "")
 
 
 class SherpaOnnxRecognizer:
@@ -311,6 +307,7 @@ def build_recognizer(name: str, args: Any) -> Recognizer:
             cpu_threads=getattr(args, "cpu_threads", 4),
             beam_size=getattr(args, "whisper_beam_size", 1),
             initial_prompt=initial_prompt,
+            use_gpu=getattr(args, "whisper_use_gpu", False),
         )
     if name.startswith("faster-whisper:"):
         initial_prompt = getattr(args, "whisper_initial_prompt", None) or domain_prompt

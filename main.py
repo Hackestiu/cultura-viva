@@ -94,13 +94,22 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default="cpu", choices=("cpu", "cuda"))
     parser.add_argument("--compute-type", default="int8")
-    parser.add_argument("--cpu-threads", type=int, default=2, help="CPU threads for inference (default: 2; use 4 on a capable host)")
+    parser.add_argument(
+        "--cpu-threads",
+        type=int,
+        default=4,
+        help="CPU threads for inference (default: 4, matching the QRB2210's 4 Cortex-A53 cores)",
+    )
     parser.add_argument("--whisper-beam-size", type=int, default=1, help="Whisper beam size (1 = greedy, fastest)")
     parser.add_argument("--whisper-initial-prompt", default=None, help="Custom prompt override (domain bias prompt is used by default)")
+    parser.add_argument(
+        "--whisper-use-gpu",
+        action="store_true",
+        help="Let whisper.cpp offload to GPU if the installed build supports it (e.g. Vulkan on the QRB2210's Adreno GPU); off by default since most CPU-only builds ignore or fail on this",
+    )
     parser.add_argument("--wandb", action="store_true")
     parser.add_argument("--wandb-project", default="cultura-viva-stt-benchmark")
     return parser.parse_args()
-
 
 def main() -> None:
     """Run and export the configured benchmark, optionally tracked in Weights & Biases."""

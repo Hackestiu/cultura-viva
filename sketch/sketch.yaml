@@ -21,10 +21,7 @@ profiles:
       - SD (1.3.0)
       - STM32duino VL53L4CD (1.0.5)
       - STM32duino VL53L4ED (1.0.1)
-      # NOU: pel GPS NEO-6M (triar Park Güell / Sagrada Família per
-      # proximitat). Verifica el numero de versio real disponible al
-      # teu entorn amb "arduino-cli lib search TinyGPSPlus" -- aquest
-      # es un valor habitual pero pot no coincidir amb el que tinguis
-      # instal·lat.
+      # TinyGPSPlus library for GPS module (NEO-6M).
+      # Verify the version available in your environment using "arduino-cli lib search TinyGPSPlus".
       - TinyGPSPlus (1.0.3)
 default_profile: default

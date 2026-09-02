@@ -75,6 +75,7 @@
 #include <TinyGPSPlus.h>
 #include "landmarks.h"
 #include "tilemap.h"
+#include "ui_screens.h"
 
 // ---------- Pins LCD (SPI per maquinari) ----------
 #define TFT_CS   10
@@ -158,8 +159,16 @@ int get_volume() {
 }
 
 // ---------- UI State Machine ----------
+// UI_BOOT_INTRO  : Logo displayed, blinking "PRESS ANY BUTTON" prompt
+// UI_OPTIONS     : "Get Started" screen -- [A] Tutorial or [C] Skip
+// UI_TUTORIAL_1  : Controls page (Switch / Push button / Knob)
+// UI_TUTORIAL_2  : How it works (3 steps)
+// UI_TUTORIAL_3  : Personality intro
+// UI_VOICE_SELECT: Personality selection (A/B/C)
+// UI_ACTIVE      : Full normal app mode
 enum AppUiState {
-  UI_INTRO,
+  UI_BOOT_INTRO,
+  UI_OPTIONS,
   UI_TUTORIAL_1,
   UI_TUTORIAL_2,
   UI_TUTORIAL_3,
@@ -167,7 +176,7 @@ enum AppUiState {
   UI_ACTIVE
 };
 
-AppUiState currentUiState = UI_INTRO;
+AppUiState currentUiState = UI_BOOT_INTRO;
 
 // ---------- Botons A/B/C: seleccio de Personalitat (click curt) ----------
 // Nomes s'actualitzen dins loop() (unica funcio que toca I2C per
@@ -719,286 +728,11 @@ void setup() {
   Monitor.println("Iniciant bucle...");
   Monitor.println("==================================");
 
-  // Dibuixa la pantalla inicial d'intro (amb opcio A=tutorial o C=saltar a veu)
-  drawIntroScreen();
+  // Display the intro splash screen with the logo on boot
+  drawScreenIntro();
 }
 
-// ---------- Pantalles LCD (Intro, Tutorial, Personalitat i App) ----------
-
-// Helper: dibuixa un boto de navegacio amb fons de color
-void _drawNavBtn(int x, int y, int w, int h, uint16_t bg, const char* label) {
-  tft.fillRoundRect(x, y, w, h, 3, bg);
-  tft.drawRoundRect(x, y, w, h, 3, ST77XX_WHITE);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(1);
-  // Centrar el text dins del boto
-  int tx = x + (w - strlen(label) * 6) / 2;
-  int ty = y + (h - 8) / 2;
-  tft.setCursor(tx, ty);
-  tft.print(label);
-}
-
-void drawIntroScreen() {
-  tft.fillScreen(0x0841); // Fons quasi-negre blau fosc
-
-  // --- Area de logo/imatge (simulada amb grafics vectorials) ---
-  // Cercle central gran = Sagrada Familia silhouette simplificada
-  tft.fillRoundRect(28, 8, 104, 72, 6, 0x0020); // requadre fosc
-  tft.drawRoundRect(28, 8, 104, 72, 6, 0x39E7);  // vora gris
-
-  // Torre central
-  tft.fillRect(76, 16, 8, 50, 0xFCC0);
-  tft.fillTriangle(76, 16, 84, 16, 80, 8, 0xFD60);
-  // Torres laterals
-  tft.fillRect(60, 28, 6, 38, 0xC5A0);
-  tft.fillTriangle(60, 28, 66, 28, 63, 20, 0xD600);
-  tft.fillRect(94, 28, 6, 38, 0xC5A0);
-  tft.fillTriangle(94, 28, 100, 28, 97, 20, 0xD600);
-  // Base / nau
-  tft.fillRect(46, 52, 68, 28, 0xA4A0);
-  tft.fillRect(50, 56, 60, 24, 0x8440);
-  // Rosassa
-  tft.fillCircle(80, 60, 6, 0x07FF);
-  tft.drawCircle(80, 60, 6, ST77XX_WHITE);
-  tft.fillCircle(80, 60, 3, 0x001F);
-
-  // --- Titol ---
-  tft.fillRect(0, 82, 160, 20, 0x0010);
-  tft.drawFastHLine(0, 82, 160, 0x4A49);
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.setTextSize(1);
-  tft.setCursor(14, 88);
-  tft.print("CULTURA VIVA");
-  tft.setCursor(10, 98);
-  tft.setTextColor(0xAD75);
-  tft.print("Gaudi Smart Audio Guide");
-
-  // --- Botons ---
-  _drawNavBtn(4,  104, 72, 20, 0x0600, "[A] Tutorial");
-  _drawNavBtn(82, 104, 74, 20, 0x4208, "[C] Jump in");
-}
-
-void _drawTutorialHeader(uint8_t page) {
-  // Barra de progres (3 pastilles)
-  tft.fillScreen(0x0841);
-  tft.fillRect(0, 0, 160, 18, 0x0010);
-  tft.setTextColor(0x8410);
-  tft.setTextSize(1);
-  tft.setCursor(6, 5);
-  tft.print("HOW IT WORKS");
-
-  // Indicadors de pagina (pastilles)
-  for (uint8_t i = 0; i < 3; i++) {
-    uint16_t col = (i < page) ? ST77XX_CYAN : 0x2945;
-    tft.fillRoundRect(130 + i * 10, 5, 7, 7, 2, col);
-  }
-  tft.drawFastHLine(0, 18, 160, 0x2945);
-}
-
-void _drawNavBar(bool showNext, bool showSkip, bool showStart) {
-  // Barra inferior fixa amb botons
-  tft.fillRect(0, 108, 160, 20, 0x0010);
-  tft.drawFastHLine(0, 108, 160, 0x2945);
-
-  if (showNext && showSkip) {
-    _drawNavBtn(4,  111, 60, 14, 0x0580, "[ A ] NEXT");
-    _drawNavBtn(96, 111, 60, 14, 0x3186, "[ C ] SKIP");
-  } else if (showStart) {
-    _drawNavBtn(24, 111, 112, 14, 0x0580, "[ A ]  SELECT  PERSONALITY");
-  }
-}
-
-void drawTutorialPage(uint8_t page) {
-  _drawTutorialHeader(page);
-
-  if (page == 1) {
-    // --- Titol seccio ---
-    tft.fillRect(4, 22, 152, 12, 0x000C);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setTextSize(1);
-    tft.setCursor(8, 25);
-    tft.print("CONTROLS");
-
-    // Icona + text per a cada control
-    // Switch
-    tft.fillRoundRect(4, 38, 10, 10, 2, 0x07E0);
-    tft.setCursor(18, 39);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Switch");
-    tft.setCursor(18, 49);
-    tft.setTextColor(0x8410);
-    tft.print("ON=Camera  OFF=Map");
-
-    // Push button
-    tft.fillCircle(9, 70, 5, 0xFD20);
-    tft.setCursor(18, 65);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Push button");
-    tft.setCursor(18, 75);
-    tft.setTextColor(0x8410);
-    tft.print("Photo  /  Record Q");
-
-    // Knob
-    tft.drawCircle(9, 95, 5, ST77XX_MAGENTA);
-    tft.fillCircle(9, 95, 3, 0x8010);
-    tft.setCursor(18, 91);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Knob");
-    tft.setCursor(18, 101);
-    tft.setTextColor(0x8410);
-    tft.print("Volume control");
-
-    _drawNavBar(true, true, false);
-
-  } else if (page == 2) {
-    tft.fillRect(4, 22, 152, 12, 0x000C);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setTextSize(1);
-    tft.setCursor(8, 25);
-    tft.print("HOW TO USE IT");
-
-    // Pas 1
-    tft.fillCircle(11, 42, 7, 0x0600);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(9, 38);
-    tft.print("1");
-    tft.setCursor(22, 37);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Switch ON Camera");
-    tft.setCursor(22, 47);
-    tft.setTextColor(0x8410);
-    tft.print("Point at monument");
-
-    // Pas 2
-    tft.fillCircle(11, 64, 7, 0x0600);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(9, 60);
-    tft.print("2");
-    tft.setCursor(22, 59);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Press Push button");
-    tft.setCursor(22, 69);
-    tft.setTextColor(0x8410);
-    tft.print("Take a photo");
-
-    // Pas 3
-    tft.fillCircle(11, 86, 7, 0x0600);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(9, 82);
-    tft.print("3");
-    tft.setCursor(22, 81);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.print("Switch OFF -> Map");
-    tft.setCursor(22, 91);
-    tft.setTextColor(0x8410);
-    tft.print("Press button & ask!");
-
-    _drawNavBar(true, true, false);
-
-  } else {
-    tft.fillRect(4, 22, 152, 12, 0x000C);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setTextSize(1);
-    tft.setCursor(8, 25);
-    tft.print("PERSONALITAT");
-
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(8, 38);
-    tft.print("The AI guide answers");
-    tft.setCursor(8, 48);
-    tft.print("your questions in the");
-    tft.setCursor(8, 58);
-    tft.print("style you choose:");
-
-    // 3 opcions de personalitat
-    tft.fillRoundRect(4,  70, 48, 14, 3, 0x0006);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setCursor(8, 74);
-    tft.print("[A] ARTISTIC");
-
-    tft.fillRoundRect(56, 70, 48, 14, 3, 0x0006);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setCursor(60, 74);
-    tft.print("[B] TECHNIC");
-
-    tft.fillRoundRect(108, 70, 48, 14, 3, 0x0006);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.setCursor(112, 74);
-    tft.print("[C] CHILD");
-
-    tft.setTextColor(0x8410);
-    tft.setCursor(8, 90);
-    tft.print("You can change it");
-    tft.setCursor(8, 100);
-    tft.print("at any time!");
-
-    _drawNavBar(false, false, true);
-  }
-}
-
-void drawVoiceSelectionScreen() {
-  tft.fillScreen(0x0841);
-
-  // Capcalera
-  tft.fillRect(0, 0, 160, 20, 0x0010);
-  tft.setTextColor(ST77XX_MAGENTA);
-  tft.setTextSize(1);
-  tft.setCursor(6, 6);
-  tft.print("TRIA LA TEVA PERSONALITAT");
-  tft.drawFastHLine(0, 20, 160, 0x4208);
-
-  tft.setTextColor(0x8410);
-  tft.setCursor(6, 26);
-  tft.print("Press A, B or C:");
-
-  // --- Opcio A: Artistic ---
-  tft.fillRoundRect(4, 36, 150, 22, 4, 0x000C);
-  tft.drawRoundRect(4, 36, 150, 22, 4, ST77XX_CYAN);
-  tft.fillRoundRect(6, 38, 22, 18, 3, 0x0003);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(10, 44);
-  tft.print("[A]");
-  tft.setTextColor(ST77XX_CYAN);
-  tft.setCursor(32, 39);
-  tft.print("ARTISTIC");
-  tft.setTextColor(0x8410);
-  tft.setCursor(32, 50);
-  tft.print("Passion, art & symbols");
-
-  // --- Opcio B: Technical ---
-  tft.fillRoundRect(4, 62, 150, 22, 4, 0x000C);
-  tft.drawRoundRect(4, 62, 150, 22, 4, ST77XX_GREEN);
-  tft.fillRoundRect(6, 64, 22, 18, 3, 0x0300);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(10, 70);
-  tft.print("[B]");
-  tft.setTextColor(ST77XX_GREEN);
-  tft.setCursor(32, 65);
-  tft.print("TECHNICAL");
-  tft.setTextColor(0x8410);
-  tft.setCursor(32, 76);
-  tft.print("Arch, structure & data");
-
-  // --- Opcio C: Child ---
-  tft.fillRoundRect(4, 88, 150, 22, 4, 0x000C);
-  tft.drawRoundRect(4, 88, 150, 22, 4, ST77XX_YELLOW);
-  tft.fillRoundRect(6, 90, 22, 18, 3, 0x3300);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(10, 96);
-  tft.print("[C]");
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.setCursor(32, 91);
-  tft.print("CHILD / FUN");
-  tft.setTextColor(0x8410);
-  tft.setCursor(32, 102);
-  tft.print("Simple & playful");
-
-  // Peu
-  tft.fillRect(0, 114, 160, 14, 0x0010);
-  tft.setTextColor(0x4208);
-  tft.setCursor(14, 118);
-  tft.print("You can switch anytime!");
-}
+// Old inline UI drawing functions removed -- now in sketch/ui_screens.h.
 
 void drawMinimap() {
   drawParkMap();
@@ -1123,54 +857,61 @@ void loop() {
   btnBHeldPrev = btnBHeld;
   btnCHeldPrev = btnCHeld;
 
-  // Maquina d'estats de la pantalla inicial i tutorial
-  if (currentUiState == UI_INTRO) {
+  // State machine for onboarding and tutorial screens
+  if (currentUiState == UI_BOOT_INTRO) {
+    blinkIntroPrompt();
+    if (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge) {
+      currentUiState = UI_OPTIONS;
+      drawScreenOptions();
+      buzzer.tone(1400, 50);
+    }
+  } else if (currentUiState == UI_OPTIONS) {
     if (btnAPressedEdge) {
       currentUiState = UI_TUTORIAL_1;
-      drawTutorialPage(1);
+      drawScreenTutorial1();
       buzzer.tone(1500, 60);
     } else if (btnCPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
-      drawVoiceSelectionScreen();
+      drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
     }
   } else if (currentUiState == UI_TUTORIAL_1) {
     if (btnAPressedEdge) {
       currentUiState = UI_TUTORIAL_2;
-      drawTutorialPage(2);
+      drawScreenTutorial2();
       buzzer.tone(1500, 60);
     } else if (btnCPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
-      drawVoiceSelectionScreen();
+      drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
     }
   } else if (currentUiState == UI_TUTORIAL_2) {
     if (btnAPressedEdge) {
       currentUiState = UI_TUTORIAL_3;
-      drawTutorialPage(3);
+      drawScreenTutorial3();
       buzzer.tone(1500, 60);
     } else if (btnCPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
-      drawVoiceSelectionScreen();
+      drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
     }
   } else if (currentUiState == UI_TUTORIAL_3) {
     if (btnAPressedEdge || btnCPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
-      drawVoiceSelectionScreen();
+      drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
     }
   } else if (currentUiState == UI_VOICE_SELECT) {
     if (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
       currentUiState = UI_ACTIVE;
-      Monitor.print("[EVENT] Veu inicial seleccionada: index ");
+      Monitor.print("[EVENT] Personality selected: index ");
       Monitor.println(personalityIndex);
       buzzer.tone(1800, 100);
       drawCurrentView();
     }
   } else if (currentUiState == UI_ACTIVE) {
-    // Mode d'operacio normal: A/B/C canvia la personalitat sobre la marxa
+    // Normal mode: A/B/C changes personality on the fly
     if (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
       Monitor.print("[EVENT] Personalitat seleccionada: index ");
@@ -1179,13 +920,15 @@ void loop() {
     }
   }
 
-  // LEDs: Feedback visual segons estat d'UI
-  if (currentUiState == UI_INTRO || currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2) {
-    buttons.setLeds(true, false, true);  // A i C encesos
+  // LEDs: visual feedback according to UI state
+  if (currentUiState == UI_BOOT_INTRO || currentUiState == UI_OPTIONS) {
+    buttons.setLeds(true, false, true);   // A and C lit
+  } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2) {
+    buttons.setLeds(true, false, true);   // A and C lit (Next / Skip)
   } else if (currentUiState == UI_TUTORIAL_3) {
-    buttons.setLeds(true, false, false); // Nomes A ences
+    buttons.setLeds(true, false, false);  // only A lit (Choose Personality)
   } else if (currentUiState == UI_VOICE_SELECT) {
-    buttons.setLeds(true, true, true);   // A, B i C encesos
+    buttons.setLeds(true, true, true);    // A, B and C all lit
   } else if (currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       bool blink = ((millis() / 300) % 2) == 0;

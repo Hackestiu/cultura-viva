@@ -723,175 +723,281 @@ void setup() {
   drawIntroScreen();
 }
 
-// ---------- Pantalles LCD (Intro, Tutorial, Veu i App) ----------
-void drawIntroScreen() {
-  tft.fillScreen(ST77XX_BLACK);
+// ---------- Pantalles LCD (Intro, Tutorial, Personalitat i App) ----------
 
-  // Banner superior
-  tft.fillRect(0, 0, 160, 26, ST77XX_BLUE);
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.setTextSize(2);
-  tft.setCursor(8, 6);
-  tft.println("CULTURA VIVA");
-
-  // Linia decorativa
-  tft.fillRect(0, 26, 160, 2, ST77XX_ORANGE);
-
-  // Subtitol i benvinguda
+// Helper: dibuixa un boto de navegacio amb fons de color
+void _drawNavBtn(int x, int y, int w, int h, uint16_t bg, const char* label) {
+  tft.fillRoundRect(x, y, w, h, 3, bg);
+  tft.drawRoundRect(x, y, w, h, 3, ST77XX_WHITE);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(1);
-  tft.setCursor(10, 34);
-  tft.println("Gaudi Smart Guide");
+  // Centrar el text dins del boto
+  int tx = x + (w - strlen(label) * 6) / 2;
+  int ty = y + (h - 8) / 2;
+  tft.setCursor(tx, ty);
+  tft.print(label);
+}
 
-  tft.setCursor(10, 48);
-  tft.setTextColor(ST77XX_CYAN);
-  tft.println("Welcome to the tour!");
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setCursor(10, 60);
-  tft.println("Explore architecture");
-  tft.setCursor(10, 70);
-  tft.println("with AI audio guide.");
+void drawIntroScreen() {
+  tft.fillScreen(0x0841); // Fons quasi-negre blau fosc
 
-  // Marc d'opcions
-  tft.drawRect(4, 86, 152, 38, ST77XX_WHITE);
-  tft.setCursor(10, 92);
-  tft.setTextColor(ST77XX_GREEN);
-  tft.println("[A] Start Tutorial");
-  tft.setCursor(10, 106);
+  // --- Area de logo/imatge (simulada amb grafics vectorials) ---
+  // Cercle central gran = Sagrada Familia silhouette simplificada
+  tft.fillRoundRect(28, 8, 104, 72, 6, 0x0020); // requadre fosc
+  tft.drawRoundRect(28, 8, 104, 72, 6, 0x39E7);  // vora gris
+
+  // Torre central
+  tft.fillRect(76, 16, 8, 50, 0xFCC0);
+  tft.fillTriangle(76, 16, 84, 16, 80, 8, 0xFD60);
+  // Torres laterals
+  tft.fillRect(60, 28, 6, 38, 0xC5A0);
+  tft.fillTriangle(60, 28, 66, 28, 63, 20, 0xD600);
+  tft.fillRect(94, 28, 6, 38, 0xC5A0);
+  tft.fillTriangle(94, 28, 100, 28, 97, 20, 0xD600);
+  // Base / nau
+  tft.fillRect(46, 52, 68, 28, 0xA4A0);
+  tft.fillRect(50, 56, 60, 24, 0x8440);
+  // Rosassa
+  tft.fillCircle(80, 60, 6, 0x07FF);
+  tft.drawCircle(80, 60, 6, ST77XX_WHITE);
+  tft.fillCircle(80, 60, 3, 0x001F);
+
+  // --- Titol ---
+  tft.fillRect(0, 82, 160, 20, 0x0010);
+  tft.drawFastHLine(0, 82, 160, 0x4A49);
   tft.setTextColor(ST77XX_YELLOW);
-  tft.println("[C] Skip to Voice");
+  tft.setTextSize(1);
+  tft.setCursor(14, 88);
+  tft.print("CULTURA VIVA");
+  tft.setCursor(10, 98);
+  tft.setTextColor(0xAD75);
+  tft.print("Gaudi Smart Audio Guide");
+
+  // --- Botons ---
+  _drawNavBtn(4,  104, 72, 20, 0x0600, "[A] Tutorial");
+  _drawNavBtn(82, 104, 74, 20, 0x4208, "[C] Jump in");
+}
+
+void _drawTutorialHeader(uint8_t page) {
+  // Barra de progres (3 pastilles)
+  tft.fillScreen(0x0841);
+  tft.fillRect(0, 0, 160, 18, 0x0010);
+  tft.setTextColor(0x8410);
+  tft.setTextSize(1);
+  tft.setCursor(6, 5);
+  tft.print("HOW IT WORKS");
+
+  // Indicadors de pagina (pastilles)
+  for (uint8_t i = 0; i < 3; i++) {
+    uint16_t col = (i < page) ? ST77XX_CYAN : 0x2945;
+    tft.fillRoundRect(130 + i * 10, 5, 7, 7, 2, col);
+  }
+  tft.drawFastHLine(0, 18, 160, 0x2945);
+}
+
+void _drawNavBar(bool showNext, bool showSkip, bool showStart) {
+  // Barra inferior fixa amb botons
+  tft.fillRect(0, 108, 160, 20, 0x0010);
+  tft.drawFastHLine(0, 108, 160, 0x2945);
+
+  if (showNext && showSkip) {
+    _drawNavBtn(4,  111, 60, 14, 0x0580, "[ A ] NEXT");
+    _drawNavBtn(96, 111, 60, 14, 0x3186, "[ C ] SKIP");
+  } else if (showStart) {
+    _drawNavBtn(24, 111, 112, 14, 0x0580, "[ A ]  SELECT  PERSONALITY");
+  }
 }
 
 void drawTutorialPage(uint8_t page) {
-  tft.fillScreen(ST77XX_BLACK);
-
-  // Capcalera
-  tft.fillRect(0, 0, 160, 20, 0x18E3); // Blau fosc
-  tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(1);
-  tft.setCursor(6, 6);
-  tft.print("TUTORIAL (Page ");
-  tft.print(page);
-  tft.println("/3)");
-  tft.fillRect(0, 20, 160, 2, ST77XX_CYAN);
+  _drawTutorialHeader(page);
 
   if (page == 1) {
-    tft.setCursor(6, 26);
-    tft.setTextColor(ST77XX_YELLOW);
-    tft.println("[CONTROLS]");
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(6, 38);
-    tft.println("* Switch D6:");
-    tft.setCursor(12, 48);
+    // --- Titol seccio ---
+    tft.fillRect(4, 22, 152, 12, 0x000C);
     tft.setTextColor(ST77XX_CYAN);
-    tft.println("ON: Camera / OFF: Map");
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(6, 60);
-    tft.println("* Button D7:");
-    tft.setCursor(12, 70);
-    tft.setTextColor(ST77XX_CYAN);
-    tft.println("Photo / Record Audio");
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(6, 82);
-    tft.println("* Knob: Volume 0-100%");
+    tft.setTextSize(1);
+    tft.setCursor(8, 25);
+    tft.print("CONTROLS");
 
-    // Peu de navegacio
-    tft.drawFastHLine(0, 104, 160, ST77XX_WHITE);
-    tft.setCursor(6, 112);
-    tft.setTextColor(ST77XX_GREEN);
-    tft.print("[A] Next");
-    tft.setCursor(92, 112);
-    tft.setTextColor(ST77XX_YELLOW);
-    tft.print("[C] Skip");
+    // Icona + text per a cada control
+    // Switch
+    tft.fillRoundRect(4, 38, 10, 10, 2, 0x07E0);
+    tft.setCursor(18, 39);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Switch");
+    tft.setCursor(18, 49);
+    tft.setTextColor(0x8410);
+    tft.print("ON=Camera  OFF=Map");
+
+    // Push button
+    tft.fillCircle(9, 70, 5, 0xFD20);
+    tft.setCursor(18, 65);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Push button");
+    tft.setCursor(18, 75);
+    tft.setTextColor(0x8410);
+    tft.print("Photo  /  Record Q");
+
+    // Knob
+    tft.drawCircle(9, 95, 5, ST77XX_MAGENTA);
+    tft.fillCircle(9, 95, 3, 0x8010);
+    tft.setCursor(18, 91);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Knob");
+    tft.setCursor(18, 101);
+    tft.setTextColor(0x8410);
+    tft.print("Volume control");
+
+    _drawNavBar(true, true, false);
+
   } else if (page == 2) {
-    tft.setCursor(6, 26);
-    tft.setTextColor(ST77XX_YELLOW);
-    tft.println("[HOW IT WORKS]");
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(6, 38);
-    tft.println("1. Point camera &");
-    tft.setCursor(12, 48);
-    tft.println("press D7 for photo");
-    tft.setCursor(6, 60);
-    tft.println("2. Switch D6 to Map");
-    tft.setCursor(6, 72);
-    tft.println("3. Click D7 to record");
-    tft.setCursor(12, 82);
-    tft.println("your question!");
+    tft.fillRect(4, 22, 152, 12, 0x000C);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setTextSize(1);
+    tft.setCursor(8, 25);
+    tft.print("HOW TO USE IT");
 
-    // Peu de navegacio
-    tft.drawFastHLine(0, 104, 160, ST77XX_WHITE);
-    tft.setCursor(6, 112);
-    tft.setTextColor(ST77XX_GREEN);
-    tft.print("[A] Next");
-    tft.setCursor(92, 112);
-    tft.setTextColor(ST77XX_YELLOW);
-    tft.print("[C] Skip");
+    // Pas 1
+    tft.fillCircle(11, 42, 7, 0x0600);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(9, 38);
+    tft.print("1");
+    tft.setCursor(22, 37);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Switch ON Camera");
+    tft.setCursor(22, 47);
+    tft.setTextColor(0x8410);
+    tft.print("Point at monument");
+
+    // Pas 2
+    tft.fillCircle(11, 64, 7, 0x0600);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(9, 60);
+    tft.print("2");
+    tft.setCursor(22, 59);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Press Push button");
+    tft.setCursor(22, 69);
+    tft.setTextColor(0x8410);
+    tft.print("Take a photo");
+
+    // Pas 3
+    tft.fillCircle(11, 86, 7, 0x0600);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(9, 82);
+    tft.print("3");
+    tft.setCursor(22, 81);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.print("Switch OFF -> Map");
+    tft.setCursor(22, 91);
+    tft.setTextColor(0x8410);
+    tft.print("Press button & ask!");
+
+    _drawNavBar(true, true, false);
+
   } else {
-    tft.setCursor(6, 26);
-    tft.setTextColor(ST77XX_YELLOW);
-    tft.println("[AI VOICE GUIDE]");
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(6, 38);
-    tft.println("Your AI audio guide");
-    tft.setCursor(6, 48);
-    tft.println("identifies landmarks");
-    tft.setCursor(6, 58);
-    tft.println("& answers questions");
-    tft.setCursor(6, 68);
-    tft.println("in your chosen voice!");
+    tft.fillRect(4, 22, 152, 12, 0x000C);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setTextSize(1);
+    tft.setCursor(8, 25);
+    tft.print("PERSONALITAT");
 
-    // Peu de navegacio
-    tft.drawFastHLine(0, 104, 160, ST77XX_WHITE);
-    tft.setCursor(6, 112);
-    tft.setTextColor(ST77XX_GREEN);
-    tft.print("[A] Select Voice");
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(8, 38);
+    tft.print("The AI guide answers");
+    tft.setCursor(8, 48);
+    tft.print("your questions in the");
+    tft.setCursor(8, 58);
+    tft.print("style you choose:");
+
+    // 3 opcions de personalitat
+    tft.fillRoundRect(4,  70, 48, 14, 3, 0x0006);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setCursor(8, 74);
+    tft.print("[A] ARTISTIC");
+
+    tft.fillRoundRect(56, 70, 48, 14, 3, 0x0006);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setCursor(60, 74);
+    tft.print("[B] TECHNIC");
+
+    tft.fillRoundRect(108, 70, 48, 14, 3, 0x0006);
+    tft.setTextColor(ST77XX_CYAN);
+    tft.setCursor(112, 74);
+    tft.print("[C] CHILD");
+
+    tft.setTextColor(0x8410);
+    tft.setCursor(8, 90);
+    tft.print("You can change it");
+    tft.setCursor(8, 100);
+    tft.print("at any time!");
+
+    _drawNavBar(false, false, true);
   }
 }
 
 void drawVoiceSelectionScreen() {
-  tft.fillScreen(ST77XX_BLACK);
+  tft.fillScreen(0x0841);
 
   // Capcalera
-  tft.fillRect(0, 0, 160, 20, 0x8010); // Grana/Lila
-  tft.setTextColor(ST77XX_WHITE);
+  tft.fillRect(0, 0, 160, 20, 0x0010);
+  tft.setTextColor(ST77XX_MAGENTA);
   tft.setTextSize(1);
   tft.setCursor(6, 6);
-  tft.println("CHOOSE GUIDE VOICE");
-  tft.fillRect(0, 20, 160, 2, ST77XX_MAGENTA);
+  tft.print("TRIA LA TEVA PERSONALITAT");
+  tft.drawFastHLine(0, 20, 160, 0x4208);
 
+  tft.setTextColor(0x8410);
   tft.setCursor(6, 26);
+  tft.print("Press A, B or C:");
+
+  // --- Opcio A: Artistic ---
+  tft.fillRoundRect(4, 36, 150, 22, 4, 0x000C);
+  tft.drawRoundRect(4, 36, 150, 22, 4, ST77XX_CYAN);
+  tft.fillRoundRect(6, 38, 22, 18, 3, 0x0003);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(10, 44);
+  tft.print("[A]");
   tft.setTextColor(ST77XX_CYAN);
-  tft.println("Select personality:");
+  tft.setCursor(32, 39);
+  tft.print("ARTISTIC");
+  tft.setTextColor(0x8410);
+  tft.setCursor(32, 50);
+  tft.print("Passion, art & symbols");
 
-  // Opcio A
-  tft.setCursor(6, 40);
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.println("[A] ARTISTIC");
-  tft.setCursor(24, 50);
+  // --- Opcio B: Technical ---
+  tft.fillRoundRect(4, 62, 150, 22, 4, 0x000C);
+  tft.drawRoundRect(4, 62, 150, 22, 4, ST77XX_GREEN);
+  tft.fillRoundRect(6, 64, 22, 18, 3, 0x0300);
   tft.setTextColor(ST77XX_WHITE);
-  tft.println("Passionate & symbols");
-
-  // Opcio B
-  tft.setCursor(6, 64);
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.println("[B] TECHNICAL");
-  tft.setCursor(24, 74);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.println("Architecture & facts");
-
-  // Opcio C
-  tft.setCursor(6, 88);
-  tft.setTextColor(ST77XX_YELLOW);
-  tft.println("[C] CHILD / FUN");
-  tft.setCursor(24, 98);
-  tft.setTextColor(ST77XX_WHITE);
-  tft.println("Simple & playful");
-
-  tft.drawFastHLine(0, 114, 160, 0x7BEF);
-  tft.setCursor(6, 118);
+  tft.setCursor(10, 70);
+  tft.print("[B]");
   tft.setTextColor(ST77XX_GREEN);
-  tft.println("Press A, B or C to start");
+  tft.setCursor(32, 65);
+  tft.print("TECHNICAL");
+  tft.setTextColor(0x8410);
+  tft.setCursor(32, 76);
+  tft.print("Arch, structure & data");
+
+  // --- Opcio C: Child ---
+  tft.fillRoundRect(4, 88, 150, 22, 4, 0x000C);
+  tft.drawRoundRect(4, 88, 150, 22, 4, ST77XX_YELLOW);
+  tft.fillRoundRect(6, 90, 22, 18, 3, 0x3300);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setCursor(10, 96);
+  tft.print("[C]");
+  tft.setTextColor(ST77XX_YELLOW);
+  tft.setCursor(32, 91);
+  tft.print("CHILD / FUN");
+  tft.setTextColor(0x8410);
+  tft.setCursor(32, 102);
+  tft.print("Simple & playful");
+
+  // Peu
+  tft.fillRect(0, 114, 160, 14, 0x0010);
+  tft.setTextColor(0x4208);
+  tft.setCursor(14, 118);
+  tft.print("You can switch anytime!");
 }
 
 void drawMinimap() {

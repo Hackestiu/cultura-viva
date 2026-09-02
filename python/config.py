@@ -29,6 +29,10 @@ MINIMAP_DIR = APP_DIR / "minimapa"
 LOCATIONS_DIR = APP_DIR / "locations"
 LOCATIONS_CONFIG_FILE = LOCATIONS_DIR / "locations.json"
 
+# Default fallback location when GPS has no fix (e.g. testing indoors)
+# Options: 'park_guell' | 'sagrada_familia'
+DEFAULT_LOCATION = "park_guell"
+
 for _dir in (RECORDINGS_DIR, PHOTOS_DIR, RESPONSES_DIR, MODELS_DIR, MINIMAP_DIR, LOCATIONS_DIR):
     _dir.mkdir(parents=True, exist_ok=True)
 

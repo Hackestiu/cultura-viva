@@ -14,7 +14,7 @@ Two locations in Barcelona:
 import json
 import math
 
-from config import LOCATIONS_CONFIG_FILE
+from config import DEFAULT_LOCATION, LOCATIONS_CONFIG_FILE
 
 try:
     from arduino.app_utils import Bridge
@@ -57,7 +57,7 @@ class LocationRegistry:
     def nearest_to(self, lat: float, lon: float) -> str:
         """Returns the name of the nearest known location to (lat, lon)."""
         if not self._locations:
-            return ""
+            return DEFAULT_LOCATION
         best_name = min(
             self._locations,
             key=lambda name: _haversine_m(
@@ -66,14 +66,18 @@ class LocationRegistry:
         )
         return best_name
 
-    def current(self):
+    def current(self) -> str:
         """Queries GPS via Bridge and returns the nearest known location name,
-        or '' if no fix is available yet."""
+        or DEFAULT_LOCATION ('park_guell') if no GPS fix is available yet (e.g. testing indoors)."""
         if Bridge is None:
-            print("[dry run] current() -- Bridge unavailable, cannot read GPS")
-            return ""
-        if not Bridge.call("has_gps_fix"):
-            return ""
-        lat = Bridge.call("get_gps_lat")
-        lon = Bridge.call("get_gps_lon")
-        return self.nearest_to(lat, lon)
+            return DEFAULT_LOCATION
+        try:
+            if not Bridge.call("has_gps_fix"):
+                return DEFAULT_LOCATION
+            lat = Bridge.call("get_gps_lat")
+            lon = Bridge.call("get_gps_lon")
+            if lat and lon:
+                return self.nearest_to(lat, lon)
+        except Exception:
+            pass
+        return DEFAULT_LOCATION

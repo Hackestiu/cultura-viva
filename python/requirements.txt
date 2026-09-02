@@ -1,0 +1,21 @@
+# numpy: microphone.record_wav() retorna un np.ndarray
+numpy
+# cv2 (opencv) sembla venir preinstal·lat a la plataforma (build propia
+# amb sufix de versio "+..."); no el declarem aqui per no xocar-hi.
+
+# --- Pipeline Cultura Viva (instal·lar quan es tinguin els models) ---
+# Vision: ONNX Runtime per als classificadors de Sagrada Família i Park Güell
+onnxruntime
+pillow
+
+# STT: transcripcio Whisper per ARM/Linux sense CUDA
+# pip install pywhispercpp
+# pywhispercpp>=1.0.0
+
+# SLM: inferencia Qwen2.5 GGUF (en ARM/Linux cal compilar des de font:
+#   CMAKE_ARGS="-DLLAMA_BLAS=ON" pip install llama-cpp-python)
+# llama-cpp-python>=0.2.0
+
+# TTS: Piper text-a-veu en catala
+# pip install piper-tts
+# piper-tts

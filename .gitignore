@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Arduino / IDE
+.vscode/
+.idea/
+*.swp
+*.bak
+build/
+.arduino/
+
+# Sistema Operatiu
+.DS_Store
+Thumbs.db
+
+# Imatges i àudios generats en temps d'execució
+python/photos/*.jpg
+python/recordings/*.wav
+python/responses/*.wav
+!python/photos/.gitkeep
+!python/recordings/.gitkeep
+!python/responses/.gitkeep
+
+# Models pesats (>100MB - GitHub rebutja fitxers de més de 100MB)
+# Si vols pujar-los a GitHub, fes servir Git LFS (instruccions al README)
+*.onnx
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth

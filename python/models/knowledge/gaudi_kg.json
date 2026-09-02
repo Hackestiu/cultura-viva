@@ -1,0 +1,67 @@
+{
+  "3_viaductes": {
+    "full_name": "The Three Viaducts (Lower, Middle and High)",
+    "location": "park_guell",
+    "description": "A series of pathways and viaducts built on tilted stone columns rusticly integrated into the natural hillside landscape."
+  },
+  "casa_museu": {
+    "full_name": "Gaudí House Museum",
+    "location": "park_guell",
+    "description": "Antoni Gaudí's personal residence for nearly 20 years (1906-1925), originally designed by Francesc Berenguer."
+  },
+  "escalinata_drac": {
+    "full_name": "Dragon Stairway (Trencadís Salamander)",
+    "location": "park_guell",
+    "description": "Monumental entrance staircase featuring the famous multicolored mosaic (trencadís) salamander/dragon."
+  },
+  "pavellons_consergeria": {
+    "full_name": "Porter's Lodge and Gatehouse Pavilions",
+    "location": "park_guell",
+    "description": "Entrance pavilions with undulating mosaic rooftops inspired by the fairy tale Hansel and Gretel."
+  },
+  "placa_natura": {
+    "full_name": "Nature Square (Greek Theatre)",
+    "location": "park_guell",
+    "description": "Large open esplanade bordered by the famous serpentine mosaic bench designed with Josep Maria Jujol."
+  },
+  "sala_hipostila": {
+    "full_name": "Hypostyle Room (Doric Temple)",
+    "location": "park_guell",
+    "description": "Covered hall with 86 Doric-inspired columns originally intended as the residential estate's marketplace."
+  },
+  "turo_3_creus": {
+    "full_name": "Three Crosses Hill (Calvary)",
+    "location": "park_guell",
+    "description": "Highest point of the park with a stone monument topped by three crosses, offering panoramic views over Barcelona."
+  },
+  "cupula": {
+    "full_name": "Dome and Vaults",
+    "location": "sagrada_familia",
+    "description": "Towering cupolas and hyperbolic vaults enclosing the central naves and apse of the basilica."
+  },
+  "facana_naixement": {
+    "full_name": "Nativity Façade",
+    "location": "sagrada_familia",
+    "description": "The only façade constructed almost entirely during Gaudí's lifetime, renowned for its intricate, naturalistic ornamentation celebrating the birth of Jesus."
+  },
+  "facana_passio": {
+    "full_name": "Passion Façade",
+    "location": "sagrada_familia",
+    "description": "Austere and dramatic façade depicting the suffering and death of Christ, featuring angular sculptures by Josep Maria Subirachs."
+  },
+  "laterals": {
+    "full_name": "Lateral Naves and Portals",
+    "location": "sagrada_familia",
+    "description": "Exterior structures, walls, and stained-glass window portals of the side aisles adorned with geometric and botanical motifs."
+  },
+  "posterior": {
+    "full_name": "Apse and Crypt Exterior",
+    "location": "sagrada_familia",
+    "description": "The posterior apse section surrounding the crypt, decorated with gargoyles depicting reptiles and amphibians."
+  },
+  "torres": {
+    "full_name": "Towers and Bell Towers",
+    "location": "sagrada_familia",
+    "description": "Conical bell towers topped with colorful mosaic pinnacles dedicated to the apostles and evangelists."
+  }
+}

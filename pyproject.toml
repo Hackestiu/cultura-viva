@@ -7,7 +7,6 @@ requires-python = ">=3.10"
 dependencies = [
     "pywhispercpp>=1.2.0",
     "huggingface-hub>=0.20.0",
-    "edge-tts==7.2.8",
     "faster-whisper==1.1.1",
     "matplotlib==3.9.4",
     "psutil==6.1.1",

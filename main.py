@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import platform
 import subprocess
@@ -11,6 +12,36 @@ from pathlib import Path
 
 from benchmark import export_reports, run_benchmark
 from utils import ensure_engine_models
+
+ENGINE_DEPENDENCIES = {
+    "whisper.cpp:base.en-q5_1": {"module": "pywhispercpp", "pip": "pywhispercpp>=1.2.0"},
+    "whisper.cpp:base.en-q5_0": {"module": "pywhispercpp", "pip": "pywhispercpp>=1.2.0"},
+    "faster-whisper:base.en": {"module": "faster_whisper", "pip": "faster-whisper==1.1.1"},
+    "faster-whisper:tiny.en": {"module": "faster_whisper", "pip": "faster-whisper==1.1.1"},
+    "vosk": {"module": "vosk", "pip": "vosk==0.3.45"},
+    "sherpa-onnx": {"module": "sherpa_onnx", "pip": "sherpa-onnx==1.12.40"},
+}
+
+
+def engine_dependency_requirements(engine_name: str) -> dict[str, str]:
+    """Return the import- and pip-install names required for an STT engine."""
+    return ENGINE_DEPENDENCIES.get(engine_name, {})
+
+
+def ensure_runtime_dependencies(engine_names: list[str]) -> None:
+    """Install any missing engine dependency when the selected model is used."""
+    for engine_name in dict.fromkeys(engine_names):
+        dependency = engine_dependency_requirements(engine_name)
+        if not dependency:
+            continue
+        module_name = dependency["module"]
+        package_spec = dependency["pip"]
+        if importlib.util.find_spec(module_name) is None:
+            print(
+                f"Engine '{engine_name}' requires '{package_spec}', which is not installed. "
+                "Installing it now..."
+            )
+            subprocess.run([sys.executable, "-m", "pip", "install", package_spec], check=True)
 
 APP_DIR = Path(__file__).resolve().parent
 ALL_ENGINES = (
@@ -36,14 +67,6 @@ def dataset_has_audio(audio_dir: Path, manifest_path: Path) -> bool:
 
 
 def resolve_dataset(args: argparse.Namespace) -> None:
-    """Resolve which dataset to run.
-
-    An explicit --audio-dir/--manifest is used as-is and never overridden. Otherwise —
-    the plain `uv run main.py` case — this prefers the recorded human-speech
-    set at data_audio/recorded/ over the synthetic one, since real speech is
-    the more representative test; it falls back to the synthetic set,
-    generating it first if needed, only when no usable recorded set is found.
-    """
     if args.audio_dir is not None or args.manifest is not None:
         if args.audio_dir is None or args.manifest is None:
             raise ValueError("--audio-dir and --manifest must both be set, or both left unset.")
@@ -57,29 +80,20 @@ def resolve_dataset(args: argparse.Namespace) -> None:
         args.manifest = str(recorded_manifest)
         print(f"Using recorded dataset (preferred): {recorded_dir}")
         return
-
+    
     synthetic_dir = APP_DIR / "data_audio"
     synthetic_manifest = synthetic_dir / "manifest.json"
     if not dataset_has_audio(synthetic_dir, synthetic_manifest):
-        print("Recorded audio is unavailable; generating the synthetic dataset.")
-        try:
-            subprocess.run(
-                [sys.executable, str(APP_DIR / "dataset_generator.py")],
-                cwd=APP_DIR,
-                check=True,
-            )
-        except (OSError, subprocess.CalledProcessError) as error:
-            raise RuntimeError(
-                "No usable recorded or synthetic audio was found. "
-                "Run 'python dataset_generator.py' on a computer with internet access."
-            ) from error
+        raise RuntimeError(
+            "No usable recorded or synthetic audio was found. "
+            "Please provide a dataset via --audio-dir and --manifest."
+        )
     args.audio_dir = str(synthetic_dir)
     args.manifest = str(synthetic_manifest)
     print(f"Recorded dataset not found at {recorded_dir}; using synthetic dataset: {synthetic_dir}")
 
 
 def parse_args() -> argparse.Namespace:
-    """Build the command-line interface for configuring and running the benchmark."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audio-dir", default=os.getenv("AUDIO_DIR"))
     parser.add_argument("--manifest", default=os.getenv("MANIFEST"))
@@ -105,45 +119,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--whisper-use-gpu",
         action="store_true",
-        help="Let whisper.cpp offload to GPU if the installed build supports it (e.g. Vulkan on the QRB2210's Adreno GPU); off by default since most CPU-only builds ignore or fail on this",
+        help="Let whisper.cpp offload to GPU if the installed build supports it",
     )
-    parser.add_argument("--wandb", action="store_true")
-    parser.add_argument("--wandb-project", default="cultura-viva-stt-benchmark")
     return parser.parse_args()
 
 def main() -> None:
-    """Run and export the configured benchmark, optionally tracked in Weights & Biases."""
     args = parse_args()
     if "all" in args.engines:
         args.engines = list(ALL_ENGINES)
+    ensure_runtime_dependencies(args.engines)
     ensure_engine_models(args.engines)
     resolve_dataset(args)
 
-    if args.wandb:
-        import wandb
-
-        dataset_source = "recorded" if "recorded" in Path(args.audio_dir).parts else "synthetic"
-        wandb.init(
-            project=args.wandb_project,
-            config=vars(args),
-            tags=[
-                dataset_source,
-                "domain-bias",
-                args.device,
-            ],
-        )
-        wandb.config.update({"dataset_source": dataset_source, "host": platform.node()})
-
     results, engine_started_at = run_benchmark(args)
-    export_reports(results, Path(args.output_dir), engine_started_at, use_wandb=args.wandb)
-
-    if args.wandb:
-        import wandb
-
-        wandb.finish()
+    export_reports(results, Path(args.output_dir), engine_started_at)
 
     print(f"Exported {len(results)} measurements to {args.output_dir}")
-
 
 if __name__ == "__main__":
     main()

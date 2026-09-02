@@ -11,6 +11,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
+import math
 
 from tqdm import tqdm
 
@@ -381,20 +382,7 @@ def measure_transcription(recognizer: Recognizer, audio_path: Path, language: st
 def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Run all requested engines; return per-utterance measurements and, for
     each engine, the real UTC timestamp of when that engine started running.
-    Logs a per-utterance wandb.Table when args.wandb is set.
     """
-    use_wandb = getattr(args, "wandb", False)
-    wandb_table = None
-    if use_wandb:
-        import wandb
-
-        wandb_table = wandb.Table(columns=[
-            "engine", "filename", "language", "ground_truth", "raw_transcription",
-            "transcription", "domain_bias_applied", "wer", "cer",
-            "keyword_spotting_accuracy", "inference_latency_ms", "rtf",
-            "peak_ram_mb", "model_size_mb", "error",
-        ])
-
     dataset = load_manifest(Path(args.manifest))
     audio_dir = Path(args.audio_dir)
     results: list[dict[str, Any]] = []
@@ -475,21 +463,8 @@ def run_benchmark(args: Any) -> tuple[list[dict[str, Any]], dict[str, str]]:
                 postfix["status"] = "ERR"
             pbar.set_postfix(postfix)
 
-            if wandb_table is not None:
-                wandb_table.add_data(
-                    row["engine"], row["filename"], row["language"], row["ground_truth"],
-                    row["raw_transcription"], row["transcription"], row["domain_bias_applied"],
-                    row["wer"], row["cer"], row["keyword_spotting_accuracy"],
-                    row["inference_latency_ms"], row["rtf"], row["peak_ram_mb"],
-                    row["model_size_mb"], row["error"],
-                )
         del recognizer
         gc.collect()
-
-    if wandb_table is not None:
-        import wandb
-
-        wandb.log({"predictions": wandb_table})
 
     return results, engine_started_at
 
@@ -559,7 +534,6 @@ def export_reports(
     results: list[dict[str, Any]],
     output_dir: Path,
     engine_started_at: dict[str, str] | None = None,
-    use_wandb: bool = False,
 ) -> None:
     """Write per-engine JSON prediction reports, a per-engine summary.json, and
     comparison plots. When use_wandb is set, also logs per-engine aggregate
@@ -612,30 +586,6 @@ def export_reports(
     write_json(output_dir / "summary.json", summary)
     export_plots(summary, output_dir / "plots")
     print(f"Wrote summary for {len(summary)} engine(s) and plots to {output_dir / 'plots'}")
-
-    if use_wandb:
-        import wandb
-
-        for engine, rows in by_engine.items():
-            valid_wer = [row["wer"] for row in rows if row["wer"] == row["wer"]]  # drop NaN
-            valid_cer = [row["cer"] for row in rows if row["cer"] == row["cer"]]
-            valid_kw = [row["keyword_spotting_accuracy"] for row in rows if row["keyword_spotting_accuracy"] is not None]
-            wandb.log({
-                f"{engine}/avg_wer": sum(valid_wer) / len(valid_wer) if valid_wer else None,
-                f"{engine}/avg_cer": sum(valid_cer) / len(valid_cer) if valid_cer else None,
-                f"{engine}/avg_keyword_spotting_accuracy": sum(valid_kw) / len(valid_kw) if valid_kw else None,
-                f"{engine}/avg_inference_latency_ms": sum(row["inference_latency_ms"] for row in rows) / len(rows),
-                f"{engine}/max_peak_ram_mb": max(row["peak_ram_mb"] for row in rows),
-                f"{engine}/model_size_mb": rows[0]["model_size_mb"],
-                f"{engine}/domain_bias_applied": rows[0]["domain_bias_applied"],
-            })
-
-        artifact = wandb.Artifact("predictions", type="results")
-        artifact.add_dir(str(predictions_dir))
-        hotwords_cache = CACHE_DIR / "cultura_viva_hotwords.txt"
-        if hotwords_cache.is_file():
-            artifact.add_file(str(hotwords_cache))
-        wandb.log_artifact(artifact)
 
 
 def export_plots(summary: list[dict[str, Any]], plots_dir: Path) -> None:

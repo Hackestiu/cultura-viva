@@ -1,12 +1,12 @@
 [
   {
     "engine": "whisper.cpp:base.en-q5_1",
-    "avg_wer": 0.0319625,
-    "avg_cer": 0.008804166666666667,
-    "avg_keyword_spotting_accuracy": 0.9736842105263158,
-    "avg_inference_time_sec": 1.2321333333333333,
-    "avg_inference_latency_ms": 1232.1375,
-    "max_peak_ram_mb": 241.4,
+    "avg_wer": 0.03822916666666667,
+    "avg_cer": 0.011733333333333333,
+    "avg_keyword_spotting_accuracy": 0.9473684210526315,
+    "avg_inference_time_sec": 0.8763,
+    "avg_inference_latency_ms": 876.2995833333333,
+    "max_peak_ram_mb": 225.23,
     "model_size_mb": 56.95,
     "domain_bias_applied": true,
     "num_utterances": 24

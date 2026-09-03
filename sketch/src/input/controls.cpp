@@ -158,7 +158,7 @@ void updateControls() {
 
   if (currentUiState == UI_BOOT_INTRO) {
     blinkIntroPrompt();
-    if (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge) {
+    if (btnAPressedEdge) {
       currentUiState = UI_OPTIONS;
       drawScreenOptions();
       buzzer.tone(1400, 50);

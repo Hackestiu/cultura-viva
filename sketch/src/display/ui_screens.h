@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
-#include "logo_bitmap.h"
+#include "ui_assets.h"
 
 // Forward declaration of global TFT instance
 extern Adafruit_ST7735 tft;

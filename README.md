@@ -265,34 +265,34 @@ serialitza tots automàticament i els passa al SLM com a context.
 
 ## Estat actual del projecte
 
-### ✅ Completament funcional
+### ✅ Verificat i funcionant (placa real, 3 set. 2026)
 
-- **Sketch C++**: compilat i verificat a la UNO Q (Zephyr core)
+- **Sketch C++**: compilat i flaix a la UNO Q
   - UI d'acollida: benvinguda → opcions → tutorial ×3 → selecció de personalitat
   - Vista en directe de la càmera per chunks RPC
-  - **Flux de confirmació de foto**: foto → previsualització → "Are you sure?" → switch confirma → buzzer → desbloqueig àudio
+  - Flux de confirmació de foto: foto → previsualització → "Are you sure?" → switch confirma → buzzer → desbloqueig àudio
   - Minimapa de Park Güell amb landmarks i marcador de posició actual
-  - Tots els perifèrics físics (A/B/C, switch, push button, knob, buzzer, GPS)
+  - Perifèrics: botons A/B/C, switch D6, push button D7, Modulino Knob (volum), buzzer
 
-- **Python**: tots els mòduls verificats
-  - `CameraManager`: fotos 1080p + live view chunked + `last_photo_path`
-  - `MicrophoneManager`: gravació per chunks + STT (faster-whisper, domain-biased, VAD)
-  - `AudioPlayer`: TTS Piper 3 veus + `aplay` ALSA + volum dinàmic via `amixer` (Jack 3.5mm)
-  - `LocationRegistry`: GPS + Haversine, fallback `park_guell`
-  - `VisionClassifier`: ONNX + ImageNet preprocessing + confidence threshold
-  - `ModelRegistry`: personalitats, prompts per role, KG lookup, SLM via llama-cpp
-  - `main.py`: pipeline STT→Visió→KG→SLM→TTS, guarda d'àudio si no hi ha foto confirmada
+- **Python — maquinari**:
+  - `CameraManager`: fotos 1080p + live view chunked ✅
+  - `MicrophoneManager`: gravació per chunks ✅
+  - `AudioPlayer`: `aplay` ALSA + volum dinàmic via `amixer` (Jack 3.5mm) ✅
+
+- **Python — IA (verificat que carrega i executa)**:
+  - `faster-whisper` carregat i transcriu (STT) ✅
+  - `onnxruntime` carregat, classifica elements (Visió, 99.3% al Drac) ✅
+  - `llama-cpp-python` carregat, genera respostes (SLM, Qwen2.5 1.5B) ✅
+  - `piper-tts` carrega la veu — **síntesi pendent de verificar** ⚠️
 
 ### ⚠️ Pendent / Limitacions conegudes
 
 | # | Problema | Impacte |
 |---|---|---|
-| 1 | **SLM no descarregat** (`models/slm/` buit) | Retorna `"(model not available)"` com a resposta. La pipeline no peta, però no hi ha resposta real. |
-| 2 | **KG bàsic** (només `description` per element) | El SLM rep poc context. Enriquir amb `curiosities`, `materials`, `year_built` milloraria les respostes. |
-| 3 | **Models de visió no entrenats** (`models/vision/` buit) | `classify()` retorna `None` i la pipeline continua sense context visual. |
-| 4 | **Models TTS no descarregats** (`models/tts/` buit) | `AudioPlayer` no produeix so fins que es baixin els `.onnx` de Piper. |
-| 5 | **Minimapa Sagrada Família inexistent** | Si GPS detecta SF, la visió/KG és correcte però el minimapa de la LCD segueix mostrant Park Güell. |
-| 6 | **Pins de `Serial1` (GPS) no verificats físicament** | El GPS pot no llegir si el pinout físic de la UNO Q difereix del sketch. |
+| 1 | **Síntesi Piper no verificada a l'altaveu** | Fix aplicat a l'API (`synthesize()`), però cal confirmar que surt so real pel jack 3.5mm |
+| 2 | **STT retorna string buit** | `faster-whisper` carrega bé però la transcripció és `''` — possible problema de silenci al micròfon o de VAD massa estricte |
+| 3 | **Minimapa Sagrada Família inexistent** | Si GPS detecta SF, la visió/KG funciona però el minimapa de la LCD segueix mostrant Park Güell |
+| 4 | **GPS no verificat físicament** | El GPS pot no llegir si el pinout físic de la UNO Q difereix del sketch |
 
 ---
 

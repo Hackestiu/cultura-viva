@@ -309,6 +309,255 @@ amixer set Master 70%
 
 ---
 
+## Instal·lació de dependències a l'Arduino UNO Q — Problemes i Solucions
+
+Aquesta secció documenta tots els problemes sorgits durant la instal·lació de les
+llibreries d'IA a la placa i les solucions definitives aplicades.
+
+### Arquitectura del sistema
+
+L'**Arduino UNO Q** executa el codi Python sobre un MPU Linux amb CPU
+**Qualcomm QRB2210 (ARM Cortex-A53, `aarch64`, 64-bit)**. Totes les
+dependències d'IA han de ser compilades per a `aarch64`; els paquets
+precompilats per a `x86_64` no serveixen.
+
+**Python disponible**: 3.13.5 (a `/usr/bin/python3`)
+
+---
+
+### Problema 1 — SSL: verificació de certificat fallida
+
+**Símptoma:**
+```
+SSLError: CERTIFICATE_VERIFY_FAILED - certificate verify failed:
+Hostname mismatch, certificate is not valid for 'pypi.org'
+```
+
+**Causa:** La xarxa de la UPC (UPCguest) fa intercepció TLS amb portal captiu.
+El certificat del portal (`portal-upcguest.upc.edu`) es presenta en lloc del de PyPI.
+
+**Solució:** Connectar la placa a un hotspot mòbil (sense proxy corporatiu) o
+passar `--trusted-host` si l'entorn ho permet:
+```bash
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <paquet>
+```
+
+---
+
+### Problema 2 — El rellotge del sistema desactualitzat trenca SSL
+
+**Símptoma:** El certificat TLS és rebutjat per data invàlida fins i tot sense
+portal captiu.
+
+**Causa:** El rellotge de la placa estava desfasat > 1 any (p.ex. 2024 quan
+l'any real és 2026). TLS rebutja certificats quan `not_before > now`.
+
+**Solució temporal (fins al proper boot):**
+```bash
+sudo date -s "2026-09-03 14:41:00"
+```
+
+**Solució permanent:**
+```bash
+sudo apt install ntp
+sudo systemctl enable ntp --now
+```
+
+---
+
+### Problema 3 — `pip install` falla perquè el sistema és *externally managed*
+
+**Símptoma:**
+```
+error: externally-managed-environment
+× This environment is externally managed
+```
+
+**Causa:** A partir de Python 3.11, Debian/Ubuntu marquen el Python del
+sistema com a gestionat per `apt`. `pip` directe queda bloquejat.
+
+**Solució:** Usar el flag `--break-system-packages` o millor, usar `uv`:
+```bash
+# Instal·lar uv (gestor de paquets ultra ràpid en Rust)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Instal·lar dependències amb uv
+cd ~/ArduinoApps/cultura-viva-uno-q/python
+sudo ~/.local/bin/uv pip install --system --break-system-packages -r requirements.txt
+```
+
+---
+
+### Problema 4 — `llama-cpp-python` no es pot compilar dins Arduino App Lab
+
+**Símptoma:**
+```
+× Failed to build `llama-cpp-python==0.3.35`
+CMake Error: CMAKE_C_COMPILER not found
+```
+
+**Causa:** Arduino App Lab executa `python/main.py` en un contenidor sandbox
+(`/app/`) que **no té accés a `gcc`, `cmake` ni eines de compilació**. Quan
+`llama-cpp-python` no és al cache de `uv`, App Lab intenta compilar-lo des de
+zero i falla.
+
+**Per què passa cada vegada que s'obre App Lab:** App Lab buida el cache de
+`uv` entre sessions i torna a intentar compilar.
+
+**Solució definitiva — Preinstalar al sistema host de la placa:**
+```bash
+# A la shell de la placa (fora d'App Lab)
+CMAKE_ARGS="-DGGML_NATIVE=OFF -DCMAKE_C_FLAGS='-march=armv8-a -mtune=cortex-a53' \
+            -DCMAKE_CXX_FLAGS='-march=armv8-a -mtune=cortex-a53'" \
+sudo pip install --break-system-packages llama-cpp-python
+```
+
+I afegir els paths del sistema al `sys.path` d'App Lab via `python/config.py`:
+```python
+# config.py — al principi del fitxer, ABANS de qualsevol import de IA
+import sys
+from pathlib import Path
+
+APP_DIR = Path(__file__).parent
+
+# Libs vendoritzades dins l'app (si existeixen)
+_lib_dir = APP_DIR / "lib"
+if _lib_dir.exists() and str(_lib_dir) not in sys.path:
+    sys.path.insert(0, str(_lib_dir))
+
+# Paquets instal·lats al sistema host de la placa
+for _p in [
+    "/usr/local/lib/python3.13/dist-packages",
+    "/home/arduino/.local/lib/python3.13/site-packages",
+]:
+    if _p not in sys.path:
+        sys.path.append(_p)
+```
+
+---
+
+### Problema 5 — `opencv-python-headless` conflicte amb el sistema
+
+**Símptoma:**
+```
+ImportError: libGL.so.1: cannot open shared object file
+# o bé:
+error: conflicting distribution 'opencv-python 4.13.0...' found in the system
+```
+
+**Causa:** El SO de l'Arduino UNO Q porta un build propi i optimitzat de
+`opencv` (`4.13.0+1ddb20b`) preinstal·lat. Instal·lar `opencv-python-headless`
+via pip genera conflictes de versió o dependències de biblioteques `.so` absents.
+
+**Solució:** Eliminar `opencv-python-headless` del `requirements.txt` i del
+`pyproject.toml`. El OpenCV del sistema funciona perfectament a 1080p.
+
+```bash
+# Verificació:
+python3 -c "import cv2; print(cv2.__version__)"
+# → 4.13.0
+```
+
+---
+
+### Problema 6 — `onnxruntime` s'instal·la a un path diferent
+
+**Símptoma:** `[WARN] vision_module: 'onnxruntime' is not installed` a App Lab
+tot i que `python3 -c "import onnxruntime"` funciona a la shell.
+
+**Causa:** `onnxruntime` s'havia instal·lat a
+`/home/arduino/.local/lib/python3.13/site-packages/` (instal·lació d'usuari)
+mentre que App Lab usa Python de `/usr`. El path d'usuari no era al `sys.path`
+del contenidor.
+
+**Solució:** Afegit al `sys.path` de `config.py` (vegeu Problema 4).
+Verificació:
+```bash
+python3 -c "import onnxruntime; print(onnxruntime.__file__)"
+# → /home/arduino/.local/lib/python3.13/site-packages/onnxruntime/__init__.py
+```
+
+---
+
+### Problema 7 — API de Piper `synthesize_wav()` incompatible
+
+**Símptoma:**
+```
+[ERROR] AudioPlayer: synthesis failed for voice 'semaine_prudence':
+PiperVoice.synthesize_wav() got an unexpected keyword argument 'speaker_id'
+```
+
+**Causa:** La versió de `piper-tts` instal·lada a `aarch64` exposa `synthesize()`
+en lloc de `synthesize_wav()`, o bé no accepta el kwarg `speaker_id` en veus
+mono-parlant.
+
+**Solució aplicada a `hw/audio_playback_module.py`:**
+```python
+try:
+    if speaker_id is not None:
+        voice_obj.synthesize(text, wf, speaker_id=speaker_id)
+    else:
+        voice_obj.synthesize(text, wf)
+except (TypeError, AttributeError):
+    try:
+        voice_obj.synthesize(text, wf)       # sense speaker_id
+    except (TypeError, AttributeError):
+        voice_obj.synthesize_wav(text, wf)   # fallback a API antiga
+```
+
+---
+
+### Problema 8 — `element_sheets.json` no troba `escalinata_drac`
+
+**Símptoma:**
+```
+[WARN] KG: element 'escalinata_drac' not found in any knowledge file.
+```
+
+**Causa:** El model de visió retorna l'etiqueta `escalinata_drac` (de
+`labels.json`), però `element_sheets.json` tenia l'element amb `"id":
+"drac_park_guell"` i sense cap àlies que coincidís amb `escalinata_drac`.
+
+**Solució:** Afegida `"escalinata_drac"` a la llista `aliases` de l'element
+`drac_park_guell`. Igualment s'han mapejat totes les etiquetes dels models de
+visió als seus elements:
+
+| Etiqueta del model | Element al KG |
+|---|---|
+| `escalinata_drac` | `drac_park_guell` |
+| `pavellons_consergeria` | `porters_lodge_park_guell` |
+| `placa_natura` | `banc_serpentejant` |
+| `3_viaductes` | `viaductes_park_guell` |
+| `sala_hipostila` | `sala_hipostila` |
+
+---
+
+### Resum de l'estat de les dependències (verificat 3 set. 2026)
+
+```bash
+python3 -c "
+mods = ['numpy', 'PIL', 'onnxruntime', 'faster_whisper', 'llama_cpp', 'piper', 'sounddevice']
+for m in mods:
+    try:
+        __import__(m); print(f'[OK] {m}')
+    except Exception as e:
+        print(f'[FALTA] {m}: {e}')
+"
+```
+
+Resultat esperat (placa verificada):
+```
+[OK] numpy
+[OK] PIL
+[OK] onnxruntime
+[OK] faster_whisper
+[OK] llama_cpp
+[OK] piper
+[OK] sounddevice
+```
+
+---
+
 ## Primers passos (setup des de zero)
 
 ```bash

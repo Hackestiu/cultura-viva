@@ -4,8 +4,8 @@
     "question": "When and where was Antoni Gaudí born, and when did he die?",
     "reference": "Gaudí was born on 25 June 1852 in Reus (or possibly Riudoms). He died on 10 June 1926 in Barcelona.",
     "contexts": [
-      "Antoni Gaudí i Cornet was born on June 25, 1852, and died on June 10, 1926. He was a Catalan architect from Reus (or possibly Riudoms), Catalonia, Spain..."
+      "The retrieved passage for this question goes here."
     ],
-    "answer": "Gaudí was born on June 25, 1852 in Catalonia, Spain, and died on June 10, 1926."
+    "answer": "The SLM-generated answer goes here."
   }
 ]

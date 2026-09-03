@@ -23,7 +23,19 @@ hw.location_module) and high-level AI/logic modules live in the core/ package
 (core.model_module, core.vision_module, core.minimap_module). Configuration is centralized in config.py.
 """
 
+import sys
 import time
+
+# Ensure system-wide installed AI packages are accessible in Arduino App Lab sandbox
+for p in [
+    "/usr/local/lib/python3.13/dist-packages",
+    "/usr/local/lib/python3.13/site-packages",
+    "/usr/lib/python3/dist-packages",
+    "/usr/lib/python3.13/dist-packages",
+    "/home/arduino/.local/lib/python3.13/site-packages",
+]:
+    if p not in sys.path:
+        sys.path.append(p)
 
 from config import (
     CAM_CHUNK_PIXELS,

@@ -1,30 +1,3 @@
-# numpy: microphone.record_wav() returns an np.ndarray
-numpy
-
-# cv2 (opencv) comes pre-installed on Arduino UNO Q platform;
-# not declared here to avoid version collision with preinstalled build.
-
-# --- Vision pipeline ---
-# ONNX Runtime for Sagrada Família / Park Güell element classifiers
-onnxruntime
-pillow
-
-# --- STT: faster-whisper (upgraded from pywhispercpp) ---
-# Optimized for ARM/Linux without CUDA: int8 quantization, greedy decoding, VAD.
-# Model: Systran/faster-whisper-base.en — see models/stt/README.md for download instructions.
-faster-whisper>=1.0.0
-
-# --- SLM: Qwen2.5 GGUF inference (llama-cpp-python) ---
-# On ARM/Linux, compile from source:
-#   CMAKE_ARGS="-DLLAMA_BLAS=ON" pip install llama-cpp-python
-llama-cpp-python>=0.2.0
-
-# --- TTS: Piper text-to-speech (3 personality voices) ---
-# piper-tts bundles its own ONNX Runtime build and the espeak-ng phonemizer.
-# Requires >=1.2.0 for synthesize_wav(speaker_id=) keyword-argument support.
-# Model files: see models/tts/README.md for download instructions.
-piper-tts>=1.2.0
-
-# sounddevice: optional pure-Python audio fallback (aplay/ALSA is used by default)
-# Remove if not needed on the target board (requires PortAudio).
-sounddevice>=0.4.6
+# All AI dependencies are installed system-wide on the Arduino UNO Q platform:
+# - faster-whisper, onnxruntime, llama-cpp-python, piper-tts, pillow, numpy, sounddevice
+# (main.py automatically adds system dist-packages to sys.path).

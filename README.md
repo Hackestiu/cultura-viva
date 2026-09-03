@@ -1,337 +1,347 @@
-# Projecte Personalitat — Arduino UNO Q (+ integració Cultura Viva)
+# Cultura Viva — Arduino UNO Q
 
-Aquest document és una referència completa de l'estat actual del projecte,
-pensada per compartir amb altres persones (o altres IAs, com GitHub Copilot)
-que hagin d'agafar el codi i seguir-hi treballant. Explica què fa cada
-fitxer, com es comuniquen el sketch i el Python, i **què està fet de veritat
-vs. què encara està pendent** — aquesta última part és important, no
-assumeixis que tot el que es descriu aquí ja funciona de cap a cap.
+Audioguia interactiva de Park Güell i la Sagrada Família que combina visió
+per computador, transcripció de veu (STT), model de llenguatge petit (SLM) i
+síntesi de veu (TTS) sobre un Arduino UNO Q.
 
-> **Actualització:** aquesta versió incorpora dos fixes crítics fets
-> després d'una sessió de depuració (gravació trencada + àudio Bluetooth
-> mut) — veure la secció "Fixes aplicats" més avall, abans de "PENDENT".
+L'usuari fa una foto d'un element de Gaudí, confirma la foto amb el switch,
+fa una pregunta en veu alta i rep una resposta parlada adaptada a la
+personalitat seleccionada (Artístic / Tècnic / Infantil).
+
+---
 
 ## Maquinari
 
-- **Arduino UNO Q**: placa amb dos processadors — un MCU (STM32, temps real,
-  corre el sketch `.ino`) i un MPU Linux (Qualcomm QRB2210, corre el Python).
-  Es comuniquen entre ells amb **Bridge (RPC)**, no per port sèrie.
-- **LCD TFT ST7735S** 128x160, 1.8", nomès 3.3V — connectada per SPI de
-  maquinari (pins CS=10, DC=8, RST=9, backlight=5).
-- **Webcam Logitech Brio 105** per USB — fotos i vista en directe.
-- **Micròfon**: el de la mateixa Brio 105 (ALSA `hw:0,0`), NO un micròfon
-  Bluetooth.
-- **Mòduls Qwiic (I2C per `Wire1`, NO `Wire`)**: Modulino Knob (control de volum dels auriculars 0-100%), Modulino Buttons (A/B/C), Modulino Buzzer.
-- **Botó extern** a D7, **switch** a D6.
-- **GPS NEO-6M** per `Serial1` (9600 baud) — només per triar automàticament
-  entre dues ubicacions fixes per proximitat (veure més avall).
-- **Sortida d'àudio**: auriculars connectats per **jack 3.5mm** (sortida directa ALSA `default`), amb volum regulable mitjançant el **Modulino Knob** — per reproduir la resposta de veu de la pipeline Cultura Viva.
+| Component | Detalls |
+|---|---|
+| **Arduino UNO Q** | MCU STM32 (sketch `.ino`, temps real) + MPU Linux Qualcomm QRB2210 (Python). Es comuniquen per **Bridge RPC**. |
+| **LCD TFT ST7735S** | 128×160, 1.8", SPI: CS=10, DC=8, RST=9, backlight=5 |
+| **Webcam Logitech Brio 105** | USB — fotos 1080p i vista en directe. Micròfon integrat (ALSA `hw:0,0`) |
+| **Mòduls Qwiic (I2C via `Wire1`)** | Modulino Buttons (A/B/C — selecció de personalitat), Modulino Knob (volum), Modulino Buzzer (feedback foto) |
+| **Switch** | Switch físic a D6 — commuta entre mode càmera i mode minimapa |
+| **Push button** | Botó físic a D7 — fa foto (mode càmera) / activa gravació (mode minimapa) |
+| **GPS NEO-6M** | `Serial1`, 9600 baud — detecta la ubicació automàticament per proximitat |
+| **Auriculars** | Jack 3.5mm cablejat (sortida ALSA `default`) — volum dinàmic via Modulino Knob |
 
-## Estructura de carpetes
+---
+
+## Estructura de fitxers
 
 ```
-<carpeta del sketch>/
-├── sketch.ino          # codi C++ del MCU (tot el hardware en temps real)
-├── sketch.yaml          # dependencies de llibreries C++ (versions explicites)
-├── landmarks.h           # dades del minimapa (Park Güell): landmarks
-├── tilemap.h              # dades del minimapa (Park Güell): terreny/paleta
-└── app.yaml               # manifest de l'app (nom, icona...)
-
-python/
-├── config.py                    # TOTA la configuracio centralitzada
-├── main.py                       # bucle principal (App.run) -- veure "Fixes aplicats"
-├── camera_module.py               # CameraManager: fotos 1080p + vista en directe
-├── microphone_module.py            # MicrophoneManager: gravacio de la pregunta
-├── model_module.py                  # ModelRegistry: Personalitat (A/B/C)
-├── location_module.py                # LocationRegistry: Ubicacio per GPS
-├── bluetooth_module.py                # connexio/emparellament Bluetooth auto -- veure "Fixes aplicats"
-├── audio_playback_module.py            # AudioPlayer: reproduir la resposta TTS
-├── requirements.txt
-├── models/                              # fitxers de personalitat (opcional models.json)
-├── minimapa/
-│   ├── landmarks.json                    # font de veritat pel minimapa (mirall de landmarks.h)
-│   ├── minimap_module.py                  # MinimapManager: marcar visitat / posicio
-│   └── README.md                           # detall especific del minimapa
-├── locations/                              # opcional locations.json (override coordenades GPS)
-├── recordings/                              # .wav de preguntes gravades (es crea sol)
-├── photos/                                   # fotos preses (es crea sol)
-└── responses/                                 # .wav de respostes TTS (es crea sol -- veure nota mes avall)
+cultura-viva-uno-q/
+│
+├── README.md                    ← Ets aquí
+├── app.yaml                     ← Manifest de l'app (nom, icona)
+├── convert_logo.py              ← Eina per convertir el logo a bitmap C++
+│
+├── sketch/                      ← Codi C++ del MCU (sketch Arduino)
+│   ├── sketch.ino               ← Entry point — inicialitza perifèrics i Bridge RPC
+│   ├── sketch.yaml              ← Dependències de llibreries (versions explícites)
+│   └── src/
+│       ├── core/
+│       │   ├── app_state.h/cpp  ← Variables globals d'estat (mode, personalitat, flags foto)
+│       │   ├── config.h         ← Pins i constants de maquinari
+│       │   └── rpc_manager.h/cpp← Registre de totes les funcions Bridge.provide(...)
+│       ├── display/
+│       │   ├── ui_screens.h     ← Pantalles d'acollida (benvinguda, tutorial, selecció)
+│       │   ├── ui_manager.h/cpp ← Màquina d'estats de la UI: transicions entre pantalles
+│       │   ├── camera_view.h/cpp← Vista en directe + overlay confirmació de foto
+│       │   ├── minimap.h/cpp    ← Renderitzat del minimapa de Park Güell
+│       │   ├── landmarks.h      ← Dades dels landmarks del minimapa
+│       │   ├── tilemap.h        ← Paleta i terreny del minimapa
+│       │   └── logo_bitmap.h    ← Bitmap del logo per la pantalla d'inici
+│       ├── input/
+│       │   └── controls.h/cpp   ← Lectura de botons, switch, knob; lògica de confirmació foto
+│       └── location/
+│           └── (GPS reading helpers)
+│
+└── python/                      ← Codi Python del MPU Linux
+    ├── main.py                  ← Bucle principal de l'app (App.run)
+    ├── config.py                ← Tota la configuració centralitzada (paths, devices, mides)
+    ├── requirements.txt         ← Dependències Python
+    │
+    ├── core/                    ← Serveis d'IA i lògica de domini
+    │   ├── model_module.py      ← ModelRegistry: personalitats, prompts, KG, SLM (llama-cpp)
+    │   ├── vision_module.py     ← VisionClassifier: ONNX — detecta element Gaudí de la foto
+    │   └── minimap_module.py    ← MinimapManager: traducció landmark → RPC del minimapa
+    │
+    ├── hw/                      ← Gestors de perifèrics hardware
+    │   ├── camera_module.py     ← CameraManager: foto 1080p + vista en directe per chunks
+    │   ├── microphone_module.py ← MicrophoneManager: gravació per chunks + STT (faster-whisper)
+    │   ├── audio_playback_module.py ← AudioPlayer: TTS Piper + reproducció ALSA (Jack 3.5mm)
+    │   └── location_module.py   ← LocationRegistry: GPS + Haversine → ubicació actual
+    │
+    ├── models/                  ← Fitxers de models d'IA (no inclosos al repositori)
+    │   ├── kg.json              ← Graf de coneixement de Gaudí (12 elements, extensible)
+    │   ├── stt/                 ← faster-whisper model (faster-whisper-base.en)
+    │   ├── slm/                 ← Model SLM en GGUF (qwen2.5-1.5b-instruct-q4_k_m.gguf)
+    │   ├── tts/                 ← Models de veu Piper (.onnx + .onnx.json)
+    │   └── vision/              ← Models ONNX de classificació (park_guell/, sagrada_familia/)
+    │
+    ├── assets/                  ← Recursos estàtics (imatges, sons)
+    ├── data/                    ← Dades en temps d'execució (es creen soles a l'inici)
+    │   ├── photos/              ← Fotos preses (1080p .jpg)
+    │   ├── recordings/          ← Preguntes gravades (.wav)
+    │   └── responses/           ← Respostes TTS generades (.wav)
+    ├── minimapa/                ← Dades del minimapa (landmarks.json, minimap_module.py)
+    └── locations/               ← Override opcional de coordenades GPS (locations.json)
 ```
 
-## Com funciona: interacció física
+---
 
-El **switch D6** té dos modes, que canvien tant la pantalla LCD com el
-significat del **botó D7**:
+## Flux d'interacció (com funciona de cara a l'usuari)
 
-| Switch D6 | Pantalla LCD | Botó D7 fa... |
+### El switch commuta entre dos modes:
+
+| Switch (D6) | Pantalla | Push button (D7) fa... |
 |---|---|---|
-| **ON** (mode ENFOCAR/càmera) | Vista en directe de la webcam | Un click = fa una FOTO |
-| **OFF** (mode MINIMAPA) | Minimapa de Park Güell | Click en TOGGLE = 1r click comença a gravar la pregunta, 2n click para |
+| **ON — Mode càmera** | Vista en directe de la webcam | Fa una **foto** |
+| **OFF — Mode minimapa** | Minimapa de Park Güell | 1r click **comença** a gravar / 2n click **para** i processa |
 
-Els **botons A/B/C** (Modulino Buttons) sempre fan la mateixa cosa,
-independentment del switch: un click curt selecciona la **Personalitat**
-(ARTISTIC/TECHNICAL/CHILD, index 0/1/2). Els LEDs de cada botó mostren quina
-personalitat està seleccionada — excepte mentre s'està gravant una pregunta,
-que parpellegen totes juntes com a feedback visual.
+### Flux complet d'una interacció:
 
-La **Ubicació** (Park Güell / Sagrada Família) NO es tria manualment: es
-calcula sola per **proximitat GPS** — es compara la posició actual amb les
-coordenades fixes de tots dos llocs i es tria la més propera. El sketch
-només exposa el fix cru (`has_gps_fix`/`get_gps_lat`/`get_gps_lon`);
-`location_module.py` és qui fa el càlcul de distància (Haversine).
+```
+1. Switch ON  → Pantalla en directe de la càmera
+2. Push button → Fa la foto → previsualització a la LCD
+               → "Are you sure?" apareix a la pantalla
+3. Switch OFF  → Confirma la foto → buzzer → desbloqueig de l'àudio
+4. [Opcional] Botons A/B/C → Selecciona personalitat (Artístic/Tècnic/Infantil)
+5. Push button (hold) → Grava la pregunta → para quan es deixa anar
+6. Pipeline automàtica:
+     STT     → Transcriu la pregunta (faster-whisper)
+     Visió   → Classifica l'element Gaudí de la foto (ONNX)
+     KG      → Recupera context factual de kg.json
+     SLM     → Genera la resposta (Qwen2.5 via llama-cpp)
+     TTS     → Sintetitza la veu (Piper) → reprodueix per auriculars Jack 3.5mm
+```
 
-⚠️ **Important**: el minimapa de la LCD només té dades de **Park Güell**
-(`landmarks.h`/`tilemap.h`/`landmarks.json`). El GPS pot dir que estàs més a
-prop de la Sagrada Família, però la LCD seguirà mostrant el mapa de Park
-Güell igualment — el GPS només serveix per triar quin classificador de
-visió / graf de coneixement fer servir a la pipeline de Cultura Viva, no
-per canviar la pantalla. Fins que no es dissenyi un `tilemap.h` equivalent
-per la Sagrada Família, la LCD és de Park Güell exclusivament.
+> ⚠️ **Sense foto confirmada no es pot gravar àudio.** Si s'intenta gravar
+> sense foto, la LCD mostra un avís i es descarta la gravació.
+
+### Botons A/B/C — Personalitats:
+
+Els LEDs dels botons reflecteixen la personalitat activa. Durant la gravació,
+els tres parpellegen junts com a feedback visual.
+
+| Botó | Personalitat | Veu Piper | Estil de resposta |
+|---|---|---|---|
+| **A** | Artístic | libriTTS r-medium (en-US) | Evocador, metàfores, passió |
+| **B** | Tècnic | Semaine Spike (en-GB) | Precís, dimensions, materials |
+| **C** | Infantil | Semaine Prudence (en-GB) | Simple, curiós, anecdòtic |
+
+### GPS i ubicació:
+
+La ubicació (Park Güell / Sagrada Família) es determina automàticament per
+proximitat GPS (Haversine). El sketch exposa el fix cru via RPC;
+`location_module.py` calcula el lloc més proper. Si no hi ha fix GPS
+(interiors, test), el sistema usa `park_guell` com a fallback.
+
+> ⚠️ El minimapa de la LCD només té dades de **Park Güell**. El GPS
+> serveix exclusivament per triar el classificador de visió i el KG correcte,
+> no per canviar la pantalla del minimapa.
+
+---
 
 ## Interfície RPC (Bridge) — sketch ↔ Python
 
-Totes aquestes funcions les **exposa el sketch** (`Bridge.provide(...)`) i
-les **crida el Python** (`Bridge.call(...)`). Aquesta llista s'ha verificat
-directament contra `sketch.ino` (línies `Bridge.provide(...)`) — és la font
-de veritat, no assumeixis res que no hi surti:
+Totes les funcions que el **sketch exposa** (`Bridge.provide`) i el **Python crida** (`Bridge.call`):
 
-| Funció RPC | Retorna | Què fa |
+| Funció RPC | Retorna | Descripció |
 |---|---|---|
-| `photo_trigger()` | bool | `True` un cop quan s'ha premut D7 en mode càmera (es consumeix en llegir-la) |
-| `confirm_photo_saved()` | — | Python la crida quan ha desat la foto correctament -> sona el buzzer |
-| `view_switch_state()` | bool | Estat debounced del switch D6 (`True`=càmera, `False`=minimapa) |
-| `receive_camera_chunk(idx, total, data_b64)` | — | Un xec de la miniatura de la vista en directe (veure secció següent) |
-| `get_personality_index()` | int (0/1/2) | Personalitat seleccionada actualment amb A/B/C |
-| `is_recording_active()` | bool | `True` mentre s'està gravant la pregunta (toggle amb D7 en mode minimapa) |
-| `has_gps_fix()` | bool | Si el GPS té fix vàlid ara mateix |
-| `get_gps_lat()` / `get_gps_lon()` | float | Coordenades actuals (0.0 si no hi ha fix) |
-| `mark_landmark_visited(id)` | bool | Marca un landmark del minimapa com a visitat |
-| `set_location_by_id(id)` | bool | Mou el marcador "estàs aquí" a la posició d'un landmark |
-| `set_location_xy(x, y)` | bool | Mou el marcador a una posició arbitrària |
-| `reset_minimap()` | bool | Neteja tots els landmarks visitats i el marcador de posició |
+| `photo_trigger()` | `bool` | `True` una sola vegada quan es prem el push button en mode càmera (auto-consumida) |
+| `confirm_photo_saved()` | — | Python la crida quan la foto s'ha desat → fa sonar el buzzer i mostra confirmació |
+| `view_switch_state()` | `bool` | Estat debounced del switch (`True`=càmera, `False`=minimapa) |
+| `receive_camera_chunk(idx, total, data_b64)` | — | Rep un chunk de la miniatura de la vista en directe |
+| `get_personality_index()` | `int` 0/1/2 | Personalitat activa seleccionada amb A/B/C |
+| `is_recording_active()` | `bool` | `True` mentre s'està gravant (toggle push button en mode minimapa) |
+| `get_volume()` | `int` 0–100 | Posició actual del Modulino Knob com a % de volum |
+| `has_gps_fix()` | `bool` | El GPS té fix vàlid en aquest moment |
+| `get_gps_lat()` / `get_gps_lon()` | `float` | Coordenades actuals (0.0 si no hi ha fix) |
+| `mark_landmark_visited(id)` | `bool` | Marca un landmark del minimapa com a visitat |
+| `set_location_by_id(id)` | `bool` | Mou el marcador "estàs aquí" a un landmark |
+| `set_location_xy(x, y)` | `bool` | Mou el marcador a coordenades de pantalla arbitràries |
+| `reset_minimap()` | `bool` | Neteja landmarks visitats i marcador de posició |
 
-> ⚠️ **`get_held_button()` NO existeix** al sketch actual — es va
-> substituir per `get_personality_index()` + `is_recording_active()`. Si
-> veus codi Python que encara la crida, és codi vell/trencat (veure
-> "Fixes aplicats").
+### Vista de càmera per chunks:
 
-### Vista de la càmera, per paquets
+El canal RPC té un límit de mida per missatge. Per això, cada fotograma es
+redueix a `CAM_THUMB_W × CAM_THUMB_H` en RGB565 i s'envia en blocs de
+`CAM_CHUNK_PIXELS` píxels via `receive_camera_chunk`. **Aquestes tres
+constants han de coincidir EXACTAMENT entre `config.py` i `sketch.ino`.**
 
-El canal RPC té un límit de mida de missatge que salta amb miniatures
-relativament petites en un sol missatge. Per això, `camera_module.py`
-trosseja cada fotograma (reduït a `CAM_THUMB_W`x`CAM_THUMB_H` en RGB565) en
-xecs de `CAM_CHUNK_PIXELS` píxels i els envia seqüencialment amb
-`receive_camera_chunk`. **Aquestes tres constants han de coincidir
-EXACTAMENT entre `config.py` i `sketch.ino`.**
+---
 
-## Mòduls Python, un per un
+## Configuració (`python/config.py`)
 
-- **`camera_module.py`** — `CameraManager`: fotos a 1080p (amb verificació
-  que la resolució s'ha aplicat de veritat) i vista en directe trossejada.
-- **`microphone_module.py`** — `MicrophoneManager`: com que `Microphone`
-  només exposa `record_wav(duration=X)` (sense start/stop de streaming), la
-  gravació de durada variable es simula gravant trossos curts consecutius
-  mentre una condició (`is_still_held`) segueixi sent certa. Ara aquesta
-  condició és `is_recording_active()` (el toggle de D7) — ja connectat a
-  `main.py`, veure "Fixes aplicats".
-- **`model_module.py`** — `ModelRegistry`: nom assignat a cada botó A/B/C
-  (per defecte `model_a`/`model_b`/`model_c`, sobreescrivible amb
-  `models/models.json`). Amb la integració de Cultura Viva, aquests noms
-  haurien de ser les Personalitats (`artistic`/`technical`/`child`).
-  ✅ **Verificat**: `name_for()` espera una lletra ("A"/"B"/"C"), exactament
-  el que li passa `main.py` (convertint l'índex de `get_personality_index()`
-  amb `"ABC"[index]`) — la crida des de `main.py` és correcta.
-- **`location_module.py`** — `LocationRegistry`: coordenades de referència
-  de Park Güell i Sagrada Família, i `current()` que consulta el GPS via
-  Bridge i retorna quin dels dos és més proper (Haversine).
-- **`bluetooth_module.py`** — connexió automàtica a un dispositiu Bluetooth
-  de sortida: reconnecta a l'última MAC coneguda, o escaneja/empareila/
-  connecta un dispositiu pel nom (`TRUSTED_DEVICE_NAME`). Fa servir
-  `bluetoothctl` per subprocess. **Fix aplicat a `get_playback_device()`**
-  — veure "Fixes aplicats".
-- **`audio_playback_module.py`** — `AudioPlayer`: reprodueix un `.wav`
-  (bloquejant) amb `aplay`, fent servir el device Bluetooth resolt per
-  `bluetooth_module.py` (o `PLAYBACK_DEVICE` de `config.py` si el vols
-  forçar manualment).
-- **`minimapa/minimap_module.py`** — `MinimapManager`: tradueix un codi de
-  landmark humà (`"DR"`) a l'id numèric i crida les RPC del minimapa.
+Centralitza **tot** — paths, dispositius, mides de buffer. Si necessites canviar
+alguna cosa, és aquí i **només aquí**.
 
-## Configuració (`config.py`)
+### Valors verificats contra el maquinari real:
 
-Centralitza TOT — paths, dispositius, mides.
+```python
+MIC_DEVICE             = "hw:0,0"   # Logitech Brio 105
+CAMERA_DEVICE_INDEX    = 2          # /dev/video2
+CAMERA_FOURCC          = "MJPG"
+PLAYBACK_DEVICE        = "default"  # Jack 3.5mm (ALSA)
+DEFAULT_VOLUME_PERCENT = 70
+```
 
-- `TRUSTED_DEVICE_NAME = "RZ-B100W"` — **ja confirmat i verificat**: els
-  auriculars de sortida són uns Panasonic RZ-B100W, MAC
-  `B4:6C:47:9B:49:1C`. Abans aquest valor era `None`, cosa que impedia
-  qualsevol escaneig/connexió automàtica — era la causa principal de "no
-  s'escolta l'àudio" (veure "Fixes aplicats").
-- `PLAYBACK_DEVICE` — deixa'l a `None` per descoberta automàtica; només
-  omple'l si la descoberta automàtica no funciona bé al teu entorn.
+### Paths dels models d'IA:
 
-Punts que **ja estan verificats contra el maquinari real**:
+```python
+STT_MODEL_PATH   = MODELS_DIR / "stt" / "faster-whisper-base.en"
+SLM_MODEL_PATH   = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+KG_PATH          = MODELS_DIR / "kg.json"
+TTS_MODEL_DIR    = MODELS_DIR / "tts"
+VISION_MODEL_DIR = MODELS_DIR / "vision"
+```
 
-- `MIC_DEVICE = "hw:0,0"` (Brio 105).
-- `CAMERA_DEVICE_INDEX = 2`, `CAMERA_FOURCC = "MJPG"`.
-- `TRUSTED_DEVICE_NAME = "RZ-B100W"` (Panasonic RZ-B100W, MAC
-  `B4:6C:47:9B:49:1C`).
+---
 
-## Bluetooth: instal·lació de BlueALSA
+## Instal·lació dels models d'IA
 
-Cal `bluez`, `bluealsa` i `alsa-utils` instal·lats, amb el perfil
-`a2dp-sink` habilitat (és el que fa servir un dispositiu de sortida com
-uns auriculars). Resum ràpid:
+Els fitxers de model **no estan al repositori** (massa grans). Cal baixar-los manualment:
+
+### STT — faster-whisper
 
 ```bash
-sudo apt update && sudo apt install -y bluez bluealsa alsa-utils
-sudo systemctl enable --now bluetooth bluealsa
-systemctl cat bluealsa   # comprova si ja hi ha --profile=a2dp-sink
+pip install faster-whisper
+python -c "from faster_whisper import WhisperModel; WhisperModel('base.en', device='cpu')"
+# Mou el model resultant a python/models/stt/faster-whisper-base.en/
 ```
 
-Si falta el perfil, `sudo systemctl edit bluealsa` i afegir:
-```
-[Service]
-ExecStart=
-ExecStart=/usr/bin/bluealsa --profile=a2dp-sink
-```
-(la línia `ExecStart=` buida és imprescindible per netejar l'original).
-Després `sudo systemctl daemon-reload && sudo systemctl restart bluealsa`.
-
-⚠️ **Important, apres una sessió real de depuració**: `aplay -L | grep -i
-blue` a la UNO Q **NOMÉS mostra una entrada genèrica** `bluealsa`
-("Bluetooth Audio") — BlueALSA **no genera una entrada diferent per cada
-MAC connectada**, a diferència del que assumia una versió anterior del
-codi (veure "Fixes aplicats"). Per reproduir per un dispositiu concret cal
-construir la cadena manualment:
+### SLM — Qwen2.5 1.5B (llama-cpp-python)
 
 ```bash
-aplay -D bluealsa:DEV=B4:6C:47:9B:49:1C,PROFILE=a2dp fitxer.wav
+pip install llama-cpp-python
+# Baixa el GGUF de Hugging Face:
+# https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF
+# Fitxer: qwen2.5-1.5b-instruct-q4_k_m.gguf → python/models/slm/
 ```
 
-### Emparellament manual del RZ-B100W (procediment verificat)
+### TTS — Piper
 
-Per emparellar els auriculars des de zero (o si mai es perd
-l'emparellament):
-
-1. Mantenir premut el botó d'encesa/Bluetooth dels RZ-B100W ~5-7s fins que
-   el LED parpellegi (mode pairing) — **fer-ho immediatament abans** del
-   pas 2, no abans, perquè el mode pairing es tanca sol al cap d'una
-   estona.
-2. Dins `bluetoothctl` (`bluetoothctl` sol, sense arguments, per entrar en
-   mode interactiu):
-   ```
-   power on
-   scan on
-   ```
-   Esperar fins veure `Device B4:6C:47:9B:49:1C RZ-B100W` a la sortida.
-3. **Sense fer `scan off`**, emparellar mentre l'escaneig segueix actiu:
-   ```
-   pair B4:6C:47:9B:49:1C
-   trust B4:6C:47:9B:49:1C
-   connect B4:6C:47:9B:49:1C
-   ```
-   Si en algun punt diu `Device ... not available`, sol voler dir que el
-   controlador ha perdut contacte amb el dispositiu (p.ex. per haver fet
-   `scan off` massa aviat, o perquè el mode pairing dels auriculars ja
-   s'havia tancat) — cal repetir el pas 1 (auriculars) i el pas 2 (scan)
-   des de zero.
-   - Si segueix fallant: `remove B4:6C:47:9B:49:1C`, `power off`,
-     `power on`, i repetir tot el procediment.
-   - Si els auriculars ja estan aparellats amb un altre dispositiu (mòbil)
-     i **encès**, pot ser que no responguin al pairing request de la UNO
-     Q — cal desactivar el Bluetooth d'aquell altre dispositiu abans.
-4. Verificar: `devices Connected` hauria de mostrar la línia del
-   RZ-B100W.
-5. Provar la reproducció directament (fora de `bluetoothctl`):
-   ```bash
-   aplay -D bluealsa:DEV=B4:6C:47:9B:49:1C,PROFILE=a2dp /usr/share/sounds/alsa/Front_Center.wav
-   ```
-
-Un cop `TRUSTED_DEVICE_NAME = "RZ-B100W"` a `config.py`, i el dispositiu ja
-emparellat/de confiança un cop de forma manual, `bluetooth_module.py` ha de
-poder reconnectar-hi automàticament (via `BT_LAST_MAC_FILE`, la MAC
-desada) als següents arrencaments sense repetir tot aquest procés.
-
-## Fixes aplicats (sessió de depuració d'àudio i gravació)
-
-Durant una sessió de depuració es van trobar i corregir dos bugs reals:
-
-### 1. Gravació trencada — `main.py`
-
-`main.py` encara cridava `Bridge.call("get_held_button")`, una RPC que
-**ja no existeix** al sketch actual (substituïda per
-`get_personality_index()` + `is_recording_active()`). Com que la crida
-petava dins un `try/except`, mai arribava a `record_while_held` — no es
-gravava res, sense donar cap error visible més enllà de la consola.
-
-**Fix**: el bucle de `main.py` ara fa:
-```python
-if Bridge.call("is_recording_active"):
-    personality_index = Bridge.call("get_personality_index")  # 0/1/2
-    button_id = "ABC"[personality_index]
-    model_name = models.name_for(button_id)
-    audio = microphone.record_while_held(
-        is_still_held=lambda: Bridge.call("is_recording_active")
-    )
-    if audio is not None:
-        microphone.save(button_id, model_name, audio)
-```
-✅ **Verificat contra `model_module.py`**: `ModelRegistry.name_for()`
-espera exactament una lletra ("A"/"B"/"C"), que és el que li passa aquest
-codi. No cal cap canvi addicional aquí.
-
-### 2. Àudio Bluetooth mut — `bluetooth_module.py`
-
-`get_playback_device()` buscava la MAC del dispositiu connectat dins la
-sortida d'`aplay -L`, assumint que BlueALSA hi generaria una entrada
-específica per dispositiu. **Això no passa**: BlueALSA només exposa un PCM
-genèric `bluealsa` ("Bluetooth Audio"), igual per tots els dispositius —
-la cerca mai trobava res, `_resolve_device()` retornava `None`, i `aplay`
-acabava sonant pel dispositiu per defecte del sistema (no per Bluetooth).
-
-**Fix**: `get_playback_device()` ara construeix directament la cadena de
-device en lloc de buscar-la:
-```python
-def get_playback_device():
-    mac = ensure_connected()
-    if mac is None:
-        return None
-    return f"bluealsa:DEV={mac},PROFILE=a2dp"
+```bash
+pip install piper-tts
+# Baixa els models de veu de https://huggingface.co/rhasspy/piper-voices:
+#   en_US-libritts_r-medium.onnx + .onnx.json
+#   en_GB-semaine-medium.onnx    + .onnx.json
+# → python/models/tts/
 ```
 
-### 3. TRUSTED_DEVICE_NAME sense omplir — `config.py`
+### Visió — ONNX
 
-Encara que el fix #2 sigui correcte, sense `TRUSTED_DEVICE_NAME` omplert a
-`config.py`, `bluetooth_module.ensure_connected()` mai pot escanejar ni
-connectar res (surt directament amb un warning). **Ja identificat i
-confirmat per escaneig manual**: els auriculars són uns **Panasonic
-RZ-B100W** (MAC `B4:6C:47:9B:49:1C`) — cal:
-```python
-TRUSTED_DEVICE_NAME = "RZ-B100W"
+Els models de classificació han de tenir l'estructura:
+
+```
+python/models/vision/
+├── park_guell/
+│   ├── model.onnx
+│   └── meta.json   # {"labels": ["escalinata_drac", "placa_natura", ...], "input_size": 224, ...}
+└── sagrada_familia/
+    ├── model.onnx
+    └── meta.json
 ```
 
-## ⚠️ PENDENT — el que encara NO està fet
+---
 
-Això és important per no assumir que el projecte està complet:
+## Graf de coneixement (`python/models/kg.json`)
 
-1. ~~`main.py` desactualitzat/trencat (`get_held_button`)~~ — **corregit i
-   verificat**, veure "Fixes aplicats" #1 (compatibilitat amb
-   `model_module.name_for()` confirmada).
-2. **La pipeline de Cultura Viva pròpiament dita (STT/visió/graf de
-   coneixement/SLM) encara no s'ha portat a aquest projecte.** Només hi ha
-   la infraestructura d'integració (mòduls de maquinari + config), no la
-   IA en si — cal copiar/adaptar `speech/`, `vision/`, `knowledge/` del
-   repo original de Cultura Viva. **Conseqüència pràctica**: `responses/`
-   estarà buida fins que això existeixi — no hi ha res generat encara per
-   reproduir per Bluetooth, per molt que la connexió i el codi de
-   reproducció ja funcionin correctament (verificat amb un `.wav` de
-   prova).
-3. **`camera_module.py` no guarda encara el path de l'última foto presa**
-   — caldrà per poder-la passar al classificador de visió quan es cridi
-   la pipeline des de `main.py`.
-4. **Minimapa de la Sagrada Família: no existeix.** Només hi ha dades de
-   Park Güell.
-5. **`sketch.yaml`: verifica el número de versió de `TinyGPSPlus`** — hi
-   hem posat `1.0.3` com a valor habitual, sense poder confirmar-lo contra
-   el teu entorn real.
-6. **Pins de `Serial1` (GPS) no verificats** contra el pinout físic real
-   de la UNO Q.
+Conté 12 elements Gaudí (7 de Park Güell, 5 de Sagrada Família). Cada entrada:
+
+```json
+"escalinata_drac": {
+  "full_name": "Dragon Stairway (Trencadís Salamander)",
+  "location": "park_guell",
+  "description": "Monumental entrance staircase featuring the famous multicolored mosaic salamander/dragon."
+}
+```
+
+Per enriquir-lo afegeix camps com `year_built`, `materials`, `dimensions`,
+`curiosities` (llista de strings) — `ModelRegistry.get_kg_context()` els
+serialitza tots automàticament i els passa al SLM com a context.
+
+---
+
+## Estat actual del projecte
+
+### ✅ Completament funcional
+
+- **Sketch C++**: compilat i verificat a la UNO Q (Zephyr core)
+  - UI d'acollida: benvinguda → opcions → tutorial ×3 → selecció de personalitat
+  - Vista en directe de la càmera per chunks RPC
+  - **Flux de confirmació de foto**: foto → previsualització → "Are you sure?" → switch confirma → buzzer → desbloqueig àudio
+  - Minimapa de Park Güell amb landmarks i marcador de posició actual
+  - Tots els perifèrics físics (A/B/C, switch, push button, knob, buzzer, GPS)
+
+- **Python**: tots els mòduls verificats
+  - `CameraManager`: fotos 1080p + live view chunked + `last_photo_path`
+  - `MicrophoneManager`: gravació per chunks + STT (faster-whisper, domain-biased, VAD)
+  - `AudioPlayer`: TTS Piper 3 veus + `aplay` ALSA + volum dinàmic via `amixer` (Jack 3.5mm)
+  - `LocationRegistry`: GPS + Haversine, fallback `park_guell`
+  - `VisionClassifier`: ONNX + ImageNet preprocessing + confidence threshold
+  - `ModelRegistry`: personalitats, prompts per role, KG lookup, SLM via llama-cpp
+  - `main.py`: pipeline STT→Visió→KG→SLM→TTS, guarda d'àudio si no hi ha foto confirmada
+
+### ⚠️ Pendent / Limitacions conegudes
+
+| # | Problema | Impacte |
+|---|---|---|
+| 1 | **SLM no descarregat** (`models/slm/` buit) | Retorna `"(model not available)"` com a resposta. La pipeline no peta, però no hi ha resposta real. |
+| 2 | **KG bàsic** (només `description` per element) | El SLM rep poc context. Enriquir amb `curiosities`, `materials`, `year_built` milloraria les respostes. |
+| 3 | **Models de visió no entrenats** (`models/vision/` buit) | `classify()` retorna `None` i la pipeline continua sense context visual. |
+| 4 | **Models TTS no descarregats** (`models/tts/` buit) | `AudioPlayer` no produeix so fins que es baixin els `.onnx` de Piper. |
+| 5 | **Minimapa Sagrada Família inexistent** | Si GPS detecta SF, la visió/KG és correcte però el minimapa de la LCD segueix mostrant Park Güell. |
+| 6 | **Pins de `Serial1` (GPS) no verificats físicament** | El GPS pot no llegir si el pinout físic de la UNO Q difereix del sketch. |
+
+---
+
+## Reproducció de l'àudio (Jack 3.5mm)
+
+L'àudio surt per **jack 3.5mm** directament per ALSA (`PLAYBACK_DEVICE = "default"`).
+
+Verificació ràpida des de la UNO Q (MPU Linux):
+
+```bash
+aplay -D default /usr/share/sounds/alsa/Front_Center.wav
+amixer set Master 70%
+```
+
+---
+
+## Primers passos (setup des de zero)
+
+```bash
+# 1. Clona el repositori
+git clone https://github.com/Hackestiu/cultura-viva-uno-q
+cd cultura-viva-uno-q
+
+# 2. Instal·la les dependències Python (a la UNO Q o al PC de dev)
+pip install -r python/requirements.txt
+
+# 3. Descarrega els models d'IA (veure secció "Instal·lació dels models")
+
+# 4. Obre el sketch a Arduino Lab i fes el flash a la UNO Q
+#    (sketch/sketch.ino — placa: Arduino UNO Q)
+
+# 5. Llança l'app des d'Arduino Lab (botó "Run")
+#    La UNO Q executa automàticament python/main.py al MPU Linux
+```
+
+---
+
+## Git — Commits i sincronització
+
+```bash
+# Commit i push
+git add -A
+git commit -m "descripció del canvi"
+git push
+
+# Actualitzar des del remot
+git pull --rebase
+
+# Estat i historial
+git status
+git log --oneline -10
+```

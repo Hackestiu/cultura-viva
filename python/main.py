@@ -138,7 +138,7 @@ def run_app() -> None:
                         site       = location.current()          # 'park_guell' / 'sagrada_familia'
                         element    = vision.classify(site, photo_path) if photo_path else None
 
-                        kg_context = models.get_kg_context(element) if element else ""
+                        kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                         answer     = models.generate_response(
                             question=question_text,
                             element=element,

@@ -100,9 +100,18 @@ STT_MODEL_PATH = MODELS_DIR / "stt" / "faster-whisper-base.en"
 
 # SLM: Qwen2.5 model in GGUF format (llama-cpp-python).
 SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+# Download URL (HuggingFace):
+#   wget -P models/slm/ https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
+# Compile llama-cpp-python for Raspberry Pi 3/4 (Cortex-A53):
+#   CMAKE_ARGS="-DGGML_NATIVE=OFF -march=armv8-a -mtune=cortex-a53" pip install llama-cpp-python
 
-# KG: Gaudí Knowledge Graph in JSON (models/kg.json).
-KG_PATH = MODELS_DIR / "kg.json"
+# KG: Gaudí element sheets — detailed per-element info for vision-to-SLM context.
+# Indexed by element id (e.g. 'drac_park_guell', 'banc_serpentejant').
+KG_PATH = MODELS_DIR / "knowledge" / "element_sheets.json"
+
+# KG: General knowledge base — monument overviews, Gaudí biography, etc.
+# Used to enrich context when no specific element is detected.
+KG_BASE_PATH = MODELS_DIR / "knowledge" / "knowledge_base.json"
 
 # TTS: Piper voice models (.onnx + .onnx.json pairs) live in MODELS_DIR / "tts".
 # The AudioPlayer in hw/audio_playback_module.py discovers them automatically via

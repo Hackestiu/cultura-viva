@@ -69,40 +69,144 @@ class ModelRegistry:
     def models_dir(self):
         return MODELS_DIR
 
-    def get_kg_context(self, element: str) -> str:
-        """Returns a string of factual context for element from the Gaudí knowledge graph,
-        or '' if element is not found or the knowledge graph file does not exist."""
+    def _load_kg(self) -> None:
+        """Lazily loads element_sheets.json and builds id and alias indices."""
+        if hasattr(self, "_kg_index"):
+            return
         from config import KG_PATH
+
+        self._kg_index: dict = {}
+        self._kg_alias_index: dict = {}  # alias.lower() -> id
 
         if not KG_PATH.exists():
             print(
-                f"[WARN] Knowledge graph not found at {KG_PATH}. "
-                "Create it following the instructions in models/README.md. "
-                "Returning empty context string."
+                f"[WARN] element_sheets.json not found at {KG_PATH}. "
+                "Returning empty KG context."
             )
+            return
+
+        try:
+            with open(KG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            sheets = data.get("sheets", [])
+            for sheet in sheets:
+                sid = sheet.get("id", "")
+                if sid:
+                    self._kg_index[sid] = sheet
+                    # Index by name and all aliases
+                    for alias in [sheet.get("name", "")] + sheet.get("aliases", []):
+                        if alias:
+                            self._kg_alias_index[alias.lower()] = sid
+            print(f"[OK] Knowledge sheets loaded: {len(self._kg_index)} elements")
+        except (OSError, ValueError) as exc:
+            print(f"[ERROR] Could not read element_sheets.json: {exc}")
+
+    def _load_kg_base(self) -> dict:
+        """Lazily loads knowledge_base.json. Returns {} on error."""
+        if hasattr(self, "_kg_base"):
+            return self._kg_base
+        from config import KG_BASE_PATH
+
+        self._kg_base: dict = {}
+        if not KG_BASE_PATH.exists():
+            return self._kg_base
+        try:
+            with open(KG_BASE_PATH, "r", encoding="utf-8") as f:
+                self._kg_base = json.load(f)
+            print(f"[OK] Knowledge base loaded.")
+        except (OSError, ValueError) as exc:
+            print(f"[ERROR] Could not read knowledge_base.json: {exc}")
+        return self._kg_base
+
+    def get_kg_context(self, element: str, personality: str = "artistic") -> str:
+        """Returns a factual context string for *element* from the Gaudí knowledge sheets.
+
+        Looks up element by id or alias (case-insensitive). If not found, tries
+        knowledge_base.json. Returns '' if nothing is found.
+
+        :param element:     Element id or name from the vision module
+                            (e.g. 'drac_park_guell', 'El Drac').
+        :param personality: 'artistic' | 'technical' | 'child' — selects which
+                            fact fields to prioritise in the returned string.
+        """
+        self._load_kg()
+
+        # --- look up sheet by id, then by alias ---
+        sheet = self._kg_index.get(element)
+        if sheet is None:
+            sid = self._kg_alias_index.get(element.lower())
+            if sid:
+                sheet = self._kg_index.get(sid)
+
+        # --- fallback: monument level from knowledge_base.json ---
+        if sheet is None:
+            base = self._load_kg_base()
+            entry = base.get(element, {})
+            if entry:
+                print(f"[INFO] KG: element '{element}' served from knowledge_base.json")
+                return self._format_base_entry(entry)
+            print(f"[WARN] KG: element '{element}' not found in any knowledge file.")
             return ""
 
-        if not hasattr(self, "_kg"):
-            try:
-                with open(KG_PATH, "r", encoding="utf-8") as f:
-                    self._kg = json.load(f)
-                print(f"[OK] Knowledge graph loaded: {len(self._kg)} elements")
-            except (OSError, ValueError) as exc:
-                print(f"[ERROR] Could not read KG ({KG_PATH}): {exc}")
-                self._kg = {}
+        return self._format_sheet(sheet, personality)
 
-        entry = self._kg.get(element, {})
-        if not entry:
-            print(f"[WARN] Element '{element}' not found in knowledge graph.")
-            return ""
+    def _format_sheet(self, sheet: dict, personality: str) -> str:
+        """Formats a knowledge sheet into a compact factual string for the SLM prompt."""
+        lines: list[str] = []
+        name = sheet.get("name", "")
+        if name:
+            lines.append(f"Element: {name}")
 
-        lines = []
+        # Fields shared by all personalities
+        if sheet.get("creator"):
+            lines.append(f"Creator: {sheet['creator']}")
+        if sheet.get("timeline"):
+            lines.append(f"Timeline: {sheet['timeline']}")
+
+        if personality == "technical":
+            for key in ("materials", "construction_process", "technical_figures"):
+                val = sheet.get(key)
+                if val:
+                    if isinstance(val, list):
+                        lines.append(f"{key}: {'; '.join(str(v) for v in val)}")
+                    elif isinstance(val, dict) and val:
+                        for k2, v2 in val.items():
+                            lines.append(f"{k2}: {v2}")
+                    else:
+                        lines.append(f"{key}: {val}")
+            for fact in sheet.get("technical_facts", []):
+                lines.append(f"- {fact}")
+
+        elif personality == "child":
+            if sheet.get("inspiration"):
+                lines.append(f"Inspiration: {sheet['inspiration']}")
+            for fact in sheet.get("artistic_facts", [])[:3]:
+                lines.append(f"- {fact}")
+            for fact in sheet.get("general_knowledge_facts", [])[:2]:
+                lines.append(f"- {fact}")
+
+        else:  # artistic (default)
+            if sheet.get("inspiration"):
+                lines.append(f"Inspiration: {sheet['inspiration']}")
+            for fact in sheet.get("artistic_facts", []):
+                lines.append(f"- {fact}")
+            for fact in sheet.get("general_knowledge_facts", []):
+                lines.append(f"- {fact}")
+            sims = sheet.get("similarities", [])
+            if sims:
+                lines.append(f"Connections: {'; '.join(sims)}")
+
+        return "\n".join(lines)
+
+    def _format_base_entry(self, entry: dict) -> str:
+        """Formats a knowledge_base.json entry into a compact string."""
+        lines: list[str] = []
         for k, v in entry.items():
-            # 'curiositats' is the legacy Catalan key; both map to 'curiosities' in output
-            if k == "curiosities" and isinstance(v, list):
-                lines.append(f"curiosities: {'; '.join(str(c) for c in v)}")
-            elif k == "curiositats" and isinstance(v, list):
-                lines.append(f"curiosities: {'; '.join(str(c) for c in v)}")
+            if isinstance(v, list):
+                lines.append(f"{k}: {'; '.join(str(i) for i in v)}")
+            elif isinstance(v, dict):
+                for k2, v2 in v.items():
+                    lines.append(f"{k2}: {v2}")
             else:
                 lines.append(f"{k}: {v}")
         return "\n".join(lines)
@@ -139,8 +243,9 @@ class ModelRegistry:
                 from llama_cpp import Llama
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=2048,
-                    n_threads=4,
+                    n_ctx=2048,      # context_window
+                    n_threads=4,     # threads (Cortex-A53 has 4 cores)
+                    n_batch=256,     # batch_size for prompt processing
                     verbose=False,
                 )
                 print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
@@ -171,8 +276,8 @@ class ModelRegistry:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=256,
-                temperature=0.7,
+                max_tokens=128,   # max_tokens: keeps responses concise for TTS
+                temperature=0.1,  # low temperature = more factual, less hallucination
             )
             answer = output["choices"][0]["message"]["content"].strip()
             print(f"[OK] SLM response generated ({len(answer)} characters).")

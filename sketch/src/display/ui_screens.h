@@ -25,24 +25,24 @@ inline uint16_t uiColor(const UiRGB& c) {
 }
 
 // Icon rendering helpers
-void drawSwitchIcon(int16_t x, int16_t y) {
+inline void drawSwitchIcon(int16_t x, int16_t y) {
   tft.drawRoundRect(x, y, 20, 14, 6, uiColor(UI_NAVY));
   tft.fillCircle(x + 14, y + 7, 5, uiColor(UI_TEAL));
 }
 
-void drawButtonIcon(int16_t x, int16_t y) {
+inline void drawButtonIcon(int16_t x, int16_t y) {
   tft.fillCircle(x + 7, y + 7, 7, uiColor(UI_PEACH));
   tft.drawCircle(x + 7, y + 7, 7, uiColor(UI_NAVY));
 }
 
-void drawKnobIcon(int16_t x, int16_t y) {
+inline void drawKnobIcon(int16_t x, int16_t y) {
   tft.drawCircle(x + 7, y + 7, 7, uiColor(UI_NAVY));
   tft.drawLine(x + 7, y + 7, x + 7, y + 1, uiColor(UI_MUSTARD));
   tft.fillCircle(x + 7, y + 7, 2, uiColor(UI_MUSTARD));
 }
 
 // Text and card layout helpers
-void uiHeader(const char* title) {
+inline void uiHeader(const char* title) {
   tft.setTextSize(1);
   tft.setTextColor(uiColor(UI_NAVY));
   tft.setCursor(4, 3);
@@ -52,7 +52,7 @@ void uiHeader(const char* title) {
   tft.drawFastHLine(4, 13, 152, uiColor(UI_TEAL));
 }
 
-void uiFooterNav(const char* left, const char* right) {
+inline void uiFooterNav(const char* left, const char* right) {
   tft.setTextSize(1);
   if (left != nullptr && left[0] != '\0') {
     tft.setTextColor(uiColor(UI_TEAL));
@@ -67,7 +67,7 @@ void uiFooterNav(const char* left, const char* right) {
   }
 }
 
-void uiCard(int16_t x, int16_t y, int16_t w, int16_t h, const char* label, uint16_t accent) {
+inline void uiCard(int16_t x, int16_t y, int16_t w, int16_t h, const char* label, uint16_t accent) {
   tft.drawRoundRect(x, y, w, h, 5, accent);
   tft.setTextColor(accent);
   tft.setCursor(x + 8, y + (h - 8) / 2);

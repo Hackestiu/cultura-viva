@@ -175,6 +175,10 @@ void updateControls() {
     }
   } else if (currentUiState == UI_TUTORIAL_1) {
     if (btnAPressedEdge) {
+      currentUiState = UI_OPTIONS;
+      drawScreenOptions();
+      buzzer.tone(1500, 60);
+    } else if (btnBPressedEdge) {
       currentUiState = UI_TUTORIAL_2;
       drawScreenTutorial2();
       buzzer.tone(1500, 60);
@@ -185,6 +189,10 @@ void updateControls() {
     }
   } else if (currentUiState == UI_TUTORIAL_2) {
     if (btnAPressedEdge) {
+      currentUiState = UI_TUTORIAL_1;
+      drawScreenTutorial1();
+      buzzer.tone(1500, 60);
+    } else if (btnBPressedEdge) {
       currentUiState = UI_TUTORIAL_3;
       drawScreenTutorial3();
       buzzer.tone(1500, 60);
@@ -194,7 +202,11 @@ void updateControls() {
       buzzer.tone(1500, 60);
     }
   } else if (currentUiState == UI_TUTORIAL_3) {
-    if (btnAPressedEdge || btnCPressedEdge) {
+    if (btnAPressedEdge) {
+      currentUiState = UI_TUTORIAL_2;
+      drawScreenTutorial2();
+      buzzer.tone(1500, 60);
+    } else if (btnBPressedEdge || btnCPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
       drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
@@ -220,10 +232,8 @@ void updateControls() {
   // Modulino LED status indicators
   if (currentUiState == UI_BOOT_INTRO || currentUiState == UI_OPTIONS) {
     buttons.setLeds(true, false, true);
-  } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2) {
-    buttons.setLeds(true, false, true);
-  } else if (currentUiState == UI_TUTORIAL_3) {
-    buttons.setLeds(true, false, false);
+  } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2 || currentUiState == UI_TUTORIAL_3) {
+    buttons.setLeds(true, true, true);
   } else if (currentUiState == UI_VOICE_SELECT) {
     buttons.setLeds(true, true, true);
   } else if (currentUiState == UI_ACTIVE) {

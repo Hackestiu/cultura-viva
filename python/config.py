@@ -102,7 +102,7 @@ STT_MODEL_PATH = MODELS_DIR / "stt" / "faster-whisper-base.en"
 SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 # Download URL (HuggingFace):
 #   wget -P models/slm/ https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
-# Compile llama-cpp-python for Raspberry Pi 3/4 (Cortex-A53):
+# Compile llama-cpp-python for Arduino UNO Q (ARM Cortex-A53 / aarch64):
 #   CMAKE_ARGS="-DGGML_NATIVE=OFF -march=armv8-a -mtune=cortex-a53" pip install llama-cpp-python
 
 # KG: Gaudí element sheets — detailed per-element info for vision-to-SLM context.

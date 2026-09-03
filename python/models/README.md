@@ -34,7 +34,7 @@ Paràmetres d'inferència configurats a `core/model_module.py`:
 
 ### Descarregar (opció recomanada)
 ```bash
-# Directament amb wget (a la Raspberry Pi):
+# Directament amb wget (a la placa Arduino UNO Q):
 wget -P python/models/slm/ \
   https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
 ```
@@ -47,15 +47,15 @@ huggingface-cli download Qwen/Qwen2.5-1.5B-Instruct-GGUF \
     --local-dir python/models/slm/
 ```
 
-### Compilar llama-cpp-python per a Raspberry Pi (Cortex-A53)
+### Compilar llama-cpp-python per a Arduino UNO Q (Cortex-A53 / aarch64)
 ```bash
-# Flags optimitzats per a armv8-a / Cortex-A53 (RPi 3 i 4):
+# Flags optimitzats per a armv8-a / Cortex-A53 (Arduino UNO Q):
 CMAKE_ARGS="-DGGML_NATIVE=OFF -march=armv8-a -mtune=cortex-a53" \
     pip install llama-cpp-python
 ```
 
 > **Nota:** `-DGGML_NATIVE=OFF` és important per evitar que cmake detecti
-> l'arquitectura de la màquina de compilació creuada en lloc de la Pi.
+> una arquitectura incorrecta durant la compilació a la placa.
 
 ---
 

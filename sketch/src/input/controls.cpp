@@ -99,7 +99,7 @@ void updateControls() {
 
   // External button D7 handling (active only in UI_ACTIVE state)
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+  if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE && !processingActive) {
     if (viewSwitchOn) {
       photoTriggerFlag = true;
       photoConfirmed = false;
@@ -221,7 +221,8 @@ void updateControls() {
       drawCurrentView();
     }
   } else if (currentUiState == UI_ACTIVE) {
-    if (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge) {
+    if (!recordingActive && !processingActive
+        && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
       Monitor.print("[EVENT] Personality selected: index ");
       Monitor.println(personalityIndex);
@@ -237,7 +238,7 @@ void updateControls() {
   } else if (currentUiState == UI_VOICE_SELECT) {
     buttons.setLeds(true, true, true);
   } else if (currentUiState == UI_ACTIVE) {
-    if (recordingActive) {
+    if (recordingActive || processingActive) {
       bool blink = ((millis() / 300) % 2) == 0;
       buttons.setLeds(blink, blink, blink);
     } else {

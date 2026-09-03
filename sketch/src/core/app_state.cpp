@@ -4,6 +4,7 @@ AppUiState currentUiState = UI_BOOT_INTRO;
 uint8_t personalityIndex = 0;
 int16_t currentVolume = 70;
 bool recordingActive = false;
+bool processingActive = false;
 bool photoTriggerFlag = false;
 bool playShutterSoundFlag = false;
 bool viewSwitchDebounced = true;
@@ -21,6 +22,10 @@ int get_volume() {
 
 bool is_recording_active() {
   return recordingActive;
+}
+
+void set_processing_active(bool active) {
+  processingActive = active;
 }
 
 bool photo_trigger() {

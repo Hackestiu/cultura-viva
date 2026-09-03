@@ -20,6 +20,7 @@ extern AppUiState currentUiState;
 extern uint8_t personalityIndex;
 extern int16_t currentVolume;
 extern bool recordingActive;
+extern bool processingActive;
 extern bool photoTriggerFlag;
 extern bool playShutterSoundFlag;
 extern bool viewSwitchDebounced;
@@ -41,6 +42,11 @@ int get_volume();
  * Returns whether user audio recording is currently active.
  */
 bool is_recording_active();
+
+/**
+ * Sets whether the Python audio/AI pipeline is processing the current question.
+ */
+void set_processing_active(bool active);
 
 /**
  * Returns true if a photo capture was triggered and clears the trigger flag.

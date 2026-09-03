@@ -136,30 +136,34 @@ def run_app() -> None:
                     button_id = "ABC"[personality_index]
                     model_name = models.name_for(button_id)
                     print(f"[EVENT] Recording started (personality: {model_name}) -> recording...")
-                    audio = microphone.record_while_held(
-                        is_still_held=lambda: Bridge.call("is_recording_active")
-                    )
-                    if audio is not None:
-                        wav_path = microphone.save(button_id, model_name, audio)
-
-                        # --- Cultura Viva Pipeline ---
-                        # Each step is individually guarded: if a model fails or is missing,
-                        # the subsequent step receives an empty string/None and proceeds cleanly.
-                        question_text = microphone.transcribe(wav_path)
-
-                        site       = location.current()          # 'park_guell' / 'sagrada_familia'
-                        element    = vision.classify(site, photo_path) if photo_path else None
-
-                        kg_context = models.get_kg_context(element, personality=model_name) if element else ""
-                        answer     = models.generate_response(
-                            question=question_text,
-                            element=element,
-                            personality=model_name,
-                            kg_context=kg_context,
+                    Bridge.call("set_processing_active", True)
+                    try:
+                        audio = microphone.record_while_held(
+                            is_still_held=lambda: Bridge.call("is_recording_active")
                         )
-                        player.synthesize_and_play(answer, personality=model_name)
-                    else:
-                        print("[WARN] Empty recording (0 chunks captured)")
+                        if audio is not None:
+                            wav_path = microphone.save(button_id, model_name, audio)
+
+                            # --- Cultura Viva Pipeline ---
+                            # Each step is individually guarded: if a model fails or is missing,
+                            # the subsequent step receives an empty string/None and proceeds cleanly.
+                            question_text = microphone.transcribe(wav_path)
+
+                            site       = location.current()          # 'park_guell' / 'sagrada_familia'
+                            element    = vision.classify(site, photo_path) if photo_path else None
+
+                            kg_context = models.get_kg_context(element, personality=model_name) if element else ""
+                            answer     = models.generate_response(
+                                question=question_text,
+                                element=element,
+                                personality=model_name,
+                                kg_context=kg_context,
+                            )
+                            player.synthesize_and_play(answer, personality=model_name)
+                        else:
+                            print("[WARN] Empty recording (0 chunks captured)")
+                    finally:
+                        Bridge.call("set_processing_active", False)
         except Exception as exc:
             print(f"[ERROR] Recording/processing question: {exc}")
 

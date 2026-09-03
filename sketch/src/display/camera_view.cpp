@@ -70,10 +70,10 @@ void drawCameraViewPlaceholder() {
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(1);
   tft.setCursor(0, 0);
-  tft.println("VISTA CAMERA");
+  tft.println("CAMERA VIEW");
   tft.println("(switch ON)");
   tft.println("");
-  tft.println("Esperant imatge...");
+  tft.println("Waiting for image...");
   int x = (160 - CAM_THUMB_W * CAM_SCALE) / 2;
   int y = (128 - CAM_THUMB_H * CAM_SCALE) / 2;
   tft.drawRect(x - 2, y - 2, CAM_THUMB_W * CAM_SCALE + 4, CAM_THUMB_H * CAM_SCALE + 4, ST77XX_WHITE);
@@ -93,21 +93,21 @@ void drawCameraFrame() {
 
 void drawPhotoConfirmationOverlay() {
   // Solid overlay banner across bottom of the screen
-  tft.fillRect(0, 90, 160, 38, 0x0000); // Black background
-  tft.drawRect(0, 90, 160, 38, 0xFFE0); // Yellow border
+  tft.fillRect(0, 86, 160, 42, 0x0000); // Black background
+  tft.drawRect(0, 86, 160, 42, 0xFFE0); // Yellow border
   
   tft.setTextColor(0xFFE0); // Yellow
   tft.setTextSize(1);
-  tft.setCursor(4, 94);
-  tft.print("Are you sure of photo?");
+  tft.setCursor(6, 90);
+  tft.print(F("Do you like the photo?"));
   
-  tft.setTextColor(0x07FF); // Cyan
-  tft.setCursor(4, 106);
-  tft.print("-> Switch to Map: YES");
+  tft.setTextColor(0x07E0); // Green
+  tft.setCursor(6, 102);
+  tft.print(F("Switch to Map: KEEP"));
   
-  tft.setTextColor(0xFFFF); // White
-  tft.setCursor(4, 117);
-  tft.print("-> Push button: Retake");
+  tft.setTextColor(0xF800); // Red
+  tft.setCursor(6, 114);
+  tft.print(F("Push Button: RETAKE"));
 }
 
 void drawNoPhotoWarningOverlay() {

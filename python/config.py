@@ -6,7 +6,23 @@ Modify paths, devices, and dimensions only here -- all other modules
 audio_playback_module, main) import from here and do not hardcode values.
 """
 
+import sys
 from pathlib import Path
+
+# Ensure all system and user dist-packages are in sys.path for Arduino App Lab
+_EXTRA_PATHS = [
+    "/usr/local/lib/python3.13/dist-packages",
+    "/usr/local/lib/python3.13/site-packages",
+    "/usr/lib/python3/dist-packages",
+    "/usr/lib/python3.13/dist-packages",
+    "/home/arduino/.local/lib/python3.13/site-packages",
+    "/home/arduino/.local/lib/python3.13/dist-packages",
+    "/root/.local/lib/python3.13/site-packages",
+]
+for _p in _EXTRA_PATHS:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 
 # ---------- Paths ----------
 # Inside the app's own directory (visible from host at ~/ArduinoApps/<app-id>/python/...)

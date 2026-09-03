@@ -41,9 +41,11 @@
             "type": "element",
             "name": "El Drac (Dragon / Salamander)",
             "aliases": [
+                "escalinata_drac",
                 "the dragon",
                 "the salamander",
-                "drac"
+                "drac",
+                "escalinata del drac"
             ],
             "parent": "park_guell",
             "creator": "Antoni Gaudí",
@@ -110,9 +112,11 @@
             "type": "element",
             "name": "Porter's Lodge (entrance gatehouses)",
             "aliases": [
+                "pavellons_consergeria",
                 "Pavellons de la Portería",
                 "gatehouses",
-                "entrance pavilions"
+                "entrance pavilions",
+                "porter's lodge"
             ],
             "parent": "park_guell",
             "creator": "Antoni Gaudí",
@@ -138,9 +142,11 @@
             "type": "element",
             "name": "Serpentine Bench (Banc de trencadís)",
             "aliases": [
+                "placa_natura",
                 "the sea-serpent bench",
                 "undulating bench",
-                "banc ondulat"
+                "banc ondulat",
+                "plaça de la natura"
             ],
             "parent": "park_guell",
             "creator": "Josep Maria Jujol (design of the trencadís bench, under Gaudí's overall project)",
@@ -203,6 +209,8 @@
             "type": "element",
             "name": "Viaducts / elevated pathways",
             "aliases": [
+                "3_viaductes",
+                "tres viaductes",
                 "viaducts",
                 "elevated carriage paths"
             ],

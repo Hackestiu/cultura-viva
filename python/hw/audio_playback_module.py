@@ -162,7 +162,16 @@ class AudioPlayer:
                 wf.setframerate(voice_obj.config.sample_rate)
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
-                voice_obj.synthesize_wav(text, wf, speaker_id=speaker_id)
+                try:
+                    if speaker_id is not None:
+                        voice_obj.synthesize(text, wf, speaker_id=speaker_id)
+                    else:
+                        voice_obj.synthesize(text, wf)
+                except (TypeError, AttributeError):
+                    try:
+                        voice_obj.synthesize(text, wf)
+                    except (TypeError, AttributeError):
+                        voice_obj.synthesize_wav(text, wf)
             wav_bytes = buf.getvalue()
             print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")
             return wav_bytes

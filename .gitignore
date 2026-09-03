@@ -21,12 +21,12 @@ build/
 Thumbs.db
 
 # Imatges i àudios generats en temps d'execució
-python/photos/*.jpg
-python/recordings/*.wav
-python/responses/*.wav
-!python/photos/.gitkeep
-!python/recordings/.gitkeep
-!python/responses/.gitkeep
+python/data/photos/*.jpg
+python/data/recordings/*.wav
+python/data/responses/*.wav
+!python/data/photos/.gitkeep
+!python/data/recordings/.gitkeep
+!python/data/responses/.gitkeep
 
 # Models pesats (>100MB - GitHub rebutja fitxers de més de 100MB)
 # Si vols pujar-los a GitHub, fes servir Git LFS (instruccions al README)

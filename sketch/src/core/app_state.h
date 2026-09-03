@@ -23,6 +23,9 @@ extern bool recordingActive;
 extern bool photoTriggerFlag;
 extern bool playShutterSoundFlag;
 extern bool viewSwitchDebounced;
+extern bool hasCapturedPhoto;
+extern bool photoConfirmed;
+extern bool photoWaitingConfirmation;
 
 /**
  * Returns the currently selected personality index (0=Artistic, 1=Technical, 2=Child).

@@ -12,14 +12,19 @@ from pathlib import Path
 # Inside the app's own directory (visible from host at ~/ArduinoApps/<app-id>/python/...)
 APP_DIR = Path(__file__).resolve().parent
 
-RECORDINGS_DIR = APP_DIR / "recordings"
-PHOTOS_DIR = APP_DIR / "photos"
-
-# Directory for TTS synthesized response audio played back through visitor headphones
-RESPONSES_DIR = APP_DIR / "responses"
-
-# Directory for personality/voice/response models associated with buttons A/B/C
+# Core AI and hardware directories
+CORE_DIR = APP_DIR / "core"
+HW_DIR = APP_DIR / "hw"
+ASSETS_DIR = APP_DIR / "assets"
 MODELS_DIR = APP_DIR / "models"
+DATA_DIR = APP_DIR / "data"
+
+# Runtime output data directories
+PHOTOS_DIR = DATA_DIR / "photos"
+RECORDINGS_DIR = DATA_DIR / "recordings"
+RESPONSES_DIR = DATA_DIR / "responses"
+
+# Directory for personality/voice/response models configuration
 MODELS_CONFIG_FILE = MODELS_DIR / "models.json"
 
 # Directory for minimap content (switch D6 OFF)
@@ -33,7 +38,19 @@ LOCATIONS_CONFIG_FILE = LOCATIONS_DIR / "locations.json"
 # Options: 'park_guell' | 'sagrada_familia'
 DEFAULT_LOCATION = "park_guell"
 
-for _dir in (RECORDINGS_DIR, PHOTOS_DIR, RESPONSES_DIR, MODELS_DIR, MINIMAP_DIR, LOCATIONS_DIR):
+# Ensure all runtime output and model folders exist on startup
+for _dir in (
+    PHOTOS_DIR,
+    RECORDINGS_DIR,
+    RESPONSES_DIR,
+    MODELS_DIR / "stt",
+    MODELS_DIR / "slm",
+    MODELS_DIR / "tts",
+    MODELS_DIR / "vision",
+    ASSETS_DIR,
+    MINIMAP_DIR,
+    LOCATIONS_DIR,
+):
     _dir.mkdir(parents=True, exist_ok=True)
 
 # ---------- Microphone (question recording, button D7 toggle mode) ----------
@@ -77,30 +94,20 @@ POLL_INTERVAL = 0.1
 # All paths point inside MODELS_DIR to keep paths centralized.
 # If you change models or filenames, update them here.
 
-# STT: faster-whisper model directory (contains model.bin, config.json, vocabulary.txt).
-# See models/stt/README.md for download instructions.
+# STT: faster-whisper model directory (contains model.bin, config.json, vocabulary.txt)
+# or pywhispercpp / whisper GGML model (.bin).
 STT_MODEL_PATH = MODELS_DIR / "stt" / "faster-whisper-base.en"
 
 # SLM: Qwen2.5 model in GGUF format (llama-cpp-python).
 SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
-# KG: Gaudí Knowledge Graph in JSON.
-KG_PATH = MODELS_DIR / "knowledge" / "gaudi_kg.json"
+# KG: Gaudí Knowledge Graph in JSON (models/kg.json).
+KG_PATH = MODELS_DIR / "kg.json"
 
 # TTS: Piper voice models (.onnx + .onnx.json pairs) live in MODELS_DIR / "tts".
 # The AudioPlayer in hw/audio_playback_module.py discovers them automatically via
 # its voice registry (PERSONALITY_VOICE). No single-file path is needed here.
-# See models/tts/README.md for download instructions.
+TTS_MODEL_DIR = MODELS_DIR / "tts"
 
-# Vision: Vision Transformer directory containing model.safetensors and config.json
+# Vision: Vision ONNX models directory containing park_guell/ and sagrada_familia/
 VISION_MODEL_DIR = MODELS_DIR / "vision"
-
-# Create model subdirectories on startup if they don't exist yet
-for _model_subdir in (
-    MODELS_DIR / "stt",
-    MODELS_DIR / "slm",
-    MODELS_DIR / "knowledge",
-    MODELS_DIR / "tts",
-    MODELS_DIR / "vision",
-):
-    _model_subdir.mkdir(parents=True, exist_ok=True)

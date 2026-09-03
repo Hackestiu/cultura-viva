@@ -77,6 +77,20 @@ void updateControls() {
       Monitor.println("[EVENT] Recording forcibly stopped (switched to camera mode)");
     }
 
+    if (!viewSwitchDebounced) {
+      // Switched to Map mode: if a photo was taken, this confirms the photo!
+      if (hasCapturedPhoto) {
+        photoConfirmed = true;
+        photoWaitingConfirmation = false;
+        Monitor.println("[EVENT] Photo CONFIRMED via switch -> Map mode unlocked for audio!");
+        buzzer.tone(1600, 80);
+        delay(90);
+        buzzer.tone(2000, 100);
+      }
+    } else {
+      photoWaitingConfirmation = false;
+    }
+
     if (currentUiState == UI_ACTIVE) {
       drawCurrentView();
     }
@@ -88,15 +102,25 @@ void updateControls() {
   if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (viewSwitchOn) {
       photoTriggerFlag = true;
-      Monitor.println("[EVENT] Button D7 pressed -> photo");
+      photoConfirmed = false;
+      Monitor.println("[EVENT] Button D7 pressed -> taking photo");
     } else {
-      recordingActive = !recordingActive;
-      if (recordingActive) {
-        buzzer.tone(1400, 90);
-        Monitor.println("[EVENT] Button D7 pressed -> started recording question");
+      if (!photoConfirmed) {
+        recordingActive = false;
+        Monitor.println("[WARN] Audio recording blocked: No photo taken yet!");
+        buzzer.tone(350, 120);
+        delay(80);
+        buzzer.tone(250, 180);
+        drawNoPhotoWarningOverlay();
       } else {
-        buzzer.tone(900, 90);
-        Monitor.println("[EVENT] Button D7 pressed -> stopped recording question");
+        recordingActive = !recordingActive;
+        if (recordingActive) {
+          buzzer.tone(1400, 90);
+          Monitor.println("[EVENT] Button D7 pressed -> started recording question");
+        } else {
+          buzzer.tone(900, 90);
+          Monitor.println("[EVENT] Button D7 pressed -> stopped recording question");
+        }
       }
     }
   }
@@ -105,6 +129,7 @@ void updateControls() {
   if (playShutterSoundFlag) {
     playShutterSoundFlag = false;
     buzzer.tone(2000, 100);
+    drawPhotoConfirmationOverlay();
   }
 
   // Camera frame update rendering trigger
@@ -112,6 +137,9 @@ void updateControls() {
     newCameraFrameFlag = false;
     if (viewSwitchOn && currentUiState == UI_ACTIVE) {
       drawCameraFrame();
+      if (photoWaitingConfirmation) {
+        drawPhotoConfirmationOverlay();
+      }
     }
   }
 

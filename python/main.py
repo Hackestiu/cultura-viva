@@ -19,8 +19,8 @@ Functionalities triggered via RPC from sketch.ino:
 
 Modular code: hardware peripherals live in the hw/ package
 (hw.camera_module, hw.microphone_module, hw.audio_playback_module,
-hw.location_module) and high-level AI/logic modules live in
-model_module.py and vision_module.py. Configuration is centralized in config.py.
+hw.location_module) and high-level AI/logic modules live in the core/ package
+(core.model_module, core.vision_module, core.minimap_module). Configuration is centralized in config.py.
 """
 
 import time
@@ -37,12 +37,13 @@ from config import (
     POLL_INTERVAL,
     RECORDINGS_DIR,
 )
+from core.minimap_module import MinimapManager
+from core.model_module import ModelRegistry
+from core.vision_module import VisionClassifier
 from hw.audio_playback_module import AudioPlayer
 from hw.camera_module import CameraManager
 from hw.location_module import LocationRegistry
 from hw.microphone_module import MicrophoneManager
-from model_module import ModelRegistry
-from vision_module import VisionClassifier
 
 try:
     from arduino.app_utils import App, Bridge
@@ -92,6 +93,10 @@ def run_app() -> None:
             if Bridge.call("photo_trigger"):
                 saved_path = camera.take_photo()
                 if saved_path is not None:
+                    # Immediately send captured photo frame to LCD for preview
+                    camera.send_view_frame_chunked(
+                        Bridge, CAM_THUMB_W, CAM_THUMB_H, CAM_CHUNK_PIXELS, CAMERA_CHUNK_DELAY_S
+                    )
                     Bridge.call("confirm_photo_saved")
         except Exception as exc:
             print(f"[ERROR] Checking button D7 / taking photo: {exc}")
@@ -111,35 +116,38 @@ def run_app() -> None:
         # --- Toggle Recording (D7 in minimap mode) ---
         try:
             if Bridge.call("is_recording_active"):
-                personality_index = Bridge.call("get_personality_index")  # 0/1/2
-                button_id = "ABC"[personality_index]
-                model_name = models.name_for(button_id)
-                print(f"[EVENT] Recording started (personality: {model_name}) -> recording...")
-                audio = microphone.record_while_held(
-                    is_still_held=lambda: Bridge.call("is_recording_active")
-                )
-                if audio is not None:
-                    wav_path = microphone.save(button_id, model_name, audio)
-
-                    # --- Cultura Viva Pipeline ---
-                    # Each step is individually guarded: if a model fails or is missing,
-                    # the subsequent step receives an empty string/None and proceeds cleanly.
-                    question_text = microphone.transcribe(wav_path)
-
-                    site       = location.current()          # 'park_guell' / 'sagrada_familia'
-                    photo_path = camera.last_photo_path       # last captured photo (None if none taken)
-                    element    = vision.classify(site, photo_path) if photo_path else None
-
-                    kg_context = models.get_kg_context(element) if element else ""
-                    answer     = models.generate_response(
-                        question=question_text,
-                        element=element,
-                        personality=model_name,
-                        kg_context=kg_context,
-                    )
-                    player.synthesize_and_play(answer, personality=model_name)
+                photo_path = camera.last_photo_path
+                if photo_path is None or not photo_path.exists():
+                    print("[WARN] Audio recording rejected: No photo taken yet! Switch to camera mode and take a photo first.")
                 else:
-                    print("[WARN] Empty recording (0 chunks captured)")
+                    personality_index = Bridge.call("get_personality_index")  # 0/1/2
+                    button_id = "ABC"[personality_index]
+                    model_name = models.name_for(button_id)
+                    print(f"[EVENT] Recording started (personality: {model_name}) -> recording...")
+                    audio = microphone.record_while_held(
+                        is_still_held=lambda: Bridge.call("is_recording_active")
+                    )
+                    if audio is not None:
+                        wav_path = microphone.save(button_id, model_name, audio)
+
+                        # --- Cultura Viva Pipeline ---
+                        # Each step is individually guarded: if a model fails or is missing,
+                        # the subsequent step receives an empty string/None and proceeds cleanly.
+                        question_text = microphone.transcribe(wav_path)
+
+                        site       = location.current()          # 'park_guell' / 'sagrada_familia'
+                        element    = vision.classify(site, photo_path) if photo_path else None
+
+                        kg_context = models.get_kg_context(element) if element else ""
+                        answer     = models.generate_response(
+                            question=question_text,
+                            element=element,
+                            personality=model_name,
+                            kg_context=kg_context,
+                        )
+                        player.synthesize_and_play(answer, personality=model_name)
+                    else:
+                        print("[WARN] Empty recording (0 chunks captured)")
         except Exception as exc:
             print(f"[ERROR] Recording/processing question: {exc}")
 

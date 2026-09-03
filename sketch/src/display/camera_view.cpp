@@ -91,3 +91,47 @@ void drawCameraFrame() {
   }
 }
 
+void drawPhotoConfirmationOverlay() {
+  // Solid overlay banner across bottom of the screen
+  tft.fillRect(0, 90, 160, 38, 0x0000); // Black background
+  tft.drawRect(0, 90, 160, 38, 0xFFE0); // Yellow border
+  
+  tft.setTextColor(0xFFE0); // Yellow
+  tft.setTextSize(1);
+  tft.setCursor(4, 94);
+  tft.print("Are you sure of photo?");
+  
+  tft.setTextColor(0x07FF); // Cyan
+  tft.setCursor(4, 106);
+  tft.print("-> Switch to Map: YES");
+  
+  tft.setTextColor(0xFFFF); // White
+  tft.setCursor(4, 117);
+  tft.print("-> Push button: Retake");
+}
+
+void drawNoPhotoWarningOverlay() {
+  // Red alert box in center of screen
+  tft.fillRoundRect(8, 28, 144, 70, 5, 0x0000); // Black fill
+  tft.drawRoundRect(8, 28, 144, 70, 5, 0xF800); // Red border
+  tft.drawRoundRect(9, 29, 142, 68, 4, 0xF800);
+  
+  tft.setTextColor(0xF800); // Red
+  tft.setTextSize(1);
+  tft.setCursor(18, 36);
+  tft.print("! NO PHOTO TAKEN !");
+  
+  tft.drawFastHLine(14, 48, 132, 0xF800);
+  
+  tft.setTextColor(0xFFFF); // White
+  tft.setCursor(14, 54);
+  tft.print("Switch ON to Camera");
+  tft.setCursor(14, 66);
+  tft.print("& take photo first");
+  
+  tft.setTextColor(0xFFE0); // Yellow
+  tft.setCursor(14, 80);
+  tft.print("to ask your question!");
+}
+
+

@@ -7,6 +7,9 @@ bool recordingActive = false;
 bool photoTriggerFlag = false;
 bool playShutterSoundFlag = false;
 bool viewSwitchDebounced = true;
+bool hasCapturedPhoto = false;
+bool photoConfirmed = false;
+bool photoWaitingConfirmation = false;
 
 uint8_t get_personality_index() {
   return personalityIndex;
@@ -28,6 +31,8 @@ bool photo_trigger() {
 
 void confirm_photo_saved() {
   playShutterSoundFlag = true;
+  hasCapturedPhoto = true;
+  photoWaitingConfirmation = true;
 }
 
 bool view_switch_state() {

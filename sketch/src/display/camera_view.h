@@ -35,3 +35,13 @@ void drawCameraViewPlaceholder();
  */
 void drawCameraFrame();
 
+/**
+ * Draws the "Are you sure of this photo?" confirmation footer banner.
+ */
+void drawPhotoConfirmationOverlay();
+
+/**
+ * Draws the warning alert box when attempting to record without taking/confirming a photo first.
+ */
+void drawNoPhotoWarningOverlay();
+

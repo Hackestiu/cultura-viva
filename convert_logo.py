@@ -10,7 +10,7 @@ import struct
 from pathlib import Path
 from PIL import Image
 
-SRC = Path(__file__).parent / "python" / "inicial" / "160-100.jpg"
+SRC = Path(__file__).parent / "python" / "assets" / "160-100.jpg"
 DST = Path(__file__).parent / "sketch" / "logo_bitmap.h"
 
 img = Image.open(SRC).convert("RGB")

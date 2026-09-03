@@ -316,7 +316,12 @@ amixer set Master 70%
 git clone https://github.com/Hackestiu/cultura-viva-uno-q
 cd cultura-viva-uno-q
 
-# 2. Instal·la les dependències Python (a la UNO Q o al PC de dev)
+# 2. Instal·la les dependències Python:
+# Opció A: Amb uv (Recomanat — ultra ràpid):
+#   curl -LsSf https://astral.sh/uv/install.sh | sh
+#   cd python && uv sync
+#
+# Opció B: Amb pip tradicional:
 pip install -r python/requirements.txt
 
 # 3. Descarrega els models d'IA (veure secció "Instal·lació dels models")

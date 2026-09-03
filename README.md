@@ -67,8 +67,15 @@ python train_classifier.py
 
 ## Train a subset
 
-Comment out entries from `monuments:` or `models:` to shrink the matrix, or
-point at a smaller config file:
+Filter models and monuments dynamically via command-line flags:
+
+```bash
+uv run python train_classifier.py --models vit --monuments sagrada_familia
+# Or train multiple:
+uv run python train_classifier.py --models vit mobilenetv2 --monuments sagrada_familia casa_batllo
+```
+
+Or point at a smaller config file / comment out entries:
 
 ```bash
 CONFIG_PATH=config_quick_test.yaml python train_classifier.py

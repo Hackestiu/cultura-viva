@@ -1,0 +1,21 @@
+[project]
+name = "gaudi-vision"
+version = "0.1.0"
+description = "Vision classification and ONNX export pipeline for Gaudi dataset"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "datasets",
+    "evaluate",
+    "matplotlib>=3.10.9",
+    "numpy",
+    "onnx",
+    "onnxruntime",
+    "onnxscript",
+    "pillow",
+    "pyyaml",
+    "torch",
+    "torchvision",
+    "transformers",
+    "wandb",
+]

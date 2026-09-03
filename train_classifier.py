@@ -18,9 +18,11 @@ separate output directory, and separate W&B run.
 Usage:
     export HF_TOKEN=hf_xxxx
     python train_classifier.py
+    python train_classifier.py --models vit --monuments sagrada_familia
     CONFIG_PATH=other_config.yaml python train_classifier.py
 """
 
+import argparse
 import os
 import time
 import numpy as np
@@ -129,9 +131,9 @@ def load_monument_dataset(monument_name: str, data_dir: str) -> DatasetDict:
     except Exception as e:
         err_str = str(e)
 
-        if _is_offline_error(err_str) and is_offline:
+        if _is_offline_error(err_str):
             # --- Fallback: load full cached dataset and filter by monument ---
-            print(f"\n[Info] Per-monument cache not found for '{data_dir}' in offline mode.")
+            print(f"\n[Info] Per-monument cache not found for '{data_dir}'.")
             print(f"[Info] Loading full cached dataset and filtering for '{monument_name}'...")
             full_dataset = _try_load({**base_kwargs})
 
@@ -391,12 +393,87 @@ def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None
     wandb.finish()
 
 
+def _normalize_filter_args(items):
+    """Normalizes a list of filter strings which may contain comma-separated values."""
+    if not items:
+        return None
+    res = set()
+    for item in items:
+        for piece in str(item).split(","):
+            cleaned = piece.strip()
+            if cleaned:
+                res.add(cleaned)
+    return res
+
+
 if __name__ == "__main__":
-    for monument_cfg in MONUMENT_CONFIGS:
+    parser = argparse.ArgumentParser(description="Train monument classifiers.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=CONFIG_PATH,
+        help="Path to the config.yaml file (default: config.yaml or $CONFIG_PATH)",
+    )
+    parser.add_argument(
+        "--monuments",
+        "-m",
+        nargs="+",
+        help="Specific monument name(s) to train on (e.g. --monuments sagrada_familia casa_batllo)",
+    )
+    parser.add_argument(
+        "--models",
+        "-M",
+        nargs="+",
+        help="Specific model name(s) to train (e.g. --models vit mobilenetv2)",
+    )
+    args = parser.parse_args()
+
+    # If --config is passed and differs from default CONFIG_PATH, reload config
+    if args.config != CONFIG_PATH:
+        with open(args.config) as f:
+            config = yaml.safe_load(f)
+        HF_DATASET_NAME = config["dataset"]["name"]
+        VAL_SIZE = config["dataset"]["val_size"]
+        TEST_SIZE = config["dataset"]["test_size"]
+        SEED = config["dataset"]["seed"]
+        TRAINING_DEFAULTS = config.get("training_defaults", {})
+        WANDB_PROJECT = config.get("wandb", {}).get("project", "cultura-viva")
+
+    monument_filters = _normalize_filter_args(args.monuments) or (
+        _normalize_filter_args([MONUMENT_FILTER]) if MONUMENT_FILTER else None
+    )
+    model_filters = _normalize_filter_args(args.models) or (
+        _normalize_filter_args([MODEL_FILTER]) if MODEL_FILTER else None
+    )
+
+    monuments_to_run = [
+        m for m in config["monuments"]
+        if not monument_filters or m["name"] in monument_filters
+    ]
+    models_to_run = [
+        m for m in config["models"]
+        if not model_filters or m["name"] in model_filters
+    ]
+
+    if not monuments_to_run:
+        available = [m["name"] for m in config.get("monuments", [])]
+        print(f"[Error] No monuments matched filter '{args.monuments}'. Available monuments: {available}")
+        exit(1)
+
+    if not models_to_run:
+        available = [m["name"] for m in config.get("models", [])]
+        print(f"[Error] No models matched filter '{args.models}'. Available models: {available}")
+        exit(1)
+
+    print(f"\n[Run Plan]")
+    print(f"  Monuments ({len(monuments_to_run)}): {[m['name'] for m in monuments_to_run]}")
+    print(f"  Models ({len(models_to_run)}): {[m['name'] for m in models_to_run]}\n")
+
+    for monument_cfg in monuments_to_run:
         # Load + split this monument's dataset ONCE, reuse across all models
         monument_dataset = load_monument_dataset(monument_cfg["name"], monument_cfg["data_dir"])
 
-        for model_cfg in MODEL_CONFIGS:
+        for model_cfg in models_to_run:
             train_one(monument_cfg, model_cfg, monument_dataset)
 
     print("\nAll (monument, model) classifiers finished training successfully.")

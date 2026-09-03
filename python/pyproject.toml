@@ -4,8 +4,7 @@ version = "2.0.0"
 description = "Guia turístic multimodal amb IA per a Arduino UNO Q (STT, SLM, TTS i Visió)"
 requires-python = ">=3.10"
 dependencies = [
-    # Càmera i processament d'imatge (cv2, PIL, numpy)
-    "opencv-python-headless>=4.8.0",
+    # Imatge i matrius numèriques (cv2 ve preinstal·lat a l'Arduino UNO Q)
     "pillow>=10.0.0",
     "numpy>=1.24.0",
 

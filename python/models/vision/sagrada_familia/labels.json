@@ -5,7 +5,8 @@
     "2": "facana_passio",
     "3": "laterals",
     "4": "posterior",
-    "5": "torres"
+    "5": "torres",
+    "6": "unknown"
   },
   "image_size": 224,
   "image_mean": [

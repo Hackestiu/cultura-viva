@@ -3,14 +3,15 @@ vision_module.py — Vision classifier for Gaudí architectural elements.
 
 Given the path of a photo taken by CameraManager and the location name
 returned by LocationRegistry.current(), returns the name of the Gaudí
-element detected in the photo (or None if none is detected with sufficient confidence).
+element detected in the photo, 'unknown' if a non-recognizable element or
+low-confidence prediction is detected, or None if no photo/model is available.
 
 CURRENT MODELS (ONNX, exported from the training pipeline):
   - Sagrada Família: models/vision/sagrada_familia/model.onnx + labels.json
-    Classes: cupula, facana_naixement, facana_passio, laterals, posterior, torres
+    Classes: cupula, facana_naixement, facana_passio, laterals, posterior, torres, unknown
   - Park Güell:      models/vision/park_guell/model.onnx + labels.json
     Classes: 3_viaductes, casa_museu, escalinata_drac, pavellons_consergeria,
-             placa_natura, sala_hipostila, turo_3_creus
+             placa_natura, sala_hipostila, turo_3_creus, unknown
 
 Runtime dependencies: onnxruntime, Pillow, numpy  (no torch / transformers needed)
   pip install onnxruntime pillow numpy
@@ -30,10 +31,27 @@ import numpy as np
 # config.py (or this constant below).
 # -----------------------------------------------------------------------
 try:
-    from config import MODELS_DIR
+    from config import (
+        MODELS_DIR,
+        VISION_NON_RECOGNIZABLE_LABELS,
+        VISION_UNKNOWN_LABEL,
+    )
     VISION_MODEL_DIR = MODELS_DIR / "vision"
 except ImportError:
     VISION_MODEL_DIR = Path(__file__).parent / "models" / "vision"
+    VISION_NON_RECOGNIZABLE_LABELS = {
+        "unknown",
+        "altres",
+        "desconegut",
+        "other",
+        "no_element",
+        "background",
+        "non_monument",
+        "none",
+        "fons",
+    }
+    VISION_UNKNOWN_LABEL = "unknown"
+
 
 # Minimum softmax probability to accept a prediction as valid.
 # Increase if the model produces false positives; decrease if it fails to detect.
@@ -81,8 +99,8 @@ class VisionClassifier:
     """Classifies a photo to detect which Gaudí architectural element is present.
 
     Returns the element label (e.g. 'torres', 'escalinata_drac') for the location's
-    model, or None if no element is detected with sufficient confidence or if the
-    model for that location is unavailable.
+    model, 'unknown' if a non-recognizable element or low-confidence prediction is
+    detected, or None if no photo was provided or the model is unavailable.
     """
 
     def __init__(self):
@@ -90,8 +108,9 @@ class VisionClassifier:
 
     def classify(self, location: str, photo_path) -> str | None:
         """Returns the label of the Gaudí element detected in the photo at photo_path
-        for the given location, or None if photo_path is None, the file does not exist,
-        no model is available for location, or the top prediction is below CONFIDENCE_THRESHOLD.
+        for the given location, 'unknown' if a non-monument element is detected or
+        confidence is low, or None if photo_path is None, the file does not exist,
+        or no model is available for location.
 
         :param location:   'park_guell' or 'sagrada_familia'.
         :param photo_path: Path or str to a .jpg image file, or None.
@@ -174,7 +193,8 @@ class VisionClassifier:
 
     def _run_inference(self, session, meta: dict, photo_path: Path, location: str) -> str | None:
         """Runs ONNX inference on the photo.
-        Returns the winning class label if it exceeds CONFIDENCE_THRESHOLD, or None.
+        Returns the winning class label if it exceeds CONFIDENCE_THRESHOLD and is a
+        monument element, or VISION_UNKNOWN_LABEL ('unknown') if non-recognizable or low-confidence.
         """
         try:
             pixel_values = _preprocess(
@@ -191,21 +211,31 @@ class VisionClassifier:
             top_idx    = int(np.argmax(probs))
             confidence = float(probs[top_idx])
             id2label   = meta["id2label"]
-            label      = id2label.get(str(top_idx), str(top_idx))
+            raw_label  = str(id2label.get(str(top_idx), top_idx)).strip()
+            label_lower = raw_label.lower()
 
             print(
-                f"[OK] vision_module: '{label}' "
+                f"[OK] vision_module: '{raw_label}' "
                 f"(confidence: {confidence:.1%}, location: {location})"
             )
 
+            # Check if predicted class is explicitly the non-recognizable elements class
+            if label_lower in VISION_NON_RECOGNIZABLE_LABELS:
+                print(
+                    f"[INFO] vision_module: photo classified as non-recognizable element "
+                    f"('{raw_label}' -> '{VISION_UNKNOWN_LABEL}')."
+                )
+                return VISION_UNKNOWN_LABEL
+
+            # Check confidence threshold for recognized monument elements
             if confidence < CONFIDENCE_THRESHOLD:
                 print(
                     f"[WARN] vision_module: confidence {confidence:.1%} < "
-                    f"threshold {CONFIDENCE_THRESHOLD:.0%} — returning None."
+                    f"threshold {CONFIDENCE_THRESHOLD:.0%} — returning '{VISION_UNKNOWN_LABEL}'."
                 )
-                return None
+                return VISION_UNKNOWN_LABEL
 
-            return label
+            return raw_label
 
         except ImportError:
             print(

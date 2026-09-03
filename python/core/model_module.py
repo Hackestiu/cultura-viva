@@ -14,7 +14,11 @@ This can be overridden by creating models/models.json (see models/models.example
 
 import json
 
-from config import MODELS_CONFIG_FILE, MODELS_DIR
+try:
+    from config import MODELS_CONFIG_FILE, MODELS_DIR, VISION_UNKNOWN_LABEL
+except ImportError:
+    from config import MODELS_CONFIG_FILE, MODELS_DIR
+    VISION_UNKNOWN_LABEL = "unknown"
 
 _DEFAULT_NAMES = {"A": "artistic", "B": "technical", "C": "child"}
 
@@ -129,6 +133,9 @@ class ModelRegistry:
         :param personality: 'artistic' | 'technical' | 'child' — selects which
                             fact fields to prioritise in the returned string.
         """
+        if not element or element == VISION_UNKNOWN_LABEL:
+            return ""
+
         self._load_kg()
 
         # --- look up sheet by id, then by alias ---
@@ -265,7 +272,13 @@ class ModelRegistry:
         )
 
         user_content = question or "(no question provided)"
-        if element:
+        if element == VISION_UNKNOWN_LABEL:
+            user_content += (
+                "\n\n[Visual recognition: The photo does not match any architectural element of this monument. "
+                "Politely and concisely tell the user (in your assigned guide personality) that the photo does not seem "
+                "to show a recognized monument element, and invite them to capture an architectural element if they'd like details.]"
+            )
+        elif element:
             user_content += f"\n\n[Detected element in photo: {element}]"
         if kg_context:
             user_content += f"\n\n[Factual information about the element:\n{kg_context}]"

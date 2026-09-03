@@ -139,3 +139,18 @@ TTS_MODEL_DIR = MODELS_DIR / "tts"
 
 # Vision: Vision ONNX models directory containing park_guell/ and sagrada_familia/
 VISION_MODEL_DIR = MODELS_DIR / "vision"
+
+# Vision: Labels representing non-recognizable / non-monument elements
+# Supports various naming conventions from different training runs
+VISION_NON_RECOGNIZABLE_LABELS = {
+    "unknown",
+    "altres",
+    "desconegut",
+    "other",
+    "no_element",
+    "background",
+    "non_monument",
+    "none",
+    "fons",
+}
+VISION_UNKNOWN_LABEL = "unknown"

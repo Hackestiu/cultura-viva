@@ -84,3 +84,36 @@ Veure la guia a [`stt/README.md`](stt/README.md).
 ## 4. Text-to-Speech (TTS) — `models/tts/`
 
 Veure la guia a [`tts/README.md`](tts/README.md).
+
+---
+
+## 5. Visió per Computador (Classificadors ONNX) — `models/vision/`
+
+Classificadors basats en ONNX per identificar els elements arquitectònics de cada monument:
+- `models/vision/sagrada_familia/model.onnx` + `labels.json`
+- `models/vision/park_guell/model.onnx` + `labels.json`
+
+### Classe d'elements no reconeguts (`unknown` / altres)
+Per evitar falsos positius i classificacions errònies (per exemple, quan l'usuari fa una foto a una persona, un objecte aliè o el terra), s'ha incorporat una classe dedicada a elements no reconeguts / fons a cada model:
+
+- **Park Güell** (8 classes, índexs 0–7):
+  - `0`: `3_viaductes`
+  - `1`: `casa_museu`
+  - `2`: `escalinata_drac`
+  - `3`: `pavellons_consergeria`
+  - `4`: `placa_natura`
+  - `5`: `sala_hipostila`
+  - `6`: `turo_3_creus`
+  - `7`: `unknown` (altres elements / no monument)
+
+- **Sagrada Família** (7 classes, índexs 0–6):
+  - `0`: `cupula`
+  - `1`: `facana_naixement`
+  - `2`: `facana_passio`
+  - `3`: `laterals`
+  - `4`: `posterior`
+  - `5`: `torres`
+  - `6`: `unknown` (altres elements / no monument)
+
+Quan el classificador prediu aquesta classe (o si la confiança és inferior al llindar `CONFIDENCE_THRESHOLD`), el sistema retorna `"unknown"`. El model SLM informa amablement a l'usuari que la imatge no correspon a cap element reconeixible del monument i el convida a enfocar un element arquitectònic.
+

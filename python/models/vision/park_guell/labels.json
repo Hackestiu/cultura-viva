@@ -6,7 +6,8 @@
     "3": "pavellons_consergeria",
     "4": "placa_natura",
     "5": "sala_hipostila",
-    "6": "turo_3_creus"
+    "6": "turo_3_creus",
+    "7": "unknown"
   },
   "image_size": 224,
   "image_mean": [

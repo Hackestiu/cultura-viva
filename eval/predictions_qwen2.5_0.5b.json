@@ -1,0 +1,458 @@
+[
+  {
+    "id": "gaudi-birth-death-basic",
+    "question": "When and where was Gaudí born, and when did he die?",
+    "reference": "Gaudí was born on 25 June 1852 in Reus (though he later claimed the neighbouring village of Riudoms). He died on 10 June 1926 in Barcelona.",
+    "contexts": [
+      "Antoni Gaudí: Never married; devoted his life entirely to his profession and, from 1915 onward, to the Sagrada Família alone",
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Antoni Gaudí: Died after being struck by a Barcelona tram on 7 June 1926 while walking to daily prayer and confession; because of his shabby dress in later life he was initially mistaken for a beggar and did not receive immediate aid, dying three days later on 10 June 1926"
+    ],
+    "answer": "Gaudí was born in 1892 in the town of Lloc, a suburb of Barcelona. He died on 10 June 1926 in the same city.",
+    "elapsed_s": 3.588
+  },
+  {
+    "id": "gaudi-profession-basic",
+    "question": "What was Gaudí's nationality and profession?",
+    "reference": "Antoni Gaudí was a Catalan architect and designer, widely known as the greatest exponent of Catalan Modernisme.",
+    "contexts": [
+      "Antoni Gaudí: Never married; devoted his life entirely to his profession and, from 1915 onward, to the Sagrada Família alone",
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Antoni Gaudí: His principal patron was industrialist Eusebi Güell, who commissioned Park Güell, Palau Güell, and the crypt of Colònia Güell, among other major works"
+    ],
+    "answer": "Gaudí's nationality was Spanish and his profession was architecture.",
+    "elapsed_s": 2.093
+  },
+  {
+    "id": "sagrada-familia-location-basic",
+    "question": "In which district of Barcelona is the Sagrada Família located?",
+    "reference": "The Sagrada Família is a Catholic church under construction in the Eixample district of Barcelona, Catalonia, Spain.",
+    "contexts": [
+      "Sagrada Família: An arsonist set a small fire in the sacristy in April 2011; investigations later revealed the basilica was an intended target of the 2017 Barcelona (La Rambla) terrorist attacks, a plot that was abandoned after an accidental explosion at the attackers' bomb-making site",
+      "Sagrada Família: Construction halted for the first time since the Civil War when COVID-19 closed the site in March 2020",
+      "Sagrada Família: An organ with 26 stops and 1,492 pipes on two manuals and a pedalboard was installed in the chancel in 2010 by Blancafort Orgueners de Montserrat; additional organs are planned throughout the building, totaling around 8,000 pipes when complete"
+    ],
+    "answer": "The Sagrada Família is located in the district of Montjuïc in Barcelona.",
+    "elapsed_s": 2.125
+  },
+  {
+    "id": "casa-batllo-street-basic",
+    "question": "On which street is Casa Batlló located?",
+    "reference": "Casa Batlló is located on the Passeig de Gràcia in the Eixample district of Barcelona, as part of a row of houses known as the Illa de la Discòrdia.",
+    "contexts": [
+      "Casa Batlló: The Batlló family lived on the main floor until the mid-1950s; the current owners bought the building in 1993 and opened it to the public in 2002",
+      "Casa Batlló: Became a UNESCO World Heritage Site in 2005",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral"
+    ],
+    "answer": "Casa Batlló is located on the street of Passeig de Gràcia.",
+    "elapsed_s": 2.19
+  },
+  {
+    "id": "park-guell-commissioner-basic",
+    "question": "Who commissioned Gaudí to design Park Güell?",
+    "reference": "Catalan industrialist and art patron Eusebi Güell commissioned Antoni Gaudí to design the park; construction took place between 1900 and 1914.",
+    "contexts": [
+      "Park Güell: Gaudí lived in the park's show home (designed by Francesc Berenguer i Mestres, now the Gaudí House Museum) from 1906 to 1925 with his father and niece before moving to the Sagrada Família workshop; the house opened as a museum in 1963",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself",
+      "Antoni Gaudí: His principal patron was industrialist Eusebi Güell, who commissioned Park Güell, Palau Güell, and the crypt of Colònia Güell, among other major works"
+    ],
+    "answer": "Gaudí commissioned Gaudí himself to design Park Güell.",
+    "elapsed_s": 2.303
+  },
+  {
+    "id": "casa-batllo-nickname-basic",
+    "question": "What is Casa Batlló's local nickname, and why?",
+    "reference": "The local name for the building is Casa dels ossos (House of Bones), as its biomorphic aesthetic has a skeletal quality.",
+    "contexts": [
+      "Casa Batlló: Locally nicknamed 'Casa dels ossos' (House of Bones) for its skeletal, organic façade; also informally called the 'house of yawns' for the rounded mouth-like shapes around its main floor windows",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral",
+      "Casa Batlló: Became a UNESCO World Heritage Site in 2005"
+    ],
+    "answer": "Casa Batlló's local nickname is \"Casa dels ossos\" (House of Bones). This nickname is derived from the fact that the façade of Casa Batlló is covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral.",
+    "elapsed_s": 2.642
+  },
+  {
+    "id": "trencadis-basic",
+    "question": "What is trencadís?",
+    "reference": "Trencadís is a mosaic technique that Gaudí introduced, using waste or broken ceramic pieces, seen for example on the façade of Casa Batlló and the bench at Park Güell.",
+    "contexts": [
+      "Serpentine Bench (Banc de trencadís) (part of park_guell). Materials: trencadís (broken tile/ceramic/glass mosaic). Its ergonomic, curving form creates enclaves along its length that encourage social interaction rather than facing visitors outward in a straight line. Sits directly atop the Hypostyle Room's vaulted terrace, following the ergonomic curve designed to double as a shared social space rather than a simple boundary wall. One of Gaudí's introductions of curved, undulating bench forms at Park Güell, a precursor to the style he later fully realized at the Sagrada Família.",
+      "Antoni Gaudí: Introduced the trencadís mosaic technique using broken or waste ceramic pieces, seen on the undulating bench at Park Güell (with Josep Maria Jujol) and the façade of Casa Batlló (with waste from the Pelegrí glassworks)",
+      "Casa Batlló: The façade is covered in colorful trencadís (broken tile mosaic) made from waste ceramic from the Pelegrí glassworks"
+    ],
+    "answer": "Trencadís is a type of mosaic tile or ceramic material used in Antoni Gaudi's architecture. It is characterized by its broken or waste ceramic pieces, which are then arranged in a curved, undulating pattern.",
+    "elapsed_s": 2.371
+  },
+  {
+    "id": "sagrada-height-basic",
+    "question": "How tall is the Sagrada Família's central tower, and what does it represent?",
+    "reference": "The central tower of the Sagrada Família, representing Jesus Christ, reaches 172.5 metres (566 ft), making it the tallest church in the world.",
+    "contexts": [
+      "Sagrada Família: As of 30 October 2025, it is the tallest church in the world (172.5 m, ~11 m taller than the former record-holder, Ulm Minster)",
+      "Sagrada Família: The Passion façade contains a magic square based on the 1514 print Melencolia I by Albrecht Dürer, modified so its rows, columns, and diagonals add up to 33 (Christ's age at death) instead of the standard 34 for a 4x4 magic square",
+      "Sagrada Família. Location: Eixample district, Barcelona, Catalonia, Spain. Architect: Antoni Gaudí (took over from Francisco de Paula del Villar after Villar's resignation on 18 March 1883 due to disagreements with the construction board; Gaudí was formally appointed Architect Director on 28 March 1884 and redesigned the project, keeping only the crypt). Style: Gothic Revival combined with curvilinear Art Nouveau / Catalan Modernisme. Status: Still under construction. On 30 October 2025 it became the tallest church building in the world, surpassing Ulm Minster (161.5 m); it reached its full height of 172.5 m on 20 February 2026. The main structure was targeted for completion around 2026 (the centenary of Gaudí's death), but sculptural details, decoration, and a planned monumental stairway are expected to continue until 2034. Funded solely by private donations and visitor entry fees, with no government or church funding. Received 3 million visitors by 1990 and 5 million in 2025.. UNESCO: The Nativity façade and Crypt were added to the existing (1984) 'Works of Antoni Gaudí' UNESCO World Heritage Site listing in 2005."
+    ],
+    "answer": "The Sagrada Família's central tower is 172.5 meters tall, representing the 1514 print Melencolia I by Albrecht Dürer, modified to add up to 33 instead of the standard 34 for a 4x4 magic square.",
+    "elapsed_s": 2.45
+  },
+  {
+    "id": "sagrada-interior-columns",
+    "question": "What is distinctive about the design of the interior columns of the Sagrada Família?",
+    "reference": "The columns are a unique Gaudí design that branch to support their load, with ever-changing cross-sections created by intersecting geometric forms — for example, a square base evolving into an octagon, then a sixteen-sided shape, and eventually a circle, produced by two helicoidal columns twisting in opposite directions.",
+    "contexts": [
+      "Sagrada Família: The interior columns are a unique Gaudí design that branch to support their load, with ever-changing cross-sections created by intersecting geometric forms — for example, a square base evolving into an octagon, then a sixteen-sided shape, and eventually a circle, produced by two helicoidal columns twisting in opposite directions",
+      "Sagrada Família: The Passion façade contains a magic square based on the 1514 print Melencolia I by Albrecht Dürer, modified so its rows, columns, and diagonals add up to 33 (Christ's age at death) instead of the standard 34 for a 4x4 magic square",
+      "Sagrada Família: An organ with 26 stops and 1,492 pipes on two manuals and a pedalboard was installed in the chancel in 2010 by Blancafort Orgueners de Montserrat; additional organs are planned throughout the building, totaling around 8,000 pipes when complete"
+    ],
+    "answer": "The interior columns of the Sagrada Família are a unique Gaudí design that branch to support their load, with ever-changing cross-sections created by intersecting geometric forms.",
+    "elapsed_s": 2.322
+  },
+  {
+    "id": "sagrada-consecration",
+    "question": "When was the Sagrada Família consecrated as a basilica, and by whom?",
+    "reference": "Pope Benedict XVI consecrated the Sagrada Família and proclaimed it a basilica on 7 November 2010, in a ceremony attended by a congregation of 6,500 people inside and roughly 50,000 more following from outside.",
+    "contexts": [
+      "Sagrada Família: An arsonist set a small fire in the sacristy in April 2011; investigations later revealed the basilica was an intended target of the 2017 Barcelona (La Rambla) terrorist attacks, a plot that was abandoned after an accidental explosion at the attackers' bomb-making site",
+      "Sagrada Família: As of 30 October 2025, it is the tallest church in the world (172.5 m, ~11 m taller than the former record-holder, Ulm Minster)",
+      "Sagrada Família: The central doors of the Glory façade, designed by Josep Maria Subirachs and installed in September 2008, bear the text of the Lord's Prayer in Catalan in high relief, surrounded by the phrase 'give us this day our daily bread' in fifty other languages; the door handles form the letters 'A' and 'G' for Antoni Gaudí"
+    ],
+    "answer": "The Sagrada Família was consecrated as a basilica in 1882. It was built by Antoni Gaudí and completed in 1882.",
+    "elapsed_s": 2.348
+  },
+  {
+    "id": "sagrada-organ",
+    "question": "What organ was installed in the Sagrada Família and when, and what is planned for the future?",
+    "reference": "An organ with 26 stops and 1,492 pipes on two manuals and a pedalboard was installed in the chancel in 2010 by Blancafort Orgueners de Montserrat. Additional organs are planned throughout the building, which together with the original would total around 8,000 pipes when complete.",
+    "contexts": [
+      "Sagrada Família: An organ with 26 stops and 1,492 pipes on two manuals and a pedalboard was installed in the chancel in 2010 by Blancafort Orgueners de Montserrat; additional organs are planned throughout the building, totaling around 8,000 pipes when complete",
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Sagrada Família: At Gaudí's death in 1926, only an estimated 15-25% of the project was complete"
+    ],
+    "answer": "The organ installed in the Sagrada Família is called the \"Sagrada Família\" (Sagrada) and was installed in 2010 by Blancafort Orgueners de Montserrat. The organ is planned to be installed in the building's chancel, with an additional organ planned throughout the building, totaling around 8,000 pipes when complete.",
+    "elapsed_s": 2.512
+  },
+  {
+    "id": "sagrada-passion-magic-square",
+    "question": "What hidden mathematical feature appears on the Passion façade of the Sagrada Família?",
+    "reference": "The Passion façade contains a magic square based on the one in the 1514 print Melencolia I. The square is modified so its rows and columns add up to 33 instead of the standard 34 for a 4x4 magic square.",
+    "contexts": [
+      "Sagrada Família: The Passion façade contains a magic square based on the 1514 print Melencolia I by Albrecht Dürer, modified so its rows, columns, and diagonals add up to 33 (Christ's age at death) instead of the standard 34 for a 4x4 magic square",
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Sagrada Família: The interior columns are a unique Gaudí design that branch to support their load, with ever-changing cross-sections created by intersecting geometric forms — for example, a square base evolving into an octagon, then a sixteen-sided shape, and eventually a circle, produced by two helicoidal columns twisting in opposite directions"
+    ],
+    "answer": "The hidden mathematical feature on the Passion façade of the Sagrada Família is a magic square based on the 1514 print Melencolia I by Albrecht Dürer, modified so its rows, columns, and diagonals add up to 33 (Christ's age at death) instead of the standard 34 for a 4x4 magic square.",
+    "elapsed_s": 2.473
+  },
+  {
+    "id": "sagrada-glory-doors",
+    "question": "What is written on the central doors of the Glory façade, and who designed them?",
+    "reference": "The central doors of the Glory façade, designed by Josep Maria Subirachs and installed in September 2008, bear the text of the Lord's Prayer in Catalan in high relief, surrounded by the phrase 'give us this day our daily bread' in fifty other languages; the door handles form the letters 'A' and 'G' for Antoni Gaudí.",
+    "contexts": [
+      "Sagrada Família: The central doors of the Glory façade, designed by Josep Maria Subirachs and installed in September 2008, bear the text of the Lord's Prayer in Catalan in high relief, surrounded by the phrase 'give us this day our daily bread' in fifty other languages; the door handles form the letters 'A' and 'G' for Antoni Gaudí",
+      "Courtyards and interior gate (part of la_pedrera). Materials: cast iron (pillars, beams), wrought iron (gate). The floor-support beam structure was interpreted by Josep Maria Carandell, who built the centerpiece at a shipyard, as representing the helm of a ship -- 'the soul of the building,' with a resemblance to Gothic crypts. The iron entrance gate's non-symmetrical structure evokes soap bubbles formed between the hands, or the structure of a plant cell. The courtyard floor's central support girder combines two concentric cylindrical beams with stretched radial beams, functioning as a keystone working in both tension and compression -- structurally described as 'the soul of the building.' The interior iron gate originally served both pedestrians and cars, providing access to the basement garage (now an auditorium). The two entrance halls are fully polychrome, with oil paintings on the plaster surfaces referencing mythology and flowers.",
+      "Casa Batlló: The façade is covered in colorful trencadís (broken tile mosaic) made from waste ceramic from the Pelegrí glassworks"
+    ],
+    "answer": "The central doors of the Glory façade bear the text of the Lord's Prayer in Catalan in high relief, surrounded by the phrase 'give us this day our daily bread' in fifty other languages. The door handles form the letters 'A' and 'G' for Antoni Gaudí.",
+    "elapsed_s": 2.429
+  },
+  {
+    "id": "park-guell-location",
+    "question": "Where is Park Güell located, and on what kind of terrain was it built?",
+    "reference": "Park Güell is located in the La Salut neighborhood of the Gràcia district in Barcelona, on the southern slope of the Turó del Carmel hill, part of the Collserola mountain range, on a rocky site originally known as Muntanya Pelada (Bare Mountain).",
+    "contexts": [
+      "Park Güell: Became a municipal garden/park after the private development failed",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself",
+      "Park Güell (part of Park Güell). Materials: local stone (viaducts and columns), trencadís (broken tile/ceramic mosaic). Inspired by the English garden-city movement (hence the English word 'Park' in its name); marks Gaudí's 'naturalist period', in which his study of nature and organic forms drove both ornament and underlying structural geometry. Symbolic references throughout include political Catalanism (entrance stairway) and Catholicism (the Calvary, originally conceived as a chapel). Uses inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudí used earlier at Colònia Güell. Entry to the Monumental Zone (main terrace, mosaics, viaducts, gate area) has required a paid ticket since October 2013; Barcelona residents enter free. UNESCO's 1984 inscription describes the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism. Introduced curved, undulating benches at Park Güell -- a precursor to the style Gaudí later fully realized at the Sagrada Família."
+    ],
+    "answer": "Park Güell is located on the Park Güell hill in Barcelona, Spain. It is a municipal garden park that was originally conceived by Gaudi as a private English-style garden-city development of 60 luxury home plots. Only one plot ever sold, to Gaudi himself. The park was designed to be a natural landscape, inspired by the English garden-city movement. It features elements such as the use of inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudi used earlier at Colònia Güell, and the use of curved, undulating benches at Park Güell",
+    "elapsed_s": 2.657
+  },
+  {
+    "id": "park-guell-porters-lodge",
+    "question": "What are the two gatehouse buildings at the entrance of Park Güell, and what do they contain today?",
+    "reference": "The entrance is marked by two whimsical gatehouses forming the Porter's Lodge pavilion. One originally housed a phone booth, while the other now contains a permanent exhibit of the Barcelona City History Museum.",
+    "contexts": [
+      "Park Güell: The entrance is marked by two whimsical gatehouses forming the Porter's Lodge pavilion: one originally housed a phone booth, while the other now contains a permanent exhibit of the Barcelona City History Museum (MUHBA)",
+      "Porter's Lodge (entrance gatehouses) (part of park_guell). Materials: . Whimsical, fairy-tale-like pavilion forms marking the park's main entrance, reflecting Güell's ambition to recreate an English residential-park model. One of the two pavilions originally housed a phone booth; the other now contains a permanent exhibit of the Barcelona City History Museum. Forms a pair of gatehouses flanking the park's main entrance, among the first structures built on site.",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself"
+    ],
+    "answer": "The two gatehouse buildings at the entrance of Park Güell are the \"Porter's Lodge\" and the \"Barcelona City History Museum.\" Today, the \"Porter's Lodge\" is a temporary exhibit, while the \"Barcelona City History Museum\" is a permanent exhibit showcasing the Barcelona City History Museum.",
+    "elapsed_s": 2.413
+  },
+  {
+    "id": "park-guell-viaducts",
+    "question": "What are the elevated pathways in Park Güell, and what natural forms do they imitate?",
+    "reference": "A system of elevated stone pathways, originally intended for carriages, winds through Park Güell. Designed by Gaudí using local stone, their columns and vaulted supports mimic tree trunks and blend seamlessly with the natural landscape, using inverted catenary arches for load-bearing.",
+    "contexts": [
+      "Viaducts / elevated pathways (part of park_guell). Materials: local stone. Columns and vaulted supports mimic tree trunks and natural forms, blending the paths seamlessly with the surrounding landscape. As with Gaudí's earlier work at Colònia Güell, the viaducts use inverted catenary arches to achieve optimal load-bearing compression, so the stone columns work in pure compression without needing external buttressing. Columns and vaulted supports mimic tree trunks and natural forms, part of Gaudí's naturalist-period design language for the park.",
+      "Park Güell: A network of elevated stone pathways and viaducts designed by Gaudí uses inclined columns of local stone mimicking tree trunks and inverted catenary arches for load-bearing compression",
+      "Park Güell (part of Park Güell). Materials: local stone (viaducts and columns), trencadís (broken tile/ceramic mosaic). Inspired by the English garden-city movement (hence the English word 'Park' in its name); marks Gaudí's 'naturalist period', in which his study of nature and organic forms drove both ornament and underlying structural geometry. Symbolic references throughout include political Catalanism (entrance stairway) and Catholicism (the Calvary, originally conceived as a chapel). Uses inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudí used earlier at Colònia Güell. Entry to the Monumental Zone (main terrace, mosaics, viaducts, gate area) has required a paid ticket since October 2013; Barcelona residents enter free. UNESCO's 1984 inscription describes the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism. Introduced curved, undulating benches at Park Güell -- a precursor to the style Gaudí later fully realized at the Sagrada Família."
+    ],
+    "answer": "The elevated pathways in Park Güell are designed by Antoni Gaudi using local stone. The columns and vaulted supports mimic tree trunks and natural forms, blending the paths seamlessly with the surrounding landscape.",
+    "elapsed_s": 2.353
+  },
+  {
+    "id": "park-guell-gaudi-house",
+    "question": "How did Gaudí come to live in Park Güell, and what did his house later become?",
+    "reference": "A show home built in 1904 and designed by Francesc Berenguer i Mestres remained unsold, so Eusebi Güell persuaded Gaudí to buy it with his own savings. Gaudí moved in with his father and niece in 1906, and the house became the Gaudí House Museum in 1963, declared a national monument in 1969.",
+    "contexts": [
+      "Park Güell: Gaudí lived in the park's show home (designed by Francesc Berenguer i Mestres, now the Gaudí House Museum) from 1906 to 1925 with his father and niece before moving to the Sagrada Família workshop; the house opened as a museum in 1963",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself",
+      "Antoni Gaudí: His principal patron was industrialist Eusebi Güell, who commissioned Park Güell, Palau Güell, and the crypt of Colònia Güell, among other major works"
+    ],
+    "answer": "Gaudí came to live in Park Güell in 1906, after his father and niece had moved out. His house later became the Gaudí House Museum, now known as the Gaudí House Museum.",
+    "elapsed_s": 2.369
+  },
+  {
+    "id": "park-guell-unesco",
+    "question": "When was Park Güell designated a UNESCO World Heritage Site, and what did the citation praise?",
+    "reference": "UNESCO designated Park Güell a World Heritage Site in 1984, as part of the 'Works of Antoni Gaudí' collection, praising how the park's architecture combined the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, anticipating many forms and techniques of 20th-century Modernism.",
+    "contexts": [
+      "Park Güell (part of Park Güell). Materials: local stone (viaducts and columns), trencadís (broken tile/ceramic mosaic). Inspired by the English garden-city movement (hence the English word 'Park' in its name); marks Gaudí's 'naturalist period', in which his study of nature and organic forms drove both ornament and underlying structural geometry. Symbolic references throughout include political Catalanism (entrance stairway) and Catholicism (the Calvary, originally conceived as a chapel). Uses inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudí used earlier at Colònia Güell. Entry to the Monumental Zone (main terrace, mosaics, viaducts, gate area) has required a paid ticket since October 2013; Barcelona residents enter free. UNESCO's 1984 inscription describes the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism. Introduced curved, undulating benches at Park Güell -- a precursor to the style Gaudí later fully realized at the Sagrada Família.",
+      "Park Güell: Became a municipal garden/park after the private development failed",
+      "Park Güell. Location: La Salut neighbourhood, Gràcia district, Barcelona, Catalonia, Spain, on the southern slope of Turó del Carmel hill (part of the Collserola mountain range), on a rocky site originally known as Muntanya Pelada (Bare Mountain). Architect: Antoni Gaudí, commissioned by Eusebi Güell; the curving mosaic bench was designed by Josep Maria Jujol. Style: Catalan Modernisme, blending Arts and Crafts, Symbolism, Expressionism, and Rationalism influences. Status: Completed, operates as a public park; the Monumental Zone (main terrace, mosaics, viaducts, entrance) has required a paid ticket since October 2013, though Barcelona residents enter free. UNESCO: Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí' (reference 320-001), inscribed 1984."
+    ],
+    "answer": "Park Güell was designated a UNESCO World Heritage Site in 1984. The citation praises the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism.",
+    "elapsed_s": 2.441
+  },
+  {
+    "id": "casa-batllo-discord",
+    "question": "Why is the block of buildings containing Casa Batlló known as the 'Illa de la Discòrdia'?",
+    "reference": "Casa Batlló sits on Passeig de Gràcia alongside other striking buildings by different Modernista architects, born from a rivalry among wealthy industrialists each trying to outdo the others' houses. This clash of contrasting styles on the same block earned it the nickname 'Illa de la Discòrdia' (Block of Discord).",
+    "contexts": [
+      "Casa Batlló. Location: Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain (part of the 'Illa de la Discòrdia' / 'Block of Discord', a row of four houses by leading Modernista architects in rivalry). Architect: Antoni Gaudí, assisted by Domènec Sugrañes i Gras, Josep Canaleta, and Joan Rubió (renovation of an existing 1877 eclectic building originally commissioned by Lluís Sala Sánchez and designed by Emili Sala Cortés, one of Gaudí's professors). Style: Catalan Modernisme / Art Nouveau. Status: Completed, open to the public as a museum. UNESCO: Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí' (reference 320-006); the overall listing was inscribed in 1984 and extended in 2005 to include Casa Batlló.",
+      "Casa Batlló: Became a UNESCO World Heritage Site in 2005",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral"
+    ],
+    "answer": "The 'Illa de la Discòrdia' is a row of four houses by leading Modernista architects in rivalry, which is why the block of buildings containing Casa Batlló is known as the 'Illa de la Discòrdia'.",
+    "elapsed_s": 2.373
+  },
+  {
+    "id": "casa-batllo-original-building",
+    "question": "Who originally built the structure that became Casa Batlló, and when?",
+    "reference": "The building was originally constructed in 1877, commissioned by Lluís Sala Sánchez and designed by Emili Sala Cortés, one of Gaudí's own professors, as a conventional eclectic building with no remarkable characteristics.",
+    "contexts": [
+      "Casa Batlló: The Batlló family lived on the main floor until the mid-1950s; the current owners bought the building in 1993 and opened it to the public in 2002",
+      "Casa Batlló: Became a UNESCO World Heritage Site in 2005",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral"
+    ],
+    "answer": "The structure that became Casa Batlló was originally built by the Batlló family, who lived on the main floor until the mid-1950s. The current owners bought the building in 1993 and opened it to the public in 2002.",
+    "elapsed_s": 2.403
+  },
+  {
+    "id": "casa-batllo-roof-chimneys",
+    "question": "What is notable about the chimneys on the roof of Casa Batlló?",
+    "reference": "The roof terrace of Casa Batlló is decorated with four chimney stacks, in addition to its famous dragon-back tiled design representing an animal's spine, and the chimneys were designed to prevent backdraughts.",
+    "contexts": [
+      "Casa Batlló: The roof terrace is decorated with four chimney stacks designed with specialized curves to prevent backdraughts",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral",
+      "Casa Batlló: Locally nicknamed 'Casa dels ossos' (House of Bones) for its skeletal, organic façade; also informally called the 'house of yawns' for the rounded mouth-like shapes around its main floor windows"
+    ],
+    "answer": "The roof of Casa Batlló is decorated with four chimney stacks designed with specialized curves to prevent backdrafts.",
+    "elapsed_s": 2.265
+  },
+  {
+    "id": "casa-batllo-central-facade",
+    "question": "What visual effect does the central section of Casa Batlló's façade evoke, and how was it made?",
+    "reference": "The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings. It is covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Jujol while working in Majorca.",
+    "contexts": [
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral",
+      "Casa Batlló: The façade is covered in colorful trencadís (broken tile mosaic) made from waste ceramic from the Pelegrí glassworks",
+      "Casa Batlló: Locally nicknamed 'Casa dels ossos' (House of Bones) for its skeletal, organic façade; also informally called the 'house of yawns' for the rounded mouth-like shapes around its main floor windows"
+    ],
+    "answer": "The central section of Casa Batlló's façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral.",
+    "elapsed_s": 2.645
+  },
+  {
+    "id": "casa-batllo-yawns",
+    "question": "Why has the main floor of Casa Batlló been nicknamed the 'house of yawns'?",
+    "reference": "The rounded shapes of the window gaps on the main floor, together with lip-like edges carved into the surrounding stone, create the appearance of a fully open mouth, giving Casa Batlló the nickname 'house of yawns'.",
+    "contexts": [
+      "Casa Batlló: Locally nicknamed 'Casa dels ossos' (House of Bones) for its skeletal, organic façade; also informally called the 'house of yawns' for the rounded mouth-like shapes around its main floor windows",
+      "Casa Batlló: The Batlló family lived on the main floor until the mid-1950s; the current owners bought the building in 1993 and opened it to the public in 2002",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral"
+    ],
+    "answer": "The main floor of Casa Batlló has been nicknamed the 'house of yawns' because the rounded mouth-like shapes around its main floor windows resemble yawns.",
+    "elapsed_s": 2.293
+  },
+  {
+    "id": "gaudi-catalan-arrest",
+    "question": "What happened to Gaudí on Catalonia's National Day in 1924?",
+    "reference": "On 11 September 1924, Gaudí was beaten at a demonstration against the Catalan language ban and arrested by the Civil Guard while travelling to attend a mass for Catalan patriots. He refused to speak Spanish, insisting he paid his taxes but would not stop speaking his own language, and was released after paying 50 pesetas bail.",
+    "contexts": [
+      "Antoni Gaudí: On 11 September 1924 (Catalonia's National Day), Gaudí was beaten at a demonstration against the Catalan language ban and arrested by the Civil Guard while travelling to attend a mass for Catalan patriots; he refused to speak Spanish, insisting he paid his taxes but would not stop speaking his own language, and was released after paying 50 pesetas bail",
+      "Antoni Gaudí: Died after being struck by a Barcelona tram on 7 June 1926 while walking to daily prayer and confession; because of his shabby dress in later life he was initially mistaken for a beggar and did not receive immediate aid, dying three days later on 10 June 1926",
+      "Antoni Gaudí: Dragons were seen as Catalan nationalist symbols during the Renaixença due to their connection with Saint George (patron saint of Catalonia), connecting Casa Batlló's dragon-back roof and Park Güell's dragon/salamander to Gaudí's Catalan identity"
+    ],
+    "answer": "On Catalonia's National Day in 1924, Antoni Gaudí was arrested by the Civil Guard while traveling to attend a mass for Catalan patriots. He refused to speak Spanish and insisted he paid his taxes but would not stop speaking his own language, and was released after paying 50 pesetas bail.",
+    "elapsed_s": 2.412
+  },
+  {
+    "id": "gaudi-death-accident",
+    "question": "How did Gaudí die, and why was he initially not recognised or given prompt help?",
+    "reference": "On 7 June 1926, Gaudí was struck by a passing tram while walking to his daily prayer and confession. Because of his neglected appearance in his later years, passers-by mistook him for a beggar and did not give him immediate aid; he died of his injuries on 10 June 1926, three days later.",
+    "contexts": [
+      "Antoni Gaudí: Died after being struck by a Barcelona tram on 7 June 1926 while walking to daily prayer and confession; because of his shabby dress in later life he was initially mistaken for a beggar and did not receive immediate aid, dying three days later on 10 June 1926",
+      "Sagrada Família: At Gaudí's death in 1926, only an estimated 15-25% of the project was complete",
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt"
+    ],
+    "answer": "Gaudí died after being struck by a Barcelona tram on 7 June 1926 while walking to daily prayer and confession. He was initially mistaken for a beggar and did not receive immediate aid, dying three days later on 10 June 1926.",
+    "elapsed_s": 2.444
+  },
+  {
+    "id": "gaudi-beatification",
+    "question": "What progress has been made toward Gaudí's canonisation as a saint?",
+    "reference": "Gaudí's cause for canonisation was officially opened by the bishops of Catalonia in 2003, and on 14 April 2025 Pope Francis declared Gaudí venerable, recognising what the Vatican described as his heroic virtue. He has not yet reached beatification, the next step toward sainthood.",
+    "contexts": [
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Antoni Gaudí: Never married; devoted his life entirely to his profession and, from 1915 onward, to the Sagrada Família alone",
+      "Antoni Gaudí. Location: . Architect: . Style: Catalan Modernisme (Art Nouveau); considered its greatest exponent, though his mature work transcends the movement, drawing chiefly from natural and geometric forms (ruled surfaces, hyperboloids, catenary arches). Status: . UNESCO: Seven works declared UNESCO World Heritage Sites under 'Works of Antoni Gaudí': 1984 original listing (Park Güell, Palau Güell, Casa Milà) and 2005 extension (Nativity façade and crypt of Sagrada Família, Casa Vicens, Casa Batlló, crypt of Colònia Güell)."
+    ],
+    "answer": "Antoni Gaudí's canonisation as a saint is not directly mentioned in the given context. The information provided focuses on his life and work, but does not include any details about his current status or the process of his canonization. Therefore, based on the information provided, I am not able to accurately answer the question about Gaudí's canonization as a saint.",
+    "elapsed_s": 2.493
+  },
+  {
+    "id": "gaudi-later-influence",
+    "question": "Which later architects were influenced by or admired Gaudí's work?",
+    "reference": "Gaudí left a deep mark on 20th-century architecture: Le Corbusier declared himself an admirer, and Gaudí influenced architects such as Pier Luigi Nervi, Friedensreich Hundertwasser, Oscar Niemeyer, Félix Candela, Eduardo Torroja, and Santiago Calatrava, among others.",
+    "contexts": [
+      "Antoni Gaudí: Influenced later architects including Le Corbusier, Pier Luigi Nervi, Friedensreich Hundertwasser, Oscar Niemeyer, Félix Candela, Eduardo Torroja, Santiago Calatrava, and Norman Foster",
+      "Antoni Gaudí. Location: . Architect: . Style: Catalan Modernisme (Art Nouveau); considered its greatest exponent, though his mature work transcends the movement, drawing chiefly from natural and geometric forms (ruled surfaces, hyperboloids, catenary arches). Status: . UNESCO: Seven works declared UNESCO World Heritage Sites under 'Works of Antoni Gaudí': 1984 original listing (Park Güell, Palau Güell, Casa Milà) and 2005 extension (Nativity façade and crypt of Sagrada Família, Casa Vicens, Casa Batlló, crypt of Colònia Güell).",
+      "Antoni Gaudí: Emili Sala Cortés was one of Gaudí's professors at the Barcelona architecture school, and Gaudí worked as a draughtsman for him early in his career to help finance his studies; decades later Gaudí was hired to completely redesign Sala Cortés's original 1877 building into Casa Batlló"
+    ],
+    "answer": "The later architects influenced by or admired Gaudí's work include Le Corbusier, Pier Luigi Nervi, Friedensreich Hundertwasser, Oscar Niemeyer, Félix Candela, Eduardo Torroja, Santiago Calatrava, and Norman Foster.",
+    "elapsed_s": 2.388
+  },
+  {
+    "id": "gaudi-unesco-designations-scope",
+    "question": "Which Gaudí works were included in UNESCO's original 1984 World Heritage listing, and which were added in the 2005 extension?",
+    "reference": "The 1984 listing covered Park Güell, the Palau Güell, and Casa Milà. The 2005 extension added the Nativity façade and crypt of Sagrada Família, Casa Vicens, Casa Batlló, and the crypt of the Colònia Güell.",
+    "contexts": [
+      "Antoni Gaudí. Location: . Architect: . Style: Catalan Modernisme (Art Nouveau); considered its greatest exponent, though his mature work transcends the movement, drawing chiefly from natural and geometric forms (ruled surfaces, hyperboloids, catenary arches). Status: . UNESCO: Seven works declared UNESCO World Heritage Sites under 'Works of Antoni Gaudí': 1984 original listing (Park Güell, Palau Güell, Casa Milà) and 2005 extension (Nativity façade and crypt of Sagrada Família, Casa Vicens, Casa Batlló, crypt of Colònia Güell).",
+      "Sagrada Família. Location: Eixample district, Barcelona, Catalonia, Spain. Architect: Antoni Gaudí (took over from Francisco de Paula del Villar after Villar's resignation on 18 March 1883 due to disagreements with the construction board; Gaudí was formally appointed Architect Director on 28 March 1884 and redesigned the project, keeping only the crypt). Style: Gothic Revival combined with curvilinear Art Nouveau / Catalan Modernisme. Status: Still under construction. On 30 October 2025 it became the tallest church building in the world, surpassing Ulm Minster (161.5 m); it reached its full height of 172.5 m on 20 February 2026. The main structure was targeted for completion around 2026 (the centenary of Gaudí's death), but sculptural details, decoration, and a planned monumental stairway are expected to continue until 2034. Funded solely by private donations and visitor entry fees, with no government or church funding. Received 3 million visitors by 1990 and 5 million in 2025.. UNESCO: The Nativity façade and Crypt were added to the existing (1984) 'Works of Antoni Gaudí' UNESCO World Heritage Site listing in 2005.",
+      "Casa Batlló. Location: Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain (part of the 'Illa de la Discòrdia' / 'Block of Discord', a row of four houses by leading Modernista architects in rivalry). Architect: Antoni Gaudí, assisted by Domènec Sugrañes i Gras, Josep Canaleta, and Joan Rubió (renovation of an existing 1877 eclectic building originally commissioned by Lluís Sala Sánchez and designed by Emili Sala Cortés, one of Gaudí's professors). Style: Catalan Modernisme / Art Nouveau. Status: Completed, open to the public as a museum. UNESCO: Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí' (reference 320-006); the overall listing was inscribed in 1984 and extended in 2005 to include Casa Batlló."
+    ],
+    "answer": "The Gaudí works included in UNESCO's original 1984 World Heritage listing were the Park Güell, Palau Güell, Casa Milà, and the Nativity façade and crypt of Sagrada Família. The works were added in the 2005 extension to the 2005 listing.",
+    "elapsed_s": 2.469
+  },
+  {
+    "id": "gaudi-sagrada-familia-original-architect",
+    "question": "Who was the original architect of the Sagrada Família before Gaudí, and why did Gaudí take over the project?",
+    "reference": "Francisco de Paula del Villar began construction in 1882 with a standard Gothic revival design. He resigned in March 1883 due to disagreements with the construction board, and the project passed to Gaudí, who completely redesigned it, keeping only the already-built crypt.",
+    "contexts": [
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Sagrada Família: At Gaudí's death in 1926, only an estimated 15-25% of the project was complete",
+      "Antoni Gaudí: Never married; devoted his life entirely to his profession and, from 1915 onward, to the Sagrada Família alone"
+    ],
+    "answer": "The original architect of the Sagrada Família before Gaudí was Antoni Gaudí. He dedicated his life to the project and was buried in its crypt.",
+    "elapsed_s": 2.308
+  },
+  {
+    "id": "gaudi-catenary-multiple-works-multihop",
+    "question": "Name two specific structures, in two different Gaudí projects, that use catenary or inverted-catenary arches, and explain what problem this technique solves.",
+    "reference": "Examples include the elevated viaducts at Park Güell, whose columns use inverted catenary arches for load-bearing, and the loft of Casa Batlló, whose sixty catenary arches form a ribcage-like structure. The catenary distributes weight evenly, affected only by self-cancelling tangential forces, letting Gaudí support loads without buttresses.",
+    "contexts": [
+      "Viaducts / elevated pathways (part of park_guell). Materials: local stone. Columns and vaulted supports mimic tree trunks and natural forms, blending the paths seamlessly with the surrounding landscape. As with Gaudí's earlier work at Colònia Güell, the viaducts use inverted catenary arches to achieve optimal load-bearing compression, so the stone columns work in pure compression without needing external buttressing. Columns and vaulted supports mimic tree trunks and natural forms, part of Gaudí's naturalist-period design language for the park.",
+      "Casa Batlló: The loft of Casa Batlló contains sixty catenary arches forming a ribcage-like structure that distributes weight evenly with self-cancelling tangential forces, supporting loads without external buttresses",
+      "Park Güell: A network of elevated stone pathways and viaducts designed by Gaudí uses inclined columns of local stone mimicking tree trunks and inverted catenary arches for load-bearing compression"
+    ],
+    "answer": "Two specific structures in Gaudi's projects that use catenary or inverted-catenary arches are:\n\n1. Casa Batlló: The loft of Casa Batlló contains sixty catenary arches forming a ribcage-like structure that distributes weight evenly with self-cancelling tangential forces, supporting loads without external buttresses.\n\n2. Park Güell: A network of elevated stone pathways and viaducts designed by Gaudi uses inclined columns of local stone mimicking tree trunks and inverted catenary arches for load-bearing compression.",
+    "elapsed_s": 2.559
+  },
+  {
+    "id": "gaudi-emili-sala-cortes-connection-multihop",
+    "question": "What is the connection between Emili Sala Cortés and Antoni Gaudí, beyond Sala Cortés having designed the original 1877 building that became Casa Batlló?",
+    "reference": "Emili Sala Cortés was one of Gaudí's professors at the Barcelona architecture school, and Gaudí also worked as a draughtsman for him early in his career to help finance his studies. Decades later, Gaudí was hired to completely redesign the building Sala Cortés had originally built.",
+    "contexts": [
+      "Antoni Gaudí: Emili Sala Cortés was one of Gaudí's professors at the Barcelona architecture school, and Gaudí worked as a draughtsman for him early in his career to help finance his studies; decades later Gaudí was hired to completely redesign Sala Cortés's original 1877 building into Casa Batlló",
+      "Casa Batlló. Location: Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain (part of the 'Illa de la Discòrdia' / 'Block of Discord', a row of four houses by leading Modernista architects in rivalry). Architect: Antoni Gaudí, assisted by Domènec Sugrañes i Gras, Josep Canaleta, and Joan Rubió (renovation of an existing 1877 eclectic building originally commissioned by Lluís Sala Sánchez and designed by Emili Sala Cortés, one of Gaudí's professors). Style: Catalan Modernisme / Art Nouveau. Status: Completed, open to the public as a museum. UNESCO: Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí' (reference 320-006); the overall listing was inscribed in 1984 and extended in 2005 to include Casa Batlló.",
+      "Antoni Gaudí. Location: . Architect: . Style: Catalan Modernisme (Art Nouveau); considered its greatest exponent, though his mature work transcends the movement, drawing chiefly from natural and geometric forms (ruled surfaces, hyperboloids, catenary arches). Status: . UNESCO: Seven works declared UNESCO World Heritage Sites under 'Works of Antoni Gaudí': 1984 original listing (Park Güell, Palau Güell, Casa Milà) and 2005 extension (Nativity façade and crypt of Sagrada Família, Casa Vicens, Casa Batlló, crypt of Colònia Güell)."
+    ],
+    "answer": "Emili Sala Cortés, a professor at the Barcelona architecture school, worked with Antoni Gaudí to redesign the original 1877 building that became Casa Batlló.",
+    "elapsed_s": 2.366
+  },
+  {
+    "id": "gaudi-park-guell-house-and-death-multihop",
+    "question": "How does Gaudí's decision to live in Park Güell from 1906 relate to how bystanders reacted when he was hit by a tram in 1926?",
+    "reference": "Gaudí moved into the Park Güell show home in 1906 and increasingly neglected his appearance in his later years while devoting himself to the Sagrada Família. Because of this worn, poor appearance, he was mistaken for a beggar after the 1926 tram accident and did not receive prompt help.",
+    "contexts": [
+      "Antoni Gaudí: Died after being struck by a Barcelona tram on 7 June 1926 while walking to daily prayer and confession; because of his shabby dress in later life he was initially mistaken for a beggar and did not receive immediate aid, dying three days later on 10 June 1926",
+      "Park Güell: Gaudí lived in the park's show home (designed by Francesc Berenguer i Mestres, now the Gaudí House Museum) from 1906 to 1925 with his father and niece before moving to the Sagrada Família workshop; the house opened as a museum in 1963",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself"
+    ],
+    "answer": "Gaudí's decision to live in Park Güell from 1906 is related to how bystanders reacted when he was hit by a tram in 1926. The context provided states that Gaudí was struck by a tram while walking to daily prayer and confession in 1926. This incident led to his initial mistaken identity as a beggar and the subsequent three-day delay in receiving immediate aid. The park's show home (designed by Francesc Berenguer i Mestres, now the Gaudí House Museum) was his temporary residence during this time.",
+    "elapsed_s": 2.646
+  },
+  {
+    "id": "gaudi-illa-discordia-vs-sagrada-timing-multihop",
+    "question": "Was Gaudí already working on the Sagrada Família when he was hired to redesign Casa Batlló, and how might that have influenced the Illa de la Discòrdia rivalry?",
+    "reference": "Gaudí had been chief architect of the Sagrada Família since 1883, over 20 years before Josep Batlló hired him in 1904 specifically because he wanted an audacious, iconoclastic design to outdo his neighbours in the Passeig de Gràcia rivalry — Gaudí's established reputation, built partly through Sagrada Família, was part of why he was chosen.",
+    "contexts": [
+      "Sagrada Família: Gaudí devoted the rest of his life to the project and is buried in its crypt",
+      "Antoni Gaudí: Emili Sala Cortés was one of Gaudí's professors at the Barcelona architecture school, and Gaudí worked as a draughtsman for him early in his career to help finance his studies; decades later Gaudí was hired to completely redesign Sala Cortés's original 1877 building into Casa Batlló",
+      "Casa Batlló. Location: Passeig de Gràcia, Eixample district, Barcelona, Catalonia, Spain (part of the 'Illa de la Discòrdia' / 'Block of Discord', a row of four houses by leading Modernista architects in rivalry). Architect: Antoni Gaudí, assisted by Domènec Sugrañes i Gras, Josep Canaleta, and Joan Rubió (renovation of an existing 1877 eclectic building originally commissioned by Lluís Sala Sánchez and designed by Emili Sala Cortés, one of Gaudí's professors). Style: Catalan Modernisme / Art Nouveau. Status: Completed, open to the public as a museum. UNESCO: Part of the UNESCO World Heritage Site 'Works of Antoni Gaudí' (reference 320-006); the overall listing was inscribed in 1984 and extended in 2005 to include Casa Batlló."
+    ],
+    "answer": "Yes, Gaudí was already working on the Sagrada Família when he was hired to redesign Casa Batlló. The rivalry between the two buildings was likely influenced by Gaudí's dedication to the Sagrada Família and his desire to create a modernist masterpiece that would challenge the existing architectural styles of the Illa de la Discòrdia.",
+    "elapsed_s": 2.454
+  },
+  {
+    "id": "gaudi-trencadis-cross-doc-multihop",
+    "question": "Where does the trencadís technique originate as a concept, and name two different structures across two different sites where it appears.",
+    "reference": "The Gaudí bio describes trencadís as a technique Gaudí introduced using waste ceramic pieces. It appears on the undulating bench at Park Güell, designed by Josep Maria Jujol, and on the façade of Casa Batlló, sourced from waste material of the Pelegrí glass works.",
+    "contexts": [
+      "Antoni Gaudí: Introduced the trencadís mosaic technique using broken or waste ceramic pieces, seen on the undulating bench at Park Güell (with Josep Maria Jujol) and the façade of Casa Batlló (with waste from the Pelegrí glassworks)",
+      "Serpentine Bench (Banc de trencadís) (part of park_guell). Materials: trencadís (broken tile/ceramic/glass mosaic). Its ergonomic, curving form creates enclaves along its length that encourage social interaction rather than facing visitors outward in a straight line. Sits directly atop the Hypostyle Room's vaulted terrace, following the ergonomic curve designed to double as a shared social space rather than a simple boundary wall. One of Gaudí's introductions of curved, undulating bench forms at Park Güell, a precursor to the style he later fully realized at the Sagrada Família.",
+      "Casa Batlló: The façade is covered in colorful trencadís (broken tile mosaic) made from waste ceramic from the Pelegrí glassworks"
+    ],
+    "answer": "The trencadís technique originates from the Park Güell site in Barcelona, Spain. It is introduced by Antoni Gaudí as a concept for a curved, undulating bench that encourages social interaction rather than a straight line of visitors. Two different structures where it appears are the Park Güell and Casa Batlló.",
+    "elapsed_s": 2.464
+  },
+  {
+    "id": "gaudi-jujol-collaboration-multihop",
+    "question": "What did Josep Maria Jujol contribute to both Park Güell and Casa Batlló?",
+    "reference": "Jujol designed the famous undulating, trencadís-covered serpentine bench at Park Güell. At Casa Batlló, he collaborated with Gaudí on the central façade's colored glass discs, designed together while both were working in Majorca on the Palma Cathedral restoration.",
+    "contexts": [
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral",
+      "Antoni Gaudí: Introduced the trencadís mosaic technique using broken or waste ceramic pieces, seen on the undulating bench at Park Güell (with Josep Maria Jujol) and the façade of Casa Batlló (with waste from the Pelegrí glassworks)",
+      "Casa Batlló: Became a UNESCO World Heritage Site in 2005"
+    ],
+    "answer": "Josep Maria Jujol contributed to both Park Güell and Casa Batlló through the use of the trencadís mosaic technique, which involved the use of broken or waste ceramic pieces. He designed the façade of Casa Batlló with waste from the Pelegrí glassworks, while working on the Palma Cathedral in Majorca.",
+    "elapsed_s": 2.481
+  },
+  {
+    "id": "dragon-symbolism-three-doc-multihop",
+    "question": "How does dragon imagery connect Casa Batlló, Park Güell, and Gaudí's Catalan identity?",
+    "reference": "Casa Batlló's roof is designed to resemble a dragon's back, tied to the legend of Saint George. Park Güell features a dragon fountain that has become a park symbol. The Gaudí bio explains dragons were seen as Catalan symbols during the Renaixença because of their connection to Catalan patron saint George, linking both buildings to Gaudí's broader Catalan nationalist symbolism.",
+    "contexts": [
+      "Antoni Gaudí: Dragons were seen as Catalan nationalist symbols during the Renaixença due to their connection with Saint George (patron saint of Catalonia), connecting Casa Batlló's dragon-back roof and Park Güell's dragon/salamander to Gaudí's Catalan identity",
+      "Park Güell (part of Park Güell). Materials: local stone (viaducts and columns), trencadís (broken tile/ceramic mosaic). Inspired by the English garden-city movement (hence the English word 'Park' in its name); marks Gaudí's 'naturalist period', in which his study of nature and organic forms drove both ornament and underlying structural geometry. Symbolic references throughout include political Catalanism (entrance stairway) and Catholicism (the Calvary, originally conceived as a chapel). Uses inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudí used earlier at Colònia Güell. Entry to the Monumental Zone (main terrace, mosaics, viaducts, gate area) has required a paid ticket since October 2013; Barcelona residents enter free. UNESCO's 1984 inscription describes the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism. Introduced curved, undulating benches at Park Güell -- a precursor to the style Gaudí later fully realized at the Sagrada Família.",
+      "Park Güell: The park hosted the First Congress of the Catalan Language during its construction"
+    ],
+    "answer": "Casa Batlló's dragon-back roof and Park Güell's dragon/salamander symbolize Gaudí's Catalan identity.",
+    "elapsed_s": 2.281
+  },
+  {
+    "id": "unanswerable-park-guell-visitors",
+    "question": "How many visitors does Park Güell receive annually?",
+    "reference": "UNANSWERABLE: Annual visitor figures are given for Sagrada Família (3 million by 1990, 5 million in 2025), but no visitor count is stated for Park Güell in the source material.",
+    "contexts": [
+      "Park Güell: Became a municipal garden/park after the private development failed",
+      "Park Güell: Originally conceived by Güell as a private, English-style garden-city development of 60 luxury home plots; only one plot ever sold — to Gaudí himself",
+      "Park Güell (part of Park Güell). Materials: local stone (viaducts and columns), trencadís (broken tile/ceramic mosaic). Inspired by the English garden-city movement (hence the English word 'Park' in its name); marks Gaudí's 'naturalist period', in which his study of nature and organic forms drove both ornament and underlying structural geometry. Symbolic references throughout include political Catalanism (entrance stairway) and Catholicism (the Calvary, originally conceived as a chapel). Uses inverted catenary arches for its viaducts and elevated pathways, the same load-bearing-compression method Gaudí used earlier at Colònia Güell. Entry to the Monumental Zone (main terrace, mosaics, viaducts, gate area) has required a paid ticket since October 2013; Barcelona residents enter free. UNESCO's 1984 inscription describes the park's architecture as combining the Arts and Crafts movement, Symbolism, Expressionism, and Rationalism, and as having presaged techniques of 20th-century Modernism. Introduced curved, undulating benches at Park Güell -- a precursor to the style Gaudí later fully realized at the Sagrada Família."
+    ],
+    "answer": "Park Güell receives approximately 100,000 visitors annually.",
+    "elapsed_s": 2.18
+  },
+  {
+    "id": "unanswerable-casa-batllo-staircase-steps",
+    "question": "How many steps does the spiral staircase to Casa Batlló's roof have?",
+    "reference": "UNANSWERABLE: A narrow spiral staircase of over 300 steps is described for the Sagrada Família's towers, not Casa Batlló. No step count is given for Casa Batlló.",
+    "contexts": [
+      "Casa Batlló: The roof terrace is decorated with four chimney stacks designed with specialized curves to prevent backdraughts",
+      "Casa Batlló: The loft of Casa Batlló contains sixty catenary arches forming a ribcage-like structure that distributes weight evenly with self-cancelling tangential forces, supporting loads without external buttresses",
+      "Casa Batlló: The central part of the façade evokes the rippling surface of a lake with water lilies, reminiscent of Monet's Nymphéas paintings, covered with plaster fragments of colored glass discs combined with 330 rounds of polychrome pottery, designed by Gaudí and Josep Maria Jujol while working in Majorca on the Palma Cathedral"
+    ],
+    "answer": "The roof terrace of Casa Batlló has four chimney stacks, which are designed with specialized curves to prevent backdrafts. Therefore, the number of steps in the spiral staircase to Casa Batlló's roof is four.",
+    "elapsed_s": 2.462
+  }
+]

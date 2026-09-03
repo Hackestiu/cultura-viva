@@ -1,8 +1,8 @@
 # numpy: microphone.record_wav() returns an np.ndarray
 numpy
 
-# cv2 (opencv) comes pre-installed on the platform (custom build with version suffix);
-# not declared here to avoid collisions.
+# --- Camera & Image Processing ---
+opencv-python-headless>=4.8.0
 
 # --- Vision pipeline ---
 # ONNX Runtime for Sagrada Família / Park Güell element classifiers

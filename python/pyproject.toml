@@ -4,12 +4,24 @@ version = "2.0.0"
 description = "Guia turístic multimodal amb IA per a Arduino UNO Q (STT, SLM, TTS i Visió)"
 requires-python = ">=3.10"
 dependencies = [
-    "numpy>=1.24.0",
-    "onnxruntime>=1.16.0",
+    # Càmera i processament d'imatge (cv2, PIL, numpy)
+    "opencv-python-headless>=4.8.0",
     "pillow>=10.0.0",
+    "numpy>=1.24.0",
+
+    # Visió per computador (classificadors ONNX Park Güell i Sagrada Família)
+    "onnxruntime>=1.16.0",
+
+    # Speech-to-Text (STT amb faster-whisper)
     "faster-whisper>=1.0.0",
+
+    # Small Language Model (SLM GGUF via llama-cpp)
     "llama-cpp-python>=0.2.0",
+
+    # Text-to-Speech (TTS Piper 3 veus)
     "piper-tts>=1.2.0",
+
+    # Reproducció d'àudio (fallback Python per a ALSA / Jack 3.5mm)
     "sounddevice>=0.4.6",
 ]
 

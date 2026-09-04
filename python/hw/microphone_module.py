@@ -127,13 +127,22 @@ class MicrophoneManager:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
         
-        # Handle floating point audio [-1.0, 1.0] vs raw integer audio
+        # Inspect audio characteristics
+        min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
+        max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
+        mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
+        print(f"[DEBUG MIC] dtype={audio.dtype}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}")
+
+        # Handle various ALSA audio formats
         if np.issubdtype(audio.dtype, np.floating):
-            max_val = np.max(np.abs(audio)) if len(audio) > 0 else 0.0
-            if max_val <= 1.5:  # Normalized float audio in [-1.0, 1.0]
+            # Float audio normalized [-1.0, 1.0]
+            if max(abs(min_v), abs(max_v)) <= 1.5:
                 samples = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
             else:
                 samples = np.clip(audio, -32768, 32767).astype(np.int16)
+        elif audio.dtype == np.uint8 or (min_v >= 0 and max_v <= 255 and mean_v > 64):
+            # 8-bit unsigned PCM [0, 255] with center at 128 -> convert to 16-bit signed PCM
+            samples = ((audio.astype(np.float32) - 128.0) * 256.0).astype(np.int16)
         else:
             samples = audio.astype(np.int16)
 

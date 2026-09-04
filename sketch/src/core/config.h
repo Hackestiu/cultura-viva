@@ -29,6 +29,6 @@
 #define CAM_SCALE 4
 
 // Input filtering and debouncing thresholds
-const int16_t KNOB_MAX_JUMP = 15;
+const int16_t KNOB_MAX_JUMP = 150;
 const unsigned long VIEW_SWITCH_DEBOUNCE_MS = 50;
 

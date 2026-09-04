@@ -12,6 +12,10 @@ The trigger that decides when to mark a landmark as visited or move the
 'you are here' marker is outside the scope of this module. Call
 mark_visited(), set_position(), or reset() from main.py or wherever
 the triggering event occurs (GPS, button, knob, proximity, etc.).
+
+mark_detected(location, vision_label) is the high-level entry-point for the
+vision pipeline: it maps the label returned by VisionClassifier.classify()
+directly to a landmark code and marks it as visited on the minimap.
 """
 
 import json
@@ -24,6 +28,32 @@ except ModuleNotFoundError:
     Bridge = None
 
 LANDMARKS_FILE = MINIMAP_DIR / "landmarks.json"
+
+# ---------------------------------------------------------------------------
+# Mapping: vision model label  →  landmark code (per location)
+# Keys must match the labels in models/vision/<location>/labels.json exactly.
+# Values must match the 'code' field in minimapa/landmarks.json.
+# ---------------------------------------------------------------------------
+VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
+    "park_guell": {
+        "escalinata_drac":      "DR",  # Dragon Stairway
+        "sala_hipostila":       "HH",  # Hypostyle Hall
+        "placa_natura":         "NS",  # Nature Square
+        "casa_museu":           "CG",  # Casa Museu Gaudí
+        "3_viaductes":          "TV",  # The Three Viaducts
+        "turo_3_creus":         "CH",  # Calvary Hill
+        "pavellons_consergeria":"PL",  # Porter's Lodge
+    },
+    "sagrada_familia": {
+        # Sagrada Família has no minimap landmarks yet; extend as needed.
+        "cupula":           None,
+        "facana_naixement": None,
+        "facana_passio":    None,
+        "laterals":         None,
+        "posterior":        None,
+        "torres":           None,
+    },
+}
 
 
 class MinimapManager:
@@ -55,6 +85,32 @@ class MinimapManager:
         return None
 
     # ---------- Public API ----------
+    def mark_detected(self, location: str, vision_label: str) -> bool:
+        """Marks the minimap landmark that corresponds to *vision_label* for
+        *location* as visited (illuminated on the minimap).
+
+        Called automatically by the Cultura Viva pipeline after VisionClassifier
+        returns a recognised, non-unknown element.
+
+        :param location:     'park_guell' or 'sagrada_familia'.
+        :param vision_label: Raw label from VisionClassifier.classify().
+        :returns:            True if the landmark was resolved and the RPC call
+                             was dispatched; False if the label has no mapping or
+                             the landmark code is None (location not yet mapped).
+        """
+        location_map = VISION_LABEL_TO_LANDMARK.get(location)
+        if location_map is None:
+            print(f"[WARN] minimap: no landmark mapping for location '{location}'")
+            return False
+
+        code = location_map.get(vision_label)
+        if code is None:
+            # Label is either unknown/non-monument or not yet mapped.
+            return False
+
+        print(f"[INFO] minimap: vision detected '{vision_label}' -> marking landmark '{code}'")
+        return self.mark_visited(code)
+
     def mark_visited(self, label: str) -> bool:
         """Marks the landmark identified by label as visited.
         label may be a landmark code (e.g. 'DR') or a numeric index as a string.

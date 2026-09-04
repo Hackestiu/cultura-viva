@@ -48,6 +48,7 @@ from config import (
     PHOTOS_DIR,
     POLL_INTERVAL,
     RECORDINGS_DIR,
+    VISION_UNKNOWN_LABEL,
 )
 from core.minimap_module import MinimapManager
 from core.model_module import ModelRegistry
@@ -69,6 +70,7 @@ models     = ModelRegistry()
 vision     = VisionClassifier()
 location   = LocationRegistry()
 player     = AudioPlayer()
+minimap    = MinimapManager()
 
 
 def run_app() -> None:
@@ -151,6 +153,11 @@ def run_app() -> None:
 
                             site       = location.current()          # 'park_guell' / 'sagrada_familia'
                             element    = vision.classify(site, photo_path) if photo_path else None
+
+                            # If the vision model found a recognisable landmark,
+                            # illuminate it on the minimap immediately.
+                            if element and element != VISION_UNKNOWN_LABEL:
+                                minimap.mark_detected(site, element)
 
                             kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                             answer     = models.generate_response(

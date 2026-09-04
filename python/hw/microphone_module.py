@@ -126,13 +126,24 @@ class MicrophoneManager:
         Returns the path of the saved file."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
-        samples = audio.astype(np.int16)
+        
+        # Handle floating point audio [-1.0, 1.0] vs raw integer audio
+        if np.issubdtype(audio.dtype, np.floating):
+            max_val = np.max(np.abs(audio)) if len(audio) > 0 else 0.0
+            if max_val <= 1.5:  # Normalized float audio in [-1.0, 1.0]
+                samples = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
+            else:
+                samples = np.clip(audio, -32768, 32767).astype(np.int16)
+        else:
+            samples = audio.astype(np.int16)
+
+        max_sample = int(np.max(np.abs(samples))) if len(samples) > 0 else 0
         with wave.open(str(out_file), "wb") as wf:
             wf.setnchannels(1)       # mono (Microphone.CHANNELS_MONO)
             wf.setsampwidth(2)       # 16-bit = 2 bytes
             wf.setframerate(16000)   # 16 kHz (Microphone.RATE_16K)
             wf.writeframes(samples.tobytes())
-        print(f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}')")
+        print(f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767)")
         return out_file
 
     def transcribe(self, audio_path) -> str:

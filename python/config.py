@@ -70,7 +70,7 @@ for _dir in (
 
 # ---------- Microphone (question recording, button D7 toggle mode) ----------
 # ALSA identifier for the microphone -- confirmed: "hw:0,0" (Logitech Brio 105)
-MIC_DEVICE = "hw:0,0"
+MIC_DEVICE = "hw:CARD=B105,DEV=0"
 
 # ---------- Audio Playback (Jack 3.5mm headphones, volume via Modulino Knob) ----------
 # ALSA output device for wired headphones connected via 3.5mm jack.
@@ -153,4 +153,4 @@ VISION_NON_RECOGNIZABLE_LABELS = {
     "none",
     "fons",
 }
-VISION_UNKNOWN_LABEL = "unknown"
+VISION_UNKNOWN_LABEL = "unknown"

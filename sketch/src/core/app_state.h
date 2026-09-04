@@ -44,6 +44,11 @@ int get_volume();
 bool is_recording_active();
 
 /**
+ * Returns whether Python should continue sending live camera frames.
+ */
+bool camera_live_view_active();
+
+/**
  * Sets whether the Python audio/AI pipeline is processing the current question.
  */
 void set_processing_active(bool active);

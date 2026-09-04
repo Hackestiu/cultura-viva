@@ -106,7 +106,7 @@ cultura-viva-uno-q/
                → "Are you sure?" apareix a la pantalla
 3. Switch OFF  → Confirma la foto → buzzer → desbloqueig de l'àudio
 4. [Opcional] Botons A/B/C → Selecciona personalitat (Artístic/Tècnic/Infantil)
-5. Push button (hold) → Grava la pregunta → para quan es deixa anar
+5. Push button → Grava la pregunta → un segon toc atura la gravació
 6. Pipeline automàtica:
      STT     → Transcriu la pregunta (faster-whisper)
      Visió   → Classifica l'element Gaudí de la foto (ONNX)
@@ -151,6 +151,7 @@ Totes les funcions que el **sketch exposa** (`Bridge.provide`) i el **Python cri
 | `photo_trigger()` | `bool` | `True` una sola vegada quan es prem el push button en mode càmera (auto-consumida) |
 | `confirm_photo_saved()` | — | Python la crida quan la foto s'ha desat → fa sonar el buzzer i mostra confirmació |
 | `view_switch_state()` | `bool` | Estat debounced del switch (`True`=càmera, `False`=minimapa) |
+| `camera_live_view_active()` | `bool` | Indica si Python ha de continuar actualitzant la vista de càmera; queda `False` durant la confirmació de la foto |
 | `receive_camera_chunk(idx, total, data_b64)` | — | Rep un chunk de la miniatura de la vista en directe |
 | `get_personality_index()` | `int` 0/1/2 | Personalitat activa seleccionada amb A/B/C |
 | `is_recording_active()` | `bool` | `True` mentre s'està gravant (toggle push button en mode minimapa) |

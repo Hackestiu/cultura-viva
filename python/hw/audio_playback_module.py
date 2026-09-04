@@ -16,7 +16,6 @@ See models/tts/README.md for download instructions.
 Uses 'aplay' (alsa-utils) and 'amixer' via subprocess for playback and volume.
 """
 
-import inspect
 import os
 import subprocess
 import time
@@ -48,82 +47,6 @@ PERSONALITY_VOICE: dict[str, str] = {
 DEFAULT_VOICE = "libriTTS_r_medium"
 
 _DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
-
-
-# ---------------------------------------------------------------------------
-# Proxy for wave.Wave_write compatible with Piper synthesis
-# ---------------------------------------------------------------------------
-
-class _PiperWaveWriterProxy:
-    """Proxy around wave.Wave_write providing synthesis configuration attributes
-    (speaker_id, length_scale, noise_scale, noise_w, sentence_silence, etc.)
-    that certain versions of PiperVoice.synthesize read directly from the wav_file argument,
-    while delegating all audio writing methods to the underlying Wave_write instance."""
-
-    def __init__(
-        self,
-        wf: wave.Wave_write,
-        speaker_id: Optional[int] = None,
-        length_scale: float = 1.0,
-        noise_scale: float = 0.667,
-        noise_w: float = 0.8,
-        sentence_silence: float = 0.0,
-    ):
-        self._wf = wf
-        self.speaker_id = speaker_id
-        self.length_scale = float(length_scale)
-        self.noise_scale = float(noise_scale)
-        self.noise_w = float(noise_w)
-        self.sentence_silence = float(sentence_silence)
-        self.volume = 1.0
-        self.rate = 1.0
-        self.pitch = 1.0
-
-    def write(self, data):
-        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
-            data = data.tobytes()
-        if isinstance(data, (bytes, bytearray)):
-            self._wf.writeframes(data)
-            return len(data)
-        return 0
-
-    def writeframes(self, data):
-        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
-            data = data.tobytes()
-        return self._wf.writeframes(data)
-
-    def writeframesraw(self, data):
-        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
-            data = data.tobytes()
-        return self._wf.writeframesraw(data)
-
-    def flush(self):
-        pass
-
-    def getnframes(self):
-        return self._wf.getnframes()
-
-    def setnchannels(self, n):
-        return self._wf.setnchannels(n)
-
-    def setsampwidth(self, n):
-        return self._wf.setsampwidth(n)
-
-    def setframerate(self, n):
-        return self._wf.setframerate(n)
-
-    def close(self):
-        return self._wf.close()
-
-    def __getattr__(self, name: str):
-        if hasattr(self._wf, name):
-            return getattr(self._wf, name)
-        # Safe numeric defaults for scale / rate / silence / multiplier attributes
-        if "scale" in name or "rate" in name or "volume" in name or "pitch" in name:
-            return 1.0
-        if "silence" in name or "delay" in name:
-            return 0.0
-        raise AttributeError(f"'_PiperWaveWriterProxy' object has no attribute '{name}'")
 
 
 # ---------------------------------------------------------------------------
@@ -234,79 +157,24 @@ class AudioPlayer:
 
         _, speaker_id = _VOICE_REGISTRY[voice_key]
         try:
+            from piper import SynthesisConfig  # type: ignore[import]
+
+            cfg = getattr(voice_obj, "config", None)
+            length_scale = getattr(cfg, "length_scale", None)
+            noise_scale = getattr(cfg, "noise_scale", None)
+            noise_w_scale = getattr(cfg, "noise_w_scale", None) or getattr(cfg, "noise_w", None)
+
+            syn_config = SynthesisConfig(
+                speaker_id=speaker_id,
+                length_scale=length_scale,
+                noise_scale=noise_scale,
+                noise_w_scale=noise_w_scale,
+            )
+
             buf = BytesIO()
             with wave.open(buf, "wb") as wf:
-                sample_rate = getattr(getattr(voice_obj, "config", None), "sample_rate", 22050)
-                wf.setframerate(sample_rate)
-                wf.setsampwidth(2)
-                wf.setnchannels(1)
-
-                cfg = getattr(voice_obj, "config", None)
-                length_scale = getattr(cfg, "length_scale", 1.0) or 1.0
-                noise_scale = getattr(cfg, "noise_scale", 0.667) or 0.667
-                noise_w = getattr(cfg, "noise_w", 0.8) or 0.8
-                sentence_silence = getattr(cfg, "sentence_silence", 0.0) or 0.0
-
-                proxy = _PiperWaveWriterProxy(
-                    wf,
-                    speaker_id=speaker_id,
-                    length_scale=length_scale,
-                    noise_scale=noise_scale,
-                    noise_w=noise_w,
-                    sentence_silence=sentence_silence,
-                )
-
-                # 1. Try synthesize(text, proxy, ...)
-                try:
-                    sig = inspect.signature(voice_obj.synthesize)
-                    kwargs = {}
-                    if "speaker_id" in sig.parameters and speaker_id is not None:
-                        kwargs["speaker_id"] = speaker_id
-                    if "length_scale" in sig.parameters:
-                        kwargs["length_scale"] = length_scale
-                    if "noise_scale" in sig.parameters:
-                        kwargs["noise_scale"] = noise_scale
-                    if "noise_w" in sig.parameters:
-                        kwargs["noise_w"] = noise_w
-                    if "sentence_silence" in sig.parameters:
-                        kwargs["sentence_silence"] = sentence_silence
-                    res = voice_obj.synthesize(text, proxy, **kwargs)
-                except TypeError:
-                    try:
-                        res = voice_obj.synthesize(text, proxy)
-                    except Exception as e:
-                        print(f"[DEBUG TTS] voice.synthesize(text, proxy) error: {e}")
-                        res = None
-                except Exception as e:
-                    print(f"[DEBUG TTS] voice.synthesize error: {e}")
-                    res = None
-
-                # Handle generator / chunks if returned by synthesize
-                if res is not None and hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
-                    for chunk in res:
-                        data = getattr(chunk, "audio_data", chunk)
-                        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
-                            data = data.tobytes()
-                        if isinstance(data, (bytes, bytearray)):
-                            wf.writeframes(data)
-                elif isinstance(res, (bytes, bytearray)):
-                    wf.writeframes(res)
-
-                # 2. Fallback: synthesize_stream_raw
-                if wf.getnframes() == 0 and hasattr(voice_obj, "synthesize_stream_raw"):
-                    try:
-                        sig = inspect.signature(voice_obj.synthesize_stream_raw)
-                        stream_kwargs = {}
-                        if "speaker_id" in sig.parameters and speaker_id is not None:
-                            stream_kwargs["speaker_id"] = speaker_id
-                        for chunk in voice_obj.synthesize_stream_raw(text, **stream_kwargs):
-                            data = getattr(chunk, "audio_data", chunk)
-                            if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
-                                data = data.tobytes()
-                            if isinstance(data, (bytes, bytearray)):
-                                wf.writeframes(data)
-                    except Exception as e:
-                        print(f"[DEBUG TTS] synthesize_stream_raw error: {e}")
+                # synthesize_wav sets channels/width/rate itself (set_wav_format=True)
+                voice_obj.synthesize_wav(text, wf, syn_config=syn_config)
 
             wav_bytes = buf.getvalue()
             if len(wav_bytes) <= 44:
@@ -371,5 +239,3 @@ class AudioPlayer:
         except Exception as exc:
             print(f"[ERROR] AudioPlayer: failed to load voice '{voice_key}': {exc}")
             return None
-
-

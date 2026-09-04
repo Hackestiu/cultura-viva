@@ -55,7 +55,7 @@ void set_photo_validation_state(int state) {
   photoValidationState = (int8_t)state;
 }
 
-void set_retake_message(String msg) {
-  strncpy(retakeLocationLabel, msg.c_str(), sizeof(retakeLocationLabel) - 1);
+void set_retake_message(const char* msg) {
+  strncpy(retakeLocationLabel, msg, sizeof(retakeLocationLabel) - 1);
   retakeLocationLabel[sizeof(retakeLocationLabel) - 1] = '\0';
 }

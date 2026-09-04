@@ -163,23 +163,36 @@ class AudioPlayer:
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
 
-                kwargs = {}
-                if speaker_id is not None:
-                    kwargs["speaker_id"] = speaker_id
-
-                # PiperVoice.synthesize is a generator: it only executes and writes when iterated over
-                try:
-                    res = voice_obj.synthesize(text, wf, **kwargs)
-                except (TypeError, AttributeError):
-                    try:
-                        res = voice_obj.synthesize(text, wf)
-                    except (TypeError, AttributeError):
-                        res = voice_obj.synthesize_wav(text, wf)
-
-                if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
-                    for chunk in res:
-                        if isinstance(chunk, (bytes, bytearray)) and wf.getnframes() == 0:
+                # 1. Preferred method: synthesize_stream_raw yields PCM chunks cleanly
+                if hasattr(voice_obj, "synthesize_stream_raw"):
+                    stream_kwargs = {}
+                    if speaker_id is not None:
+                        stream_kwargs["speaker_id"] = speaker_id
+                    for chunk in voice_obj.synthesize_stream_raw(text, **stream_kwargs):
+                        if isinstance(chunk, (bytes, bytearray)):
                             wf.writeframes(chunk)
+
+                # 2. Fallback: synthesize with explicit keyword arguments (wav_file=wf)
+                if wf.getnframes() == 0:
+                    kwargs = {"wav_file": wf}
+                    if speaker_id is not None:
+                        kwargs["speaker_id"] = speaker_id
+                    try:
+                        res = voice_obj.synthesize(text, **kwargs)
+                        if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
+                            for chunk in res:
+                                data = getattr(chunk, "audio_data", chunk)
+                                if isinstance(data, (bytes, bytearray)) and wf.getnframes() == 0:
+                                    wf.writeframes(data)
+                    except Exception:
+                        # 3. Fallback: synthesize(text, speaker_id=...) without wav_file arg
+                        kwargs2 = {"speaker_id": speaker_id} if speaker_id is not None else {}
+                        res = voice_obj.synthesize(text, **kwargs2)
+                        if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
+                            for chunk in res:
+                                data = getattr(chunk, "audio_data", chunk)
+                                if isinstance(data, (bytes, bytearray)):
+                                    wf.writeframes(data)
 
             wav_bytes = buf.getvalue()
             print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")

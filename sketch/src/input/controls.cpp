@@ -6,6 +6,7 @@
 #include "../core/app_state.h"
 #include "../display/ui_manager.h"
 #include "../display/camera_view.h"
+#include "../display/minimap.h"
 
 ModulinoKnob    knob;
 ModulinoButtons buttons;

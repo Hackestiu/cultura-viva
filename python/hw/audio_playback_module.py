@@ -34,13 +34,13 @@ from config import DEFAULT_VOLUME_PERCENT, MODELS_DIR, PLAYBACK_DEVICE, RESPONSE
 
 _VOICE_REGISTRY: dict[str, tuple[str, Optional[int]]] = {
     "libriTTS_r_medium": ("en_US-libritts_r-medium", None),
-    "semaine_spike":     ("en_GB-semaine-medium", 0),
-    "semaine_prudence":  ("en_GB-semaine-medium", 1),
+    "semaine_spike":     ("en_GB-semaine-medium", 1),
+    "semaine_prudence":  ("en_GB-semaine-medium", 0),
 }
 
 PERSONALITY_VOICE: dict[str, str] = {
-    "artistic":  "libriTTS_r_medium",
-    "technical": "semaine_spike",
+    "artistic":  "semaine_spike",
+    "technical": "libriTTS_r_medium",
     "child":     "semaine_prudence",
 }
 

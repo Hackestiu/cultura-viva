@@ -164,7 +164,7 @@ void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
     tft.setTextColor(0xFFFF); // White
     tft.setTextSize(1);
     tft.setCursor(24, 72);
-    tft.print(F("Scanning photo"));
+    tft.print(F("Scanning photo "));
   }
 
   // Animated dots only — erase & redraw the dot area
@@ -214,38 +214,42 @@ void drawVisionValidScreen() {
   // Bottom accent bar
   tft.fillRect(0, 125, 160, 3, 0x07E0);
 }
-
 void drawVisionInvalidScreen(const char* locationLabel) {
-  // Dark red background
+ 
   tft.fillScreen(tft.color565(70, 10, 10));
 
-  // Top accent bar
   tft.fillRect(0, 0, 160, 3, 0xF800); // Red
 
-  // X symbol (two crossed lines)
-  for (int t = -3; t <= 3; t++) {
-    tft.drawLine(52, 20 + abs(t), 108, 60 + abs(t), 0xF800);
-    tft.drawLine(108, 20 + abs(t), 52, 60 + abs(t), 0xF800);
+  for (int t = -2; t <= 2; t++) {
+    tft.drawLine(68, 18 + abs(t), 92, 42 + abs(t), 0xF800);
+    tft.drawLine(92, 18 + abs(t), 68, 42 + abs(t), 0xF800);
   }
 
-  // Title
-  tft.setTextColor(0xFFFF); // White
   tft.setTextSize(1);
-  tft.setCursor(8, 68);
-  tft.print(F("Not a monument in:"));
 
-  // Location label (highlight in yellow)
-  tft.setTextColor(0xFFE0); // Yellow
-  tft.setCursor(8, 80);
+  const char* title = "Not a monument in:";
+  int xTitle = (160 - (strlen(title) * 6)) / 2;
+  tft.setTextColor(0xFFFF); // Blanco
+  tft.setCursor(xTitle, 52);
+  tft.print(title);
+
+  int xLabel = (160 - (strlen(locationLabel) * 6)) / 2;
+  if (xLabel < 0) xLabel = 0; // Previene salir de pantalla si es muy largo
+  tft.setTextColor(tft.color565(255, 120, 120)); // Rojo brillante/claro
+  tft.setCursor(xLabel, 68);
   tft.print(locationLabel);
 
-  // Instruction
-  tft.setTextColor(tft.color565(240, 180, 180)); // Light red
-  tft.setCursor(8, 96);
-  tft.print(F("Retake photo of a"));
-  tft.setCursor(8, 107);
-  tft.print(F("valid monument."));
+  const char* line1 = "Retake photo of a";
+  int xLine1 = (160 - (strlen(line1) * 6)) / 2;
+  tft.setTextColor(tft.color565(240, 180, 180)); // Rojo suave
+  tft.setCursor(xLine1, 88);
+  tft.print(line1);
 
-  // Bottom accent bar
+
+  const char* line2 = "valid monument.";
+  int xLine2 = (160 - (strlen(line2) * 6)) / 2;
+  tft.setCursor(xLine2, 100);
+  tft.print(line2);
+
   tft.fillRect(0, 125, 160, 3, 0xF800);
 }

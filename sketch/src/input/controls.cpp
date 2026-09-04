@@ -410,7 +410,7 @@ void updateControls() {
   }
 
   // Auto-advance from state 1 (valid) after ~1800ms -> show photo confirmation
-  if (photoValidationState == 1 && (millis() - validationHoldStart >= 1800)) {
+  if (photoValidationState == 1 && (millis() - validationHoldStart >= 5000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;
     hasCapturedPhoto = true;
@@ -424,7 +424,7 @@ void updateControls() {
   }
 
   // Auto-advance from state 2 (invalid) after ~2000ms -> back to camera live view
-  if (photoValidationState == 2 && (millis() - validationHoldStart >= 2000)) {
+  if (photoValidationState == 2 && (millis() - validationHoldStart >= 6000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;
     hasCapturedPhoto = false;

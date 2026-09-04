@@ -51,6 +51,59 @@ _DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
 
 
 # ---------------------------------------------------------------------------
+# Proxy for wave.Wave_write compatible with Piper synthesis
+# ---------------------------------------------------------------------------
+
+class _PiperWaveWriterProxy:
+    """Proxy around wave.Wave_write providing synthesis configuration attributes
+    (speaker_id, length_scale, noise_scale, noise_w, sentence_silence, etc.)
+    that certain versions of PiperVoice.synthesize read directly from the wav_file argument,
+    while delegating all audio writing methods to the underlying Wave_write instance."""
+
+    def __init__(
+        self,
+        wf: wave.Wave_write,
+        speaker_id: Optional[int] = None,
+        length_scale: Optional[float] = None,
+        noise_scale: Optional[float] = None,
+        noise_w: Optional[float] = None,
+        sentence_silence: float = 0.0,
+    ):
+        self._wf = wf
+        self.speaker_id = speaker_id
+        self.length_scale = length_scale
+        self.noise_scale = noise_scale
+        self.noise_w = noise_w
+        self.sentence_silence = sentence_silence
+
+    def writeframes(self, data):
+        return self._wf.writeframes(data)
+
+    def writeframesraw(self, data):
+        return self._wf.writeframesraw(data)
+
+    def getnframes(self):
+        return self._wf.getnframes()
+
+    def setnchannels(self, n):
+        return self._wf.setnchannels(n)
+
+    def setsampwidth(self, n):
+        return self._wf.setsampwidth(n)
+
+    def setframerate(self, n):
+        return self._wf.setframerate(n)
+
+    def close(self):
+        return self._wf.close()
+
+    def __getattr__(self, name: str):
+        if hasattr(self._wf, name):
+            return getattr(self._wf, name)
+        return None
+
+
+# ---------------------------------------------------------------------------
 # AudioPlayer
 # ---------------------------------------------------------------------------
 
@@ -164,9 +217,14 @@ class AudioPlayer:
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
 
-                # This Piper version reads speaker_id directly from wav_file object
-                if speaker_id is not None:
-                    wf.speaker_id = speaker_id  # type: ignore[attr-defined]
+                proxy = _PiperWaveWriterProxy(
+                    wf,
+                    speaker_id=speaker_id,
+                    length_scale=None,
+                    noise_scale=None,
+                    noise_w=None,
+                    sentence_silence=0.0,
+                )
 
                 # 1. Try synthesize_stream_raw (yields raw PCM byte chunks)
                 if hasattr(voice_obj, "synthesize_stream_raw"):
@@ -181,9 +239,17 @@ class AudioPlayer:
                     except Exception:
                         pass
 
-                # 2. Fallback: synthesize(text, wav_file) — wf.speaker_id already set above
+                # 2. Fallback: synthesize(text, proxy)
                 if wf.getnframes() == 0:
-                    res = voice_obj.synthesize(text, wf)
+                    try:
+                        sig = inspect.signature(voice_obj.synthesize)
+                        kwargs = {}
+                        if "speaker_id" in sig.parameters and speaker_id is not None:
+                            kwargs["speaker_id"] = speaker_id
+                        res = voice_obj.synthesize(text, proxy, **kwargs)
+                    except TypeError:
+                        res = voice_obj.synthesize(text, proxy)
+
                     if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
                         for chunk in res:
                             data = getattr(chunk, "audio_data", chunk)

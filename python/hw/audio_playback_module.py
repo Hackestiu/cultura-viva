@@ -158,31 +158,22 @@ class AudioPlayer:
 
         _, speaker_id = _VOICE_REGISTRY[voice_key]
         try:
-            # Set speaker_id on voice or config if supported
-            if speaker_id is not None:
-                if hasattr(voice_obj, "speaker_id"):
-                    try:
-                        voice_obj.speaker_id = speaker_id
-                    except Exception:
-                        pass
-                if hasattr(voice_obj, "config") and hasattr(voice_obj.config, "speaker_id"):
-                    try:
-                        voice_obj.config.speaker_id = speaker_id
-                    except Exception:
-                        pass
-
             buf = BytesIO()
             with wave.open(buf, "wb") as wf:
                 wf.setframerate(voice_obj.config.sample_rate)
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
 
-                # 1. Try synthesize_stream_raw if available
+                # This Piper version reads speaker_id directly from wav_file object
+                if speaker_id is not None:
+                    wf.speaker_id = speaker_id  # type: ignore[attr-defined]
+
+                # 1. Try synthesize_stream_raw (yields raw PCM byte chunks)
                 if hasattr(voice_obj, "synthesize_stream_raw"):
                     try:
-                        stream_sig = inspect.signature(voice_obj.synthesize_stream_raw)
+                        sig = inspect.signature(voice_obj.synthesize_stream_raw)
                         stream_kwargs = {}
-                        if "speaker_id" in stream_sig.parameters and speaker_id is not None:
+                        if "speaker_id" in sig.parameters and speaker_id is not None:
                             stream_kwargs["speaker_id"] = speaker_id
                         for chunk in voice_obj.synthesize_stream_raw(text, **stream_kwargs):
                             if isinstance(chunk, (bytes, bytearray)):
@@ -190,31 +181,13 @@ class AudioPlayer:
                     except Exception:
                         pass
 
-                # 2. Try synthesize method with signature matching
-                if wf.getnframes() == 0 and hasattr(voice_obj, "synthesize"):
-                    synth_sig = inspect.signature(voice_obj.synthesize)
-                    params = synth_sig.parameters
-
-                    call_kwargs = {}
-                    if "speaker_id" in params and speaker_id is not None:
-                        call_kwargs["speaker_id"] = speaker_id
-                    if "wav_file" in params:
-                        call_kwargs["wav_file"] = wf
-                    elif "wav_out" in params:
-                        call_kwargs["wav_out"] = wf
-
-                    if len(call_kwargs) > 0:
-                        res = voice_obj.synthesize(text, **call_kwargs)
-                    else:
-                        try:
-                            res = voice_obj.synthesize(text, wf)
-                        except TypeError:
-                            res = voice_obj.synthesize(text)
-
+                # 2. Fallback: synthesize(text, wav_file) — wf.speaker_id already set above
+                if wf.getnframes() == 0:
+                    res = voice_obj.synthesize(text, wf)
                     if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
                         for chunk in res:
                             data = getattr(chunk, "audio_data", chunk)
-                            if isinstance(data, (bytes, bytearray)) and wf.getnframes() == 0:
+                            if isinstance(data, (bytes, bytearray)):
                                 wf.writeframes(data)
 
             wav_bytes = buf.getvalue()

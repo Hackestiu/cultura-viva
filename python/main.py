@@ -4,8 +4,10 @@ Project Personality - MPU application entry point.
 Functionalities triggered via RPC from sketch.ino:
 - 'photo_trigger' (external button D7): takes a photo with the webcam (Brio 105)
   at full resolution (1080p, verified -- see hw/camera_module.py).
-  When the photo is saved successfully, confirms to sketch ('confirm_photo_saved')
-  to sound the buzzer.
+  Immediately runs the vision classifier on the photo:
+    - If 'unknown': tells sketch to show "not a monument" retake message then camera view.
+    - If valid: tells sketch to show "photo validated" then the photo confirmation screen,
+      and caches the detected element for use in the Q&A pipeline.
 - 'camera_live_view_active' (switch D6): if active, sends a thumbnail of the webcam
   TO THE SKETCH IN CHUNKS ('receive_camera_chunk') every CAMERA_SEND_INTERVAL
   seconds, preventing RPC channel message size overflow (see hw/camera_module.py).
@@ -13,7 +15,7 @@ Functionalities triggered via RPC from sketch.ino:
   recording, 2nd click stops. While active, records audio and on stop saves it
   tagged with the Personality selected via 'get_personality_index' (see
   hw/microphone_module.py and model_module.py). Then executes the Cultura Viva
-  pipeline: STT -> Vision -> KG -> SLM -> TTS (played via 3.5mm jack headphones).
+  pipeline: STT -> KG -> SLM -> TTS (Vision already ran at photo time, element cached).
 - 'get_volume' (Modulino Knob): returns volume percentage (0 - 100%) to dynamically
   adjust playback volume through amixer.
 
@@ -70,6 +72,12 @@ vision     = VisionClassifier()
 location   = LocationRegistry()
 player     = AudioPlayer()
 
+# Human-readable location labels for the "not a monument in <X>" retake screen.
+_LOCATION_LABELS: dict[str, str] = {
+    "park_guell":      "Park Guell",
+    "sagrada_familia": "Sagrada Familia",
+}
+
 
 def run_app() -> None:
     if App is None or Bridge is None or not microphone.available:
@@ -88,8 +96,12 @@ def run_app() -> None:
     last_camera_send = 0.0
     last_volume = -1
 
+    # Element detected by the vision model at photo time — reused when the user asks a question.
+    last_detected_element: str | None = None
+    last_detected_site: str | None = None
+
     def loop():
-        nonlocal last_camera_send, last_volume
+        nonlocal last_camera_send, last_volume, last_detected_element, last_detected_site
 
         # --- Modulino Knob: Volume control ---
         try:
@@ -100,7 +112,7 @@ def run_app() -> None:
         except Exception:
             pass
 
-        # --- Photo (button D7) ---
+        # --- Photo (button D7) — now includes immediate vision validation ---
         try:
             if Bridge.call("photo_trigger"):
                 saved_path = camera.take_photo()
@@ -109,9 +121,31 @@ def run_app() -> None:
                     camera.send_view_frame_chunked(
                         Bridge, CAM_THUMB_W, CAM_THUMB_H, CAM_CHUNK_PIXELS, CAMERA_CHUNK_DELAY_S
                     )
-                    Bridge.call("confirm_photo_saved")
+
+                    # --- Vision validation phase ---
+                    # Tell sketch to show "Scanning photo..." with animated dots
+                    Bridge.call("set_photo_validation_state", 0)
+
+                    site = location.current()   # 'park_guell' / 'sagrada_familia'
+                    element = vision.classify(site, saved_path)
+
+                    if element is None or element == "unknown":
+                        # Not a monument: send location label then trigger invalid screen
+                        location_label = _LOCATION_LABELS.get(site, site.replace("_", " ").title())
+                        Bridge.call("set_retake_message", location_label)
+                        Bridge.call("set_photo_validation_state", 2)
+                        last_detected_element = None
+                        last_detected_site = None
+                        print(f"[VISION] Photo is not a monument in '{site}' -> retake screen shown.")
+                    else:
+                        # Valid monument: cache element, trigger valid screen (sketch auto-advances to photo confirmation)
+                        last_detected_element = element
+                        last_detected_site = site
+                        Bridge.call("set_photo_validation_state", 1)
+                        print(f"[VISION] Photo validated: element='{element}' at '{site}' -> showing valid screen, then confirmation.")
+
         except Exception as exc:
-            print(f"[ERROR] Checking button D7 / taking photo: {exc}")
+            print(f"[ERROR] Checking button D7 / taking photo / vision: {exc}")
 
         # --- Camera Live View (chunked) ---
         try:
@@ -140,7 +174,7 @@ def run_app() -> None:
                         is_recording=lambda: Bridge.call("is_recording_active")
                     )
                     if audio is not None:
-                        # --- Generating Answer Phase (STT interpretation, SLM, TTS audio reading) ---
+                        # --- Generating Answer Phase (STT, SLM, TTS) ---
                         Bridge.call("set_processing_active", True)
                         try:
                             wav_path = microphone.save(button_id, model_name, audio)
@@ -148,10 +182,15 @@ def run_app() -> None:
                             # 1. STT interpretation
                             question_text = microphone.transcribe(wav_path)
 
-                            site       = location.current()          # 'park_guell' / 'sagrada_familia'
-                            element    = vision.classify(site, photo_path) if photo_path else None
+                            # 2. Use element already detected at photo time (no second vision run)
+                            element  = last_detected_element
+                            site     = last_detected_site or location.current()
 
-                            # 2. SLM response generation
+                            if element is None:
+                                # Fallback: vision was unavailable at photo time, try now
+                                element = vision.classify(site, photo_path) if photo_path else None
+
+                            # 3. SLM response generation
                             kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                             answer     = models.generate_response(
                                 question=question_text,
@@ -160,7 +199,7 @@ def run_app() -> None:
                                 kg_context=kg_context,
                             )
 
-                            # 3. TTS audio reading (with real-time Modulino knob volume tracking)
+                            # 4. TTS audio reading (with real-time Modulino knob volume tracking)
                             player.synthesize_and_play(answer, personality=model_name, bridge=Bridge)
                         finally:
                             Bridge.call("set_processing_active", False)

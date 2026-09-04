@@ -98,7 +98,7 @@ int16_t readKnobFiltered() {
 void updateControls() {
   // Mode switch D6 handling with debouncing
   bool viewSwitchRaw = (digitalRead(VIEW_SWITCH_PIN) == HIGH);
-  if (!processingActive) {
+  if (!processingActive && photoValidationState == -1) {
     if (viewSwitchRaw != viewSwitchRawLast) {
       viewSwitchLastChangeTime = millis();
       viewSwitchRawLast = viewSwitchRaw;
@@ -130,9 +130,9 @@ void updateControls() {
   }
   bool viewSwitchOn = viewSwitchDebounced;
 
-  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation)
+  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation or vision validation)
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (!processingActive && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+  if (!processingActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
       buzzer.tone(900, 90);
@@ -205,8 +205,8 @@ void updateControls() {
   btnBHeldPrev = btnBHeld;
   btnCHeldPrev = btnCHeld;
 
-  // Make all buttons unavailable when generating an answer
-  if (processingActive) {
+  // Make all buttons unavailable when generating an answer or validating photo
+  if (processingActive || photoValidationState != -1) {
     btnAPressedEdge = false;
     btnBPressedEdge = false;
     btnCPressedEdge = false;
@@ -356,6 +356,85 @@ void updateControls() {
       animDotCount = (animDotCount + 1) % 4;
       drawGeneratingAnswerOverlay(animDotCount, false);
     }
+  }
+
+  // Vision validation state machine — non-blocking, millis()-based
+  // State: -1=idle, 0=checking (animated dots), 1=valid (hold ~1.8s), 2=invalid (hold ~2.0s)
+  static int8_t lastPhotoValidationState = -1;
+  static unsigned long validationHoldStart = 0;
+  static uint8_t visionDotCount = 0;
+  static unsigned long lastVisionDotMillis = 0;
+
+  if (photoValidationState != lastPhotoValidationState) {
+    lastPhotoValidationState = photoValidationState;
+
+    if (photoValidationState == 0) {
+      // Entered checking state: draw full scanning screen
+      drawVisionCheckingScreen(0, true);
+      visionDotCount = 0;
+      lastVisionDotMillis = millis();
+      Monitor.println("[EVENT] Vision: Scanning photo...");
+
+    } else if (photoValidationState == 1) {
+      // Valid monument: draw success screen and start hold timer
+      drawVisionValidScreen();
+      buzzer.tone(1800, 80);
+      delay(90);
+      buzzer.tone(2200, 120);
+      validationHoldStart = millis();
+      Monitor.println("[EVENT] Vision: Photo validated!");
+
+    } else if (photoValidationState == 2) {
+      // Invalid: draw retake screen and start hold timer
+      drawVisionInvalidScreen(retakeLocationLabel);
+      buzzer.tone(350, 120);
+      delay(80);
+      buzzer.tone(250, 200);
+      validationHoldStart = millis();
+      Monitor.print("[EVENT] Vision: Not a monument in ");
+      Monitor.println(retakeLocationLabel);
+
+    } else if (photoValidationState == -1 && lastPhotoValidationState != -1) {
+      // Returning to idle
+    }
+  }
+
+  // Animate dots while checking (state 0)
+  if (photoValidationState == 0) {
+    if (millis() - lastVisionDotMillis >= 400) {
+      lastVisionDotMillis = millis();
+      visionDotCount = (visionDotCount + 1) % 4;
+      drawVisionCheckingScreen(visionDotCount, false);
+    }
+  }
+
+  // Auto-advance from state 1 (valid) after ~1800ms -> show photo confirmation
+  if (photoValidationState == 1 && (millis() - validationHoldStart >= 1800)) {
+    photoValidationState = -1;
+    lastPhotoValidationState = -1;
+    hasCapturedPhoto = true;
+    photoWaitingConfirmation = true;
+    if (viewSwitchOn && currentUiState == UI_ACTIVE) {
+      drawCameraFrame();
+      drawPhotoConfirmationOverlay();
+    }
+    buzzer.tone(2000, 100);
+    Monitor.println("[EVENT] Vision: transitioning to photo confirmation.");
+  }
+
+  // Auto-advance from state 2 (invalid) after ~2000ms -> back to camera live view
+  if (photoValidationState == 2 && (millis() - validationHoldStart >= 2000)) {
+    photoValidationState = -1;
+    lastPhotoValidationState = -1;
+    hasCapturedPhoto = false;
+    photoConfirmed = false;
+    photoWaitingConfirmation = false;
+    if (viewSwitchOn && currentUiState == UI_ACTIVE) {
+      drawCameraViewPlaceholder();
+    } else if (!viewSwitchOn && currentUiState == UI_ACTIVE) {
+      drawParkMap();
+    }
+    Monitor.println("[EVENT] Vision: returning to camera after invalid photo.");
   }
 }
 

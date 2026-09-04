@@ -15,6 +15,7 @@ static bool lastExtBtnState = false;
 
 static int16_t knobFiltered = 0;
 static bool knobFilteredInit = false;
+static uint8_t knobOutlierCount = 0;
 
 static int16_t lastKnobPos = 0;
 static bool knobVolumeInit = false;
@@ -31,7 +32,7 @@ void initControls() {
 
   Wire1.begin();
 #if defined(WIRE_HAS_TIMEOUT) || defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_SAMD) || defined(ARDUINO_ARCH_RENESAS)
-  Wire1.setWireTimeout(50000, true);
+  Wire1.setWireTimeout(25000, true);
 #endif
   Modulino.begin(Wire1);
 
@@ -43,17 +44,53 @@ void initControls() {
   delay(200);
 }
 
+// Reads raw knob position directly via I2C.
+// Unlike knob.get() which returns 0 on communication failure (creating false jumps),
+// readKnobRaw() returns false if the I2C read fails or times out,
+// preventing spurious readings from corrupting the encoder state.
+static bool readKnobRaw(int16_t &outPos) {
+  if (!knob) {
+    static unsigned long lastBeginAttempt = 0;
+    if (millis() - lastBeginAttempt > 1000) {
+      lastBeginAttempt = millis();
+      knob.begin();
+    }
+    return false;
+  }
+  uint8_t buf[3];
+  if (!knob.read(buf, 3)) {
+    return false;
+  }
+  outPos = (int16_t)((uint16_t)buf[0] | ((uint16_t)buf[1] << 8));
+  return true;
+}
+
 int16_t readKnobFiltered() {
-  int16_t raw = knob.get();
+  int16_t raw = 0;
+  if (!readKnobRaw(raw)) {
+    return knobFiltered;
+  }
+
   if (!knobFilteredInit) {
     knobFiltered = raw;
     knobFilteredInit = true;
+    knobOutlierCount = 0;
     return knobFiltered;
   }
+
   int16_t diff = raw - knobFiltered;
+
+  // Protect against extreme single-cycle electrical noise spikes,
+  // but if the new value persists for 2 consecutive cycles, accept it
+  // so the encoder never becomes permanently locked or frozen.
   if (diff > KNOB_MAX_JUMP || diff < -KNOB_MAX_JUMP) {
-    return knobFiltered;
+    knobOutlierCount++;
+    if (knobOutlierCount < 2) {
+      return knobFiltered;
+    }
   }
+
+  knobOutlierCount = 0;
   knobFiltered = raw;
   return knobFiltered;
 }
@@ -230,27 +267,42 @@ void updateControls() {
     }
   }
 
-  // Modulino LED status indicators
+  // Modulino LED status indicators (only write I2C if state changed to prevent bus saturation)
+  bool ledA = false, ledB = false, ledC = false;
   if (currentUiState == UI_BOOT_INTRO || currentUiState == UI_OPTIONS) {
-    buttons.setLeds(true, false, true);
+    ledA = true; ledB = false; ledC = true;
   } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2 || currentUiState == UI_TUTORIAL_3) {
-    buttons.setLeds(true, true, true);
+    ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_VOICE_SELECT) {
-    buttons.setLeds(true, true, true);
+    ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_ACTIVE) {
     if (recordingActive || processingActive) {
       bool blink = ((millis() / 300) % 2) == 0;
-      buttons.setLeds(blink, blink, blink);
+      ledA = blink; ledB = blink; ledC = blink;
     } else {
-      buttons.setLeds(personalityIndex == 0, personalityIndex == 1, personalityIndex == 2);
+      ledA = (personalityIndex == 0);
+      ledB = (personalityIndex == 1);
+      ledC = (personalityIndex == 2);
     }
+  }
+
+  static bool lastLedA = false, lastLedB = false, lastLedC = false;
+  static bool ledsInit = false;
+  if (!ledsInit || ledA != lastLedA || ledB != lastLedB || ledC != lastLedC) {
+    buttons.setLeds(ledA, ledB, ledC);
+    lastLedA = ledA;
+    lastLedB = ledB;
+    lastLedC = ledC;
+    ledsInit = true;
   }
 
   // Filtered knob volume adjustment
   int16_t currentKnobPos = readKnobFiltered();
   if (!knobVolumeInit) {
-    lastKnobPos = currentKnobPos;
-    knobVolumeInit = true;
+    if (knobFilteredInit) {
+      lastKnobPos = currentKnobPos;
+      knobVolumeInit = true;
+    }
   } else {
     int16_t diff = currentKnobPos - lastKnobPos;
     if (diff != 0) {

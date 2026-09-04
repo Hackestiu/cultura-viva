@@ -79,11 +79,26 @@ class _PiperWaveWriterProxy:
         self.rate = 1.0
         self.pitch = 1.0
 
+    def write(self, data):
+        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
+            data = data.tobytes()
+        if isinstance(data, (bytes, bytearray)):
+            self._wf.writeframes(data)
+            return len(data)
+        return 0
+
     def writeframes(self, data):
+        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
+            data = data.tobytes()
         return self._wf.writeframes(data)
 
     def writeframesraw(self, data):
+        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
+            data = data.tobytes()
         return self._wf.writeframesraw(data)
+
+    def flush(self):
+        pass
 
     def getnframes(self):
         return self._wf.getnframes()
@@ -108,7 +123,7 @@ class _PiperWaveWriterProxy:
             return 1.0
         if "silence" in name or "delay" in name:
             return 0.0
-        return None
+        raise AttributeError(f"'_PiperWaveWriterProxy' object has no attribute '{name}'")
 
 
 # ---------------------------------------------------------------------------
@@ -221,51 +236,83 @@ class AudioPlayer:
         try:
             buf = BytesIO()
             with wave.open(buf, "wb") as wf:
-                wf.setframerate(voice_obj.config.sample_rate)
+                sample_rate = getattr(getattr(voice_obj, "config", None), "sample_rate", 22050)
+                wf.setframerate(sample_rate)
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
 
                 cfg = getattr(voice_obj, "config", None)
+                length_scale = getattr(cfg, "length_scale", 1.0) or 1.0
+                noise_scale = getattr(cfg, "noise_scale", 0.667) or 0.667
+                noise_w = getattr(cfg, "noise_w", 0.8) or 0.8
+                sentence_silence = getattr(cfg, "sentence_silence", 0.0) or 0.0
+
                 proxy = _PiperWaveWriterProxy(
                     wf,
                     speaker_id=speaker_id,
-                    length_scale=getattr(cfg, "length_scale", 1.0) or 1.0,
-                    noise_scale=getattr(cfg, "noise_scale", 0.667) or 0.667,
-                    noise_w=getattr(cfg, "noise_w", 0.8) or 0.8,
-                    sentence_silence=getattr(cfg, "sentence_silence", 0.0) or 0.0,
+                    length_scale=length_scale,
+                    noise_scale=noise_scale,
+                    noise_w=noise_w,
+                    sentence_silence=sentence_silence,
                 )
 
-                # 1. Try synthesize_stream_raw (yields raw PCM byte chunks)
-                if hasattr(voice_obj, "synthesize_stream_raw"):
+                # 1. Try synthesize(text, proxy, ...)
+                try:
+                    sig = inspect.signature(voice_obj.synthesize)
+                    kwargs = {}
+                    if "speaker_id" in sig.parameters and speaker_id is not None:
+                        kwargs["speaker_id"] = speaker_id
+                    if "length_scale" in sig.parameters:
+                        kwargs["length_scale"] = length_scale
+                    if "noise_scale" in sig.parameters:
+                        kwargs["noise_scale"] = noise_scale
+                    if "noise_w" in sig.parameters:
+                        kwargs["noise_w"] = noise_w
+                    if "sentence_silence" in sig.parameters:
+                        kwargs["sentence_silence"] = sentence_silence
+                    res = voice_obj.synthesize(text, proxy, **kwargs)
+                except TypeError:
+                    try:
+                        res = voice_obj.synthesize(text, proxy)
+                    except Exception as e:
+                        print(f"[DEBUG TTS] voice.synthesize(text, proxy) error: {e}")
+                        res = None
+                except Exception as e:
+                    print(f"[DEBUG TTS] voice.synthesize error: {e}")
+                    res = None
+
+                # Handle generator / chunks if returned by synthesize
+                if res is not None and hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
+                    for chunk in res:
+                        data = getattr(chunk, "audio_data", chunk)
+                        if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
+                            data = data.tobytes()
+                        if isinstance(data, (bytes, bytearray)):
+                            wf.writeframes(data)
+                elif isinstance(res, (bytes, bytearray)):
+                    wf.writeframes(res)
+
+                # 2. Fallback: synthesize_stream_raw
+                if wf.getnframes() == 0 and hasattr(voice_obj, "synthesize_stream_raw"):
                     try:
                         sig = inspect.signature(voice_obj.synthesize_stream_raw)
                         stream_kwargs = {}
                         if "speaker_id" in sig.parameters and speaker_id is not None:
                             stream_kwargs["speaker_id"] = speaker_id
                         for chunk in voice_obj.synthesize_stream_raw(text, **stream_kwargs):
-                            if isinstance(chunk, (bytes, bytearray)):
-                                wf.writeframes(chunk)
-                    except Exception:
-                        pass
-
-                # 2. Fallback: synthesize(text, proxy)
-                if wf.getnframes() == 0:
-                    try:
-                        sig = inspect.signature(voice_obj.synthesize)
-                        kwargs = {}
-                        if "speaker_id" in sig.parameters and speaker_id is not None:
-                            kwargs["speaker_id"] = speaker_id
-                        res = voice_obj.synthesize(text, proxy, **kwargs)
-                    except TypeError:
-                        res = voice_obj.synthesize(text, proxy)
-
-                    if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
-                        for chunk in res:
                             data = getattr(chunk, "audio_data", chunk)
+                            if hasattr(data, "tobytes") and not isinstance(data, (bytes, bytearray)):
+                                data = data.tobytes()
                             if isinstance(data, (bytes, bytearray)):
                                 wf.writeframes(data)
+                    except Exception as e:
+                        print(f"[DEBUG TTS] synthesize_stream_raw error: {e}")
 
             wav_bytes = buf.getvalue()
+            if len(wav_bytes) <= 44:
+                print(f"[ERROR] AudioPlayer: synthesis generated empty audio ({len(wav_bytes)} bytes) for voice '{voice_key}'")
+                return None
+
             print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")
             return wav_bytes
         except Exception as exc:

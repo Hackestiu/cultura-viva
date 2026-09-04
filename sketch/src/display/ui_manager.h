@@ -15,3 +15,8 @@ void initDisplay();
  */
 void drawCurrentView();
 
+/**
+ * Renders a generating answer status overlay at top-left corner with animated dots.
+ */
+void drawGeneratingAnswerOverlay(uint8_t dotCount = 0, bool fullRedraw = true);
+

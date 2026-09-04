@@ -90,8 +90,10 @@ class AudioPlayer:
     def current_volume(self) -> int:
         return self._current_volume
 
-    def play(self, audio_path) -> bool:
-        """Plays a .wav file synchronously (blocking).
+    def play(self, audio_path, bridge=None) -> bool:
+        """Plays a .wav file. If bridge is provided, monitors volume via
+        Bridge.call("get_volume") during playback so the Modulino knob can
+        dynamically adjust volume in real-time while audio is playing.
         Returns True if played successfully, False otherwise."""
         path = Path(audio_path)
         if not path.exists():
@@ -105,18 +107,36 @@ class AudioPlayer:
         cmd.append(str(path))
 
         try:
-            subprocess.run(cmd, check=True, capture_output=True, timeout=60)
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            last_vol = self._current_volume
+            start_time = time.time()
+            while proc.poll() is None:
+                if time.time() - start_time > 60:
+                    proc.kill()
+                    print(f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted")
+                    return False
+                if bridge is not None:
+                    try:
+                        vol = bridge.call("get_volume")
+                        if vol is not None and vol != last_vol:
+                            last_vol = vol
+                            self.set_volume(vol)
+                    except Exception:
+                        pass
+                time.sleep(0.05)
+
+            if proc.returncode != 0:
+                stderr = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+                print(f"[ERROR] aplay failed playing {path}: {stderr.strip()}")
+                return False
+
             print(f"[OK] Played: {path}" + (f" (device: {device})" if device else ""))
             return True
-        except subprocess.CalledProcessError as exc:
-            stderr = exc.stderr.decode(errors="replace") if exc.stderr else ""
-            print(f"[ERROR] aplay failed playing {path}: {stderr.strip()}")
-            return False
-        except subprocess.TimeoutExpired:
-            print(f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted")
-            return False
         except FileNotFoundError:
             print("[ERROR] 'aplay' not found on system -- install alsa-utils")
+            return False
+        except Exception as exc:
+            print(f"[ERROR] aplay error playing {path}: {exc}")
             return False
 
     @staticmethod
@@ -128,13 +148,14 @@ class AudioPlayer:
         print(f"[OK] TTS response saved to: {out_file}")
         return out_file
 
-    def synthesize_and_play(self, text: str, personality: str | None = None) -> bool:
+    def synthesize_and_play(self, text: str, personality: str | None = None, bridge=None) -> bool:
         """Synthesizes text as speech using the voice associated with personality,
         saves the result to RESPONSES_DIR, and plays it through the configured audio device.
         Returns True on success, False if text is empty or any step fails.
 
         :param text:        The text to speak.
         :param personality: 'artistic' | 'technical' | 'child', or None for the default voice.
+        :param bridge:      Optional Bridge object to monitor volume during playback.
         """
         if not text or not text.strip():
             print("[WARN] AudioPlayer: synthesize_and_play called with empty text — skipping.")
@@ -146,7 +167,7 @@ class AudioPlayer:
             return False
 
         out_file = self.save_response(wav_bytes)
-        return self.play(out_file)
+        return self.play(out_file, bridge=bridge)
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
         """Returns WAV audio bytes for text spoken in the voice identified by voice_key,

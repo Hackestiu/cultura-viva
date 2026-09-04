@@ -25,7 +25,7 @@ bool is_recording_active() {
 }
 
 bool camera_live_view_active() {
-  return viewSwitchDebounced && !photoWaitingConfirmation;
+  return viewSwitchDebounced && !photoWaitingConfirmation && !processingActive;
 }
 
 void set_processing_active(bool active) {

@@ -135,23 +135,23 @@ def run_app() -> None:
                     personality_index = Bridge.call("get_personality_index")  # 0/1/2
                     button_id = "ABC"[personality_index]
                     model_name = models.name_for(button_id)
-                    print(f"[EVENT] Recording started (personality: {model_name}) -> recording...")
-                    Bridge.call("set_processing_active", True)
-                    try:
-                        audio = microphone.record_until_stopped(
-                            is_recording=lambda: Bridge.call("is_recording_active")
-                        )
-                        if audio is not None:
+                    print(f"[EVENT] Recording started (personality: {model_name}) -> speak now, press D7 to stop...")
+                    audio = microphone.record_until_stopped(
+                        is_recording=lambda: Bridge.call("is_recording_active")
+                    )
+                    if audio is not None:
+                        # --- Generating Answer Phase (STT interpretation, SLM, TTS audio reading) ---
+                        Bridge.call("set_processing_active", True)
+                        try:
                             wav_path = microphone.save(button_id, model_name, audio)
 
-                            # --- Cultura Viva Pipeline ---
-                            # Each step is individually guarded: if a model fails or is missing,
-                            # the subsequent step receives an empty string/None and proceeds cleanly.
+                            # 1. STT interpretation
                             question_text = microphone.transcribe(wav_path)
 
                             site       = location.current()          # 'park_guell' / 'sagrada_familia'
                             element    = vision.classify(site, photo_path) if photo_path else None
 
+                            # 2. SLM response generation
                             kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                             answer     = models.generate_response(
                                 question=question_text,
@@ -159,11 +159,13 @@ def run_app() -> None:
                                 personality=model_name,
                                 kg_context=kg_context,
                             )
-                            player.synthesize_and_play(answer, personality=model_name)
-                        else:
-                            print("[WARN] Empty recording (0 chunks captured)")
-                    finally:
-                        Bridge.call("set_processing_active", False)
+
+                            # 3. TTS audio reading (with real-time Modulino knob volume tracking)
+                            player.synthesize_and_play(answer, personality=model_name, bridge=Bridge)
+                        finally:
+                            Bridge.call("set_processing_active", False)
+                    else:
+                        print("[WARN] Empty recording (0 chunks captured)")
         except Exception as exc:
             print(f"[ERROR] Recording/processing question: {exc}")
 

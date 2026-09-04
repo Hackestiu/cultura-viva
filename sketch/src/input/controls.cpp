@@ -98,40 +98,41 @@ int16_t readKnobFiltered() {
 void updateControls() {
   // Mode switch D6 handling with debouncing
   bool viewSwitchRaw = (digitalRead(VIEW_SWITCH_PIN) == HIGH);
-  if (viewSwitchRaw != viewSwitchRawLast) {
-    viewSwitchLastChangeTime = millis();
-    viewSwitchRawLast = viewSwitchRaw;
-  }
-  if ((millis() - viewSwitchLastChangeTime) > VIEW_SWITCH_DEBOUNCE_MS
-      && viewSwitchRaw != viewSwitchDebounced) {
-    viewSwitchDebounced = viewSwitchRaw;
-    Monitor.print("[EVENT] Switch D6 changed -> ");
-    Monitor.println(viewSwitchDebounced ? "ON (camera mode)" : "OFF (map mode)");
-
-    if (!viewSwitchDebounced) {
-      // Switched to Map mode: if a photo was taken, this confirms the photo!
-      if (hasCapturedPhoto) {
-        photoConfirmed = true;
-        photoWaitingConfirmation = false;
-        Monitor.println("[EVENT] Photo CONFIRMED via switch -> Map mode unlocked for audio!");
-        buzzer.tone(1600, 80);
-        delay(90);
-        buzzer.tone(2000, 100);
-      }
-    } else {
-      photoWaitingConfirmation = false;
+  if (!processingActive) {
+    if (viewSwitchRaw != viewSwitchRawLast) {
+      viewSwitchLastChangeTime = millis();
+      viewSwitchRawLast = viewSwitchRaw;
     }
+    if ((millis() - viewSwitchLastChangeTime) > VIEW_SWITCH_DEBOUNCE_MS
+        && viewSwitchRaw != viewSwitchDebounced) {
+      viewSwitchDebounced = viewSwitchRaw;
+      Monitor.print("[EVENT] Switch D6 changed -> ");
+      Monitor.println(viewSwitchDebounced ? "ON (camera mode)" : "OFF (map mode)");
 
-    if (currentUiState == UI_ACTIVE) {
-      drawCurrentView();
+      if (!viewSwitchDebounced) {
+        // Switched to Map mode: if a photo was taken, this confirms the photo!
+        if (hasCapturedPhoto) {
+          photoConfirmed = true;
+          photoWaitingConfirmation = false;
+          Monitor.println("[EVENT] Photo CONFIRMED via switch -> Map mode unlocked for audio!");
+          buzzer.tone(1600, 80);
+          delay(90);
+          buzzer.tone(2000, 100);
+        }
+      } else {
+        photoWaitingConfirmation = false;
+      }
+
+      if (currentUiState == UI_ACTIVE) {
+        drawCurrentView();
+      }
     }
   }
   bool viewSwitchOn = viewSwitchDebounced;
 
-  // External button D7 handling (active only in UI_ACTIVE state)
+  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation)
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE
-      && (!processingActive || recordingActive)) {
+  if (!processingActive && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
       buzzer.tone(900, 90);
@@ -185,6 +186,9 @@ void updateControls() {
       if (photoWaitingConfirmation) {
         drawPhotoConfirmationOverlay();
       }
+      if (processingActive) {
+        drawGeneratingAnswerOverlay(0, true);
+      }
     }
   }
 
@@ -200,6 +204,13 @@ void updateControls() {
   btnAHeldPrev = btnAHeld;
   btnBHeldPrev = btnBHeld;
   btnCHeldPrev = btnCHeld;
+
+  // Make all buttons unavailable when generating an answer
+  if (processingActive) {
+    btnAPressedEdge = false;
+    btnBPressedEdge = false;
+    btnCPressedEdge = false;
+  }
 
   if (currentUiState == UI_BOOT_INTRO) {
     blinkIntroPrompt();
@@ -321,6 +332,29 @@ void updateControls() {
       Monitor.print("[EVENT] Volume changed -> ");
       Monitor.print(currentVolume);
       Monitor.println("%");
+    }
+  }
+
+  // Generating answer overlay handling (message appears at top-left, only animated dots move)
+  static bool lastProcessingActive = false;
+  static unsigned long lastGeneratingAnimMillis = 0;
+  static uint8_t animDotCount = 0;
+
+  if (processingActive != lastProcessingActive) {
+    lastProcessingActive = processingActive;
+    if (processingActive) {
+      drawGeneratingAnswerOverlay(0, true);
+      lastGeneratingAnimMillis = millis();
+      animDotCount = 0;
+    } else {
+      // Completed generating answer -> restore current view to clear the overlay
+      drawCurrentView();
+    }
+  } else if (processingActive) {
+    if (millis() - lastGeneratingAnimMillis >= 400) {
+      lastGeneratingAnimMillis = millis();
+      animDotCount = (animDotCount + 1) % 4;
+      drawGeneratingAnswerOverlay(animDotCount, false);
     }
   }
 }

@@ -108,12 +108,6 @@ void updateControls() {
     Monitor.print("[EVENT] Switch D6 changed -> ");
     Monitor.println(viewSwitchDebounced ? "ON (camera mode)" : "OFF (map mode)");
 
-    if (viewSwitchDebounced && recordingActive) {
-      recordingActive = false;
-      buzzer.tone(600, 150);
-      Monitor.println("[EVENT] Recording forcibly stopped (switched to camera mode)");
-    }
-
     if (!viewSwitchDebounced) {
       // Switched to Map mode: if a photo was taken, this confirms the photo!
       if (hasCapturedPhoto) {
@@ -136,8 +130,13 @@ void updateControls() {
 
   // External button D7 handling (active only in UI_ACTIVE state)
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE && !processingActive) {
-    if (viewSwitchOn) {
+  if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE
+      && (!processingActive || recordingActive)) {
+    if (recordingActive) {
+      recordingActive = false;
+      buzzer.tone(900, 90);
+      Monitor.println("[EVENT] Button D7 pressed -> stopped recording question");
+    } else if (viewSwitchOn) {
       if (photoWaitingConfirmation) {
         hasCapturedPhoto = false;
         photoConfirmed = false;
@@ -252,7 +251,7 @@ void updateControls() {
       currentUiState = UI_TUTORIAL_2;
       drawScreenTutorial2();
       buzzer.tone(1500, 60);
-    } else if (btnBPressedEdge || btnCPressedEdge) {
+    } else if (btnBPressedEdge) {
       currentUiState = UI_VOICE_SELECT;
       drawScreenPersonalitySelect();
       buzzer.tone(1500, 60);
@@ -281,7 +280,7 @@ void updateControls() {
   if (currentUiState == UI_BOOT_INTRO || currentUiState == UI_OPTIONS) {
     buttons.setLeds(true, false, currentUiState == UI_OPTIONS);
   } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2 || currentUiState == UI_TUTORIAL_3) {
-    ledA = true; ledB = true; ledC = true;
+    ledA = true; ledB = true; ledC = currentUiState != UI_TUTORIAL_3;
   } else if (currentUiState == UI_VOICE_SELECT) {
     ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_ACTIVE) {

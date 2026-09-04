@@ -83,7 +83,7 @@ def run_app() -> None:
     print(f"Models (A/B/C) read from: {MODELS_DIR}")
     print(f"Minimap content at: {MINIMAP_DIR}")
     print(f"Camera view: thumbnail {CAM_THUMB_W}x{CAM_THUMB_H} in {CAM_CHUNK_PIXELS}px chunks, every {CAMERA_SEND_INTERVAL:.0f}s")
-    print("Waiting for button D7 (photo), buttons A/B/C (recording), Modulino Knob (volume) and switch D6...")
+    print("Waiting for button D7 (photo/recording), buttons A/B/C (personality), Modulino Knob (volume) and switch D6...")
 
     last_camera_send = 0.0
     last_volume = -1
@@ -138,8 +138,8 @@ def run_app() -> None:
                     print(f"[EVENT] Recording started (personality: {model_name}) -> recording...")
                     Bridge.call("set_processing_active", True)
                     try:
-                        audio = microphone.record_while_held(
-                            is_still_held=lambda: Bridge.call("is_recording_active")
+                        audio = microphone.record_until_stopped(
+                            is_recording=lambda: Bridge.call("is_recording_active")
                         )
                         if audio is not None:
                             wav_path = microphone.save(button_id, model_name, audio)

@@ -1,10 +1,10 @@
 """
-Audio recording using the Logitech Brio 105 microphone, triggered via Modulino A/B/C
-or D7 toggle button. Recordings are saved to RECORDINGS_DIR tagged with the selected personality.
+Audio recording using the Logitech Brio 105 microphone, triggered via the D7 toggle
+button. Recordings are saved to RECORDINGS_DIR tagged with the selected personality.
 
 Technical note: The Microphone API exposes record_wav(duration=X) without streaming start/stop.
 Variable-length recording is achieved by recording short consecutive chunks (RECORD_CHUNK_SECONDS)
-while is_still_held() remains True, then concatenating them into a single .wav file.
+while the D7 recording state remains active, then concatenating them into a single .wav file.
 
 STT: faster-whisper with Gaudí domain optimizations (see transcribe()).
 """
@@ -99,9 +99,10 @@ class MicrophoneManager:
         if self._mic is not None:
             self._mic.start()
 
-    def record_while_held(self, is_still_held):
-        """Records in chunks of RECORD_CHUNK_SECONDS while is_still_held()
-        returns True (up to RECORD_MAX_SECONDS as a safety limit).
+    def record_until_stopped(self, is_recording):
+        """Records after the first D7 click until the second D7 click.
+        The callback reads the sketch recording state between chunks, so the
+        physical switch cannot start or stop the recording.
         Returns the complete concatenated audio as np.ndarray, or None if empty."""
         if self._mic is None:
             return None
@@ -112,7 +113,7 @@ class MicrophoneManager:
             chunk = self._mic.record_wav(duration=RECORD_CHUNK_SECONDS)
             chunks.append(chunk)
             elapsed += RECORD_CHUNK_SECONDS
-            if not is_still_held():
+            if not is_recording():
                 break
 
         if not chunks:

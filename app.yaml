@@ -1,5 +1,5 @@
 name: Test1
-description: "LCD + Modulinos + boto extern: foto (D7) i gravacio de veu (Modulino Button A)"
+description: "LCD + Modulinos + boto extern: foto i gravacio de veu amb el boto D7"
 ports: []
 bricks: []
 icon: 🎭

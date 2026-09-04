@@ -56,3 +56,31 @@ void drawCurrentView() {
     drawParkMap();
   }
 }
+
+void drawGeneratingAnswerOverlay(uint8_t dotCount, bool fullRedraw) {
+  static const char* const dotSuffixes[] = {
+    "   ",
+    ".  ",
+    ".. ",
+    "..."
+  };
+  const char* dots = dotSuffixes[dotCount % 4];
+
+  if (fullRedraw) {
+    // High-contrast pill container in top-left corner
+    tft.fillRoundRect(2, 2, 126, 13, 2, ST77XX_BLACK);
+    tft.drawRoundRect(2, 2, 126, 13, 2, 0xFFE0); // Yellow border
+
+    // Static message text
+    tft.setTextColor(0xFFFF, 0x0000); // White text on black
+    tft.setTextSize(1);
+    tft.setCursor(5, 5);
+    tft.print(F("Generating answer"));
+  }
+
+  // Only the animated dots update
+  tft.setTextColor(0xFFFF, 0x0000);
+  tft.setTextSize(1);
+  tft.setCursor(107, 5);
+  tft.print(dots);
+}

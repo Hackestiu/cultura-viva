@@ -45,3 +45,23 @@ void drawPhotoConfirmationOverlay();
  */
 void drawNoPhotoWarningOverlay();
 
+/**
+ * Draws full-screen "Scanning photo..." status with animated dots (only dot region redrawn).
+ * Call with fullRedraw=true on first display, then with fullRedraw=false for dot animation updates.
+ */
+void drawVisionCheckingScreen(uint8_t dotCount = 0, bool fullRedraw = true);
+
+/**
+ * Draws full-screen success screen: "Photo validated!" on dark green.
+ * Shown for ~1.5s then transitions to photo confirmation.
+ */
+void drawVisionValidScreen();
+
+/**
+ * Draws full-screen retake screen: "Not a monument in <locationLabel>" on dark red.
+ * Shown for ~2s then transitions back to camera live view.
+ *
+ * @param locationLabel Human-readable location name (e.g. "Park Güell").
+ */
+void drawVisionInvalidScreen(const char* locationLabel);
+

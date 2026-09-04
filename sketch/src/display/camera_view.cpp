@@ -134,4 +134,118 @@ void drawNoPhotoWarningOverlay() {
   tft.print("to ask your question!");
 }
 
+// ---------------------------------------------------------------------------
+// Vision validation full-screen status screens
+// ---------------------------------------------------------------------------
 
+void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
+  static const char* const dotSuffixes[] = {
+    "   ",
+    ".  ",
+    ".. ",
+    "..."
+  };
+  const char* dots = dotSuffixes[dotCount % 4];
+
+  if (fullRedraw) {
+    tft.fillScreen(0x0000); // Black background
+
+    // Top accent bar
+    tft.fillRect(0, 0, 160, 3, 0x07FF); // Cyan stripe
+
+    // Large camera / scan icon (simple crosshair lines)
+    tft.drawRect(52, 20, 56, 42, 0x07FF);         // outer rect
+    tft.drawRect(54, 22, 52, 38, 0x4208);         // inner shadow
+    tft.drawFastHLine(68, 41, 24, 0x07FF);         // horizontal crosshair
+    tft.drawFastVLine(80, 28, 24, 0x07FF);         // vertical crosshair
+    tft.fillCircle(80, 41, 5, 0x07FF);             // center dot
+
+    // Static label
+    tft.setTextColor(0xFFFF); // White
+    tft.setTextSize(1);
+    tft.setCursor(24, 72);
+    tft.print(F("Scanning photo"));
+  }
+
+  // Animated dots only — erase & redraw the dot area
+  tft.setTextColor(0x07FF, 0x0000); // Cyan on black background
+  tft.setTextSize(1);
+  tft.setCursor(104, 72);
+  tft.print(dots);
+
+  if (fullRedraw) {
+    // Subtitle hint (static)
+    tft.setTextColor(0x4208); // Dark grey
+    tft.setTextSize(1);
+    tft.setCursor(14, 88);
+    tft.print(F("Checking the monument..."));
+
+    // Bottom accent bar
+    tft.fillRect(0, 125, 160, 3, 0x07FF);
+  }
+}
+
+void drawVisionValidScreen() {
+  // Dark green background
+  tft.fillScreen(tft.color565(10, 60, 25));
+
+  // Top accent bar
+  tft.fillRect(0, 0, 160, 3, 0x07E0); // Bright green
+
+  // Large checkmark (two lines forming a tick)
+  //  left arm: from (54,58) to (68,74)
+  //  right arm: from (68,74) to (106,38)
+  for (int t = 0; t <= 6; t++) {
+    tft.drawLine(54 + t, 58, 68 + t, 74, 0x07E0);
+    tft.drawLine(68 + t, 74, 106 + t, 38, 0x07E0);
+  }
+
+  // Title
+  tft.setTextColor(0xFFFF); // White
+  tft.setTextSize(1);
+  tft.setCursor(28, 84);
+  tft.print(F("Photo validated!"));
+
+  // Subtitle
+  tft.setTextColor(tft.color565(150, 230, 160)); // Light green
+  tft.setCursor(16, 100);
+  tft.print(F("Monument recognised."));
+
+  // Bottom accent bar
+  tft.fillRect(0, 125, 160, 3, 0x07E0);
+}
+
+void drawVisionInvalidScreen(const char* locationLabel) {
+  // Dark red background
+  tft.fillScreen(tft.color565(70, 10, 10));
+
+  // Top accent bar
+  tft.fillRect(0, 0, 160, 3, 0xF800); // Red
+
+  // X symbol (two crossed lines)
+  for (int t = -3; t <= 3; t++) {
+    tft.drawLine(52, 20 + abs(t), 108, 60 + abs(t), 0xF800);
+    tft.drawLine(108, 20 + abs(t), 52, 60 + abs(t), 0xF800);
+  }
+
+  // Title
+  tft.setTextColor(0xFFFF); // White
+  tft.setTextSize(1);
+  tft.setCursor(8, 68);
+  tft.print(F("Not a monument in:"));
+
+  // Location label (highlight in yellow)
+  tft.setTextColor(0xFFE0); // Yellow
+  tft.setCursor(8, 80);
+  tft.print(locationLabel);
+
+  // Instruction
+  tft.setTextColor(tft.color565(240, 180, 180)); // Light red
+  tft.setCursor(8, 96);
+  tft.print(F("Retake photo of a"));
+  tft.setCursor(8, 107);
+  tft.print(F("valid monument."));
+
+  // Bottom accent bar
+  tft.fillRect(0, 125, 160, 3, 0xF800);
+}

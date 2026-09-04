@@ -219,21 +219,36 @@ void markVisited(uint8_t id) {
   if (id >= NUM_LANDMARKS) return;
   visited[id] = true;
   lastVisitedId = id;
-  if (!viewSwitchDebounced) drawParkMap();
+  if (!viewSwitchDebounced) {
+    drawParkMap();
+    if (processingActive) {
+      drawGeneratingAnswerOverlay(0, true);
+    }
+  }
 }
 
 void setLocation(int16_t x, int16_t y) {
   locX = constrain(x, 0, 159);
   locY = constrain(y, 0, 111);
   hasLocation = true;
-  if (!viewSwitchDebounced) drawParkMap();
+  if (!viewSwitchDebounced) {
+    drawParkMap();
+    if (processingActive) {
+      drawGeneratingAnswerOverlay(0, true);
+    }
+  }
 }
 
 void resetMinimapState() {
   for (uint8_t i = 0; i < NUM_LANDMARKS; i++) visited[i] = false;
   lastVisitedId = -1;
   hasLocation = false;
-  if (!viewSwitchDebounced) drawParkMap();
+  if (!viewSwitchDebounced) {
+    drawParkMap();
+    if (processingActive) {
+      drawGeneratingAnswerOverlay(0, true);
+    }
+  }
 }
 
 bool mark_landmark_visited(int id) {

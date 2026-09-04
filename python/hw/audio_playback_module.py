@@ -64,17 +64,20 @@ class _PiperWaveWriterProxy:
         self,
         wf: wave.Wave_write,
         speaker_id: Optional[int] = None,
-        length_scale: Optional[float] = None,
-        noise_scale: Optional[float] = None,
-        noise_w: Optional[float] = None,
+        length_scale: float = 1.0,
+        noise_scale: float = 0.667,
+        noise_w: float = 0.8,
         sentence_silence: float = 0.0,
     ):
         self._wf = wf
         self.speaker_id = speaker_id
-        self.length_scale = length_scale
-        self.noise_scale = noise_scale
-        self.noise_w = noise_w
-        self.sentence_silence = sentence_silence
+        self.length_scale = float(length_scale)
+        self.noise_scale = float(noise_scale)
+        self.noise_w = float(noise_w)
+        self.sentence_silence = float(sentence_silence)
+        self.volume = 1.0
+        self.rate = 1.0
+        self.pitch = 1.0
 
     def writeframes(self, data):
         return self._wf.writeframes(data)
@@ -100,6 +103,11 @@ class _PiperWaveWriterProxy:
     def __getattr__(self, name: str):
         if hasattr(self._wf, name):
             return getattr(self._wf, name)
+        # Safe numeric defaults for scale / rate / silence / multiplier attributes
+        if "scale" in name or "rate" in name or "volume" in name or "pitch" in name:
+            return 1.0
+        if "silence" in name or "delay" in name:
+            return 0.0
         return None
 
 
@@ -217,13 +225,14 @@ class AudioPlayer:
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
 
+                cfg = getattr(voice_obj, "config", None)
                 proxy = _PiperWaveWriterProxy(
                     wf,
                     speaker_id=speaker_id,
-                    length_scale=None,
-                    noise_scale=None,
-                    noise_w=None,
-                    sentence_silence=0.0,
+                    length_scale=getattr(cfg, "length_scale", 1.0) or 1.0,
+                    noise_scale=getattr(cfg, "noise_scale", 0.667) or 0.667,
+                    noise_w=getattr(cfg, "noise_w", 0.8) or 0.8,
+                    sentence_silence=getattr(cfg, "sentence_silence", 0.0) or 0.0,
                 )
 
                 # 1. Try synthesize_stream_raw (yields raw PCM byte chunks)

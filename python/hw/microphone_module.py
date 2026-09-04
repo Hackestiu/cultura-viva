@@ -131,18 +131,19 @@ class MicrophoneManager:
         min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
         max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
         mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
-        print(f"[DEBUG MIC] dtype={audio.dtype}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}")
+        print(f"[DEBUG MIC] dtype={audio.dtype}, length={len(audio)}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}")
 
         # Handle various ALSA audio formats
-        if np.issubdtype(audio.dtype, np.floating):
+        if audio.dtype == np.uint8:
+            # Raw S16_LE (16-bit PCM Little Endian) byte buffer: 2 bytes per sample
+            even_len = len(audio) - (len(audio) % 2)
+            samples = audio[:even_len].view(np.int16)
+        elif np.issubdtype(audio.dtype, np.floating):
             # Float audio normalized [-1.0, 1.0]
             if max(abs(min_v), abs(max_v)) <= 1.5:
                 samples = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
             else:
                 samples = np.clip(audio, -32768, 32767).astype(np.int16)
-        elif audio.dtype == np.uint8 or (min_v >= 0 and max_v <= 255 and mean_v > 64):
-            # 8-bit unsigned PCM [0, 255] with center at 128 -> convert to 16-bit signed PCM
-            samples = ((audio.astype(np.float32) - 128.0) * 256.0).astype(np.int16)
         else:
             samples = audio.astype(np.int16)
 
@@ -152,7 +153,7 @@ class MicrophoneManager:
             wf.setsampwidth(2)       # 16-bit = 2 bytes
             wf.setframerate(16000)   # 16 kHz (Microphone.RATE_16K)
             wf.writeframes(samples.tobytes())
-        print(f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767)")
+        print(f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767, duration: {len(samples)/16000:.1f}s)")
         return out_file
 
     def transcribe(self, audio_path) -> str:

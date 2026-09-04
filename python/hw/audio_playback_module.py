@@ -162,16 +162,25 @@ class AudioPlayer:
                 wf.setframerate(voice_obj.config.sample_rate)
                 wf.setsampwidth(2)
                 wf.setnchannels(1)
+
+                kwargs = {}
+                if speaker_id is not None:
+                    kwargs["speaker_id"] = speaker_id
+
+                # PiperVoice.synthesize is a generator: it only executes and writes when iterated over
                 try:
-                    if speaker_id is not None:
-                        voice_obj.synthesize(text, wf, speaker_id=speaker_id)
-                    else:
-                        voice_obj.synthesize(text, wf)
+                    res = voice_obj.synthesize(text, wf, **kwargs)
                 except (TypeError, AttributeError):
                     try:
-                        voice_obj.synthesize(text, wf)
+                        res = voice_obj.synthesize(text, wf)
                     except (TypeError, AttributeError):
-                        voice_obj.synthesize_wav(text, wf)
+                        res = voice_obj.synthesize_wav(text, wf)
+
+                if hasattr(res, "__iter__") and not isinstance(res, (bytes, bytearray)):
+                    for chunk in res:
+                        if isinstance(chunk, (bytes, bytearray)) and wf.getnframes() == 0:
+                            wf.writeframes(chunk)
+
             wav_bytes = buf.getvalue()
             print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")
             return wav_bytes

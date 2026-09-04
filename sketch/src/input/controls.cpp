@@ -101,9 +101,18 @@ void updateControls() {
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
   if (extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE && !processingActive) {
     if (viewSwitchOn) {
-      photoTriggerFlag = true;
-      photoConfirmed = false;
-      Monitor.println("[EVENT] Button D7 pressed -> taking photo");
+      if (photoWaitingConfirmation) {
+        hasCapturedPhoto = false;
+        photoConfirmed = false;
+        photoWaitingConfirmation = false;
+        Monitor.println("[EVENT] Button D7 pressed -> photo rejected, returning to live camera");
+        buzzer.tone(700, 100);
+        drawCameraViewPlaceholder();
+      } else {
+        photoTriggerFlag = true;
+        photoConfirmed = false;
+        Monitor.println("[EVENT] Button D7 pressed -> taking photo");
+      }
     } else {
       if (!photoConfirmed) {
         recordingActive = false;
@@ -232,7 +241,7 @@ void updateControls() {
 
   // Modulino LED status indicators
   if (currentUiState == UI_BOOT_INTRO || currentUiState == UI_OPTIONS) {
-    buttons.setLeds(true, false, true);
+    buttons.setLeds(true, false, currentUiState == UI_OPTIONS);
   } else if (currentUiState == UI_TUTORIAL_1 || currentUiState == UI_TUTORIAL_2 || currentUiState == UI_TUTORIAL_3) {
     buttons.setLeds(true, true, true);
   } else if (currentUiState == UI_VOICE_SELECT) {

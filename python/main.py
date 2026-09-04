@@ -6,7 +6,7 @@ Functionalities triggered via RPC from sketch.ino:
   at full resolution (1080p, verified -- see hw/camera_module.py).
   When the photo is saved successfully, confirms to sketch ('confirm_photo_saved')
   to sound the buzzer.
-- 'view_switch_state' (switch D6): if ON, sends a thumbnail of the webcam
+- 'camera_live_view_active' (switch D6): if active, sends a thumbnail of the webcam
   TO THE SKETCH IN CHUNKS ('receive_camera_chunk') every CAMERA_SEND_INTERVAL
   seconds, preventing RPC channel message size overflow (see hw/camera_module.py).
 - 'is_recording_active' (button D7 in minimap mode, TOGGLE): 1st click starts
@@ -115,7 +115,7 @@ def run_app() -> None:
 
         # --- Camera Live View (chunked) ---
         try:
-            if Bridge.call("view_switch_state"):
+            if Bridge.call("camera_live_view_active"):
                 now = time.time()
                 if now - last_camera_send >= CAMERA_SEND_INTERVAL:
                     last_camera_send = now

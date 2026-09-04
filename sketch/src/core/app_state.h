@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <Arduino.h>
 
 /**
  * Onboarding, tutorial, and active runtime UI states.
@@ -93,5 +94,5 @@ void set_photo_validation_state(int state);
  * Sets the location label string for the "not a monument in <X>" retake screen.
  * Called by Python before set_photo_validation_state(2).
  */
-void set_retake_message(const char* msg);
+void set_retake_message(String msg);
 

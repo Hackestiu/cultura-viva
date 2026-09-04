@@ -128,6 +128,12 @@ class ModelRegistry:
         Looks up element by id or alias (case-insensitive). If not found, tries
         knowledge_base.json. Returns '' if nothing is found.
 
+        Mirrors the structure of GaudiKnowledgeStore.context_for_element() from
+        slm-benchmark: own sheet + a short parent summary (if the element belongs
+        to a larger monument) + top related elements. Kept deliberately compact
+        (no full parent fact-dump) because the on-device SLM only has a 2048-token
+        context window and the response budget is 128 tokens.
+
         :param element:     Element id or name from the vision module
                             (e.g. 'drac_park_guell', 'El Drac').
         :param personality: 'artistic' | 'technical' | 'child' — selects which
@@ -151,11 +157,44 @@ class ModelRegistry:
             entry = base.get(element, {})
             if entry:
                 print(f"[INFO] KG: element '{element}' served from knowledge_base.json")
-                return self._format_base_entry(entry)
+                return self._render_kb_entry(entry)
             print(f"[WARN] KG: element '{element}' not found in any knowledge file.")
             return ""
 
-        return self._format_sheet(sheet, personality)
+        return self._build_element_context(sheet, personality)
+
+    def _build_element_context(self, sheet: dict, personality: str) -> str:
+        """Assembles the full context for a sheet: own facts + parent summary
+        + related elements, following the shape of benchmark.py's
+        context_for_element() but trimmed for the on-device SLM's small
+        context window."""
+        parts = [self._format_sheet(sheet, personality)]
+
+        parent_id = sheet.get("parent")
+        if parent_id and parent_id != sheet.get("id"):
+            parent_sheet = self._kg_index.get(parent_id)
+            if parent_sheet is not None:
+                parts.append(self._render_parent_summary(parent_sheet))
+
+        related = sheet.get("similarities", [])[:2]
+        for note in related:
+            parts.append(f"Related: {note}")
+
+        return "\n---\n".join(p for p in parts if p)
+
+    def _render_parent_summary(self, parent_sheet: dict) -> str:
+        """Compact 2-3 line summary of the parent monument/area a sub-element
+        belongs to (e.g. the Dragon Stairway's parent is Park Güell). Unlike
+        benchmark.py's _render_sheet (which dumps the full sheet for offline
+        eval grounding), this stays short since it's extra context riding
+        alongside the element's own facts."""
+        name = parent_sheet.get("name", "")
+        lines = [f"Part of: {name}"] if name else []
+        if parent_sheet.get("creator"):
+            lines.append(f"Creator: {parent_sheet['creator']}")
+        if parent_sheet.get("inspiration"):
+            lines.append(f"Context: {parent_sheet['inspiration']}")
+        return "\n".join(lines)
 
     def _format_sheet(self, sheet: dict, personality: str) -> str:
         """Formats a knowledge sheet into a compact factual string for the SLM prompt."""
@@ -205,18 +244,40 @@ class ModelRegistry:
 
         return "\n".join(lines)
 
-    def _format_base_entry(self, entry: dict) -> str:
-        """Formats a knowledge_base.json entry into a compact string."""
+    def _render_kb_entry(self, entry: dict) -> str:
+        """Formats a knowledge_base.json (monument-level) entry into a compact,
+        labeled string.
+
+        Labels are derived from the JSON keys themselves ('unesco_status' ->
+        'Unesco Status') rather than a hardcoded key/label table, so adding a
+        new field to knowledge_base.json (e.g. 'restoration_year') shows up
+        here automatically — no code change needed. 'name' is pulled to the
+        top since every entry has one; list-of-strings fields (like
+        'notable_facts') render as bullets, nested dicts are flattened one
+        level, everything else is a single 'Label: value' line. Empty/falsy
+        values are skipped.
+        """
         lines: list[str] = []
-        for k, v in entry.items():
-            if isinstance(v, list):
-                lines.append(f"{k}: {'; '.join(str(i) for i in v)}")
-            elif isinstance(v, dict):
-                for k2, v2 in v.items():
-                    lines.append(f"{k2}: {v2}")
+        if name := entry.get("name"):
+            lines.append(f"Name: {name}")
+
+        for key, val in entry.items():
+            if key == "name" or not val:
+                continue
+            label = key.replace("_", " ").title()
+
+            if isinstance(val, list):
+                if all(isinstance(v, str) for v in val):
+                    lines.append(f"{label}:\n- " + "\n- ".join(val))
+                else:
+                    lines.append(f"{label}: {'; '.join(str(v) for v in val)}")
+            elif isinstance(val, dict):
+                for k2, v2 in val.items():
+                    lines.append(f"{k2.replace('_', ' ').title()}: {v2}")
             else:
-                lines.append(f"{k}: {v}")
-        return "\n".join(lines)
+                lines.append(f"{label}: {val}")
+
+        return "\n".join(lines).strip()
 
     def generate_response(
         self,

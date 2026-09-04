@@ -1,5 +1,6 @@
-name: Test1
-description: "LCD + Modulinos + boto extern: foto i gravacio de veu amb el boto D7"
+
+name: cultura-viva-uno-q
+description: "LCD + Modulinos + boto extern: foto (D7) i gravacio de veu (Modulino Button A)"
 ports: []
 bricks: []
 icon: 🎭

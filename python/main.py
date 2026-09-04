@@ -50,6 +50,7 @@ from config import (
     PHOTOS_DIR,
     POLL_INTERVAL,
     RECORDINGS_DIR,
+    VISION_UNKNOWN_LABEL,
 )
 from core.minimap_module import MinimapManager
 from core.model_module import ModelRegistry
@@ -71,11 +72,10 @@ models     = ModelRegistry()
 vision     = VisionClassifier()
 location   = LocationRegistry()
 player     = AudioPlayer()
-
-# Human-readable location labels for the "not a monument in <X>" retake screen.
+minimap    = MinimapManager()
 _LOCATION_LABELS: dict[str, str] = {
-    "park_guell":      "Park Guell",
-    "sagrada_familia": "Sagrada Familia",
+    "park_guell":      "Parc Güell",
+    "sagrada_familia": "Sagrada Família",
 }
 
 
@@ -144,6 +144,10 @@ def run_app() -> None:
                         Bridge.call("set_photo_validation_state", 1)
                         print(f"[VISION] Photo validated: element='{element}' at '{site}' -> showing valid screen, then confirmation.")
 
+                        # If the vision model found a recognisable landmark, illuminate it on the minimap immediately
+                        if element and element != VISION_UNKNOWN_LABEL:
+                            minimap.mark_detected(site, element)
+
         except Exception as exc:
             print(f"[ERROR] Checking button D7 / taking photo / vision: {exc}")
 
@@ -189,8 +193,9 @@ def run_app() -> None:
                             if element is None:
                                 # Fallback: vision was unavailable at photo time, try now
                                 element = vision.classify(site, photo_path) if photo_path else None
+                                if element and element != VISION_UNKNOWN_LABEL:
+                                    minimap.mark_detected(site, element)
 
-                            # 3. SLM response generation
                             kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                             answer     = models.generate_response(
                                 question=question_text,

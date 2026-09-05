@@ -18,6 +18,11 @@ import numpy as np
 from config import MIC_DEVICE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
 
 try:
+    import sounddevice as sd
+except ModuleNotFoundError:
+    sd = None
+
+try:
     from arduino.app_peripherals.microphone import Microphone
 except ModuleNotFoundError:
     Microphone = None
@@ -93,10 +98,10 @@ class MicrophoneManager:
 
     @property
     def available(self) -> bool:
-        return self._mic is not None
+        return sd is not None or self._mic is not None
 
     def start(self) -> None:
-        if self._mic is not None:
+        if sd is None and self._mic is not None:
             self._mic.start()
 
     def record_until_stopped(self, is_recording):
@@ -104,17 +109,47 @@ class MicrophoneManager:
         The callback reads the sketch recording state between chunks, so the
         physical switch cannot start or stop the recording.
         Returns the complete concatenated audio as np.ndarray, or None if empty."""
-        if self._mic is None:
-            return None
-
         chunks = []
-        elapsed = 0.0
-        while elapsed < RECORD_MAX_SECONDS:
-            chunk = self._mic.record_wav(duration=RECORD_CHUNK_SECONDS)
-            chunks.append(chunk)
-            elapsed += RECORD_CHUNK_SECONDS
-            if not is_recording():
-                break
+        if sd is not None:
+            sample_rate = 16000
+            block_size = 1024
+            max_frames = int(RECORD_MAX_SECONDS * sample_rate)
+            frames_read = 0
+
+            try:
+                with sd.InputStream(
+                    device=MIC_DEVICE,
+                    samplerate=sample_rate,
+                    channels=1,
+                    dtype="int16",
+                    blocksize=block_size,
+                    latency="high",
+                ) as stream:
+                    while frames_read < max_frames:
+                        chunk, overflowed = stream.read(
+                            min(block_size, max_frames - frames_read)
+                        )
+                        if overflowed:
+                            print("[WARN] ALSA input overflow while recording")
+                        samples = np.asarray(chunk, dtype=np.int16).reshape(-1)
+                        if len(samples) > 0:
+                            chunks.append(samples.copy())
+                            frames_read += len(samples)
+                        if not is_recording():
+                            break
+            except Exception as exc:
+                print(f"[ERROR] Continuous microphone capture failed: {exc}")
+                return None
+        elif self._mic is not None:
+            elapsed = 0.0
+            while elapsed < RECORD_MAX_SECONDS:
+                chunk = self._mic.record_wav(duration=RECORD_CHUNK_SECONDS)
+                chunks.append(np.asarray(chunk).reshape(-1))
+                elapsed += RECORD_CHUNK_SECONDS
+                if not is_recording():
+                    break
+        else:
+            return None
 
         if not chunks:
             return None
@@ -128,6 +163,8 @@ class MicrophoneManager:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
         
+        audio = np.asarray(audio).reshape(-1)
+
         # Inspect audio characteristics
         min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
         max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
@@ -136,9 +173,7 @@ class MicrophoneManager:
 
         # Handle various ALSA audio formats
         if audio.dtype == np.uint8:
-            # Raw S16_LE (16-bit PCM Little Endian) byte buffer: 2 bytes per sample
-            even_len = len(audio) - (len(audio) % 2)
-            samples = audio[:even_len].view(np.int16)
+            samples = (audio.astype(np.int16) - 128) << 8
         elif np.issubdtype(audio.dtype, np.floating):
             # Float audio normalized [-1.0, 1.0]
             if max(abs(min_v), abs(max_v)) <= 1.5:

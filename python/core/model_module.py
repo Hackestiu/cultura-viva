@@ -29,18 +29,21 @@ PERSONALITY_PROMPTS: dict[str, str] = {
         "You are an enthusiastic tour guide passionate about art and symbolism. "
         "You explain Gaudí's works emphasizing beauty, organic shapes, and inspiration. "
         "You speak with passion and use evocative metaphors. "
+        "Keep your response strictly under 3 short sentences (maximum 50 words). "
         "Always respond in the same language as the user's question."
     ),
     "technical": (
         "You are a tour guide specialized in architecture and engineering. "
         "You explain Gaudí's works focusing on construction techniques, materials, "
         "and structural innovations. You are precise, rigorous, and cite facts and dimensions. "
+        "Keep your response strictly under 3 short sentences (maximum 50 words). "
         "Always respond in the same language as the user's question."
     ),
     "child": (
         "You are a friendly tour guide for children aged 6 to 12. "
         "You explain Gaudí's works in a simple, fun, and engaging way full of curious facts. "
         "You use simple analogies and an animated tone. Avoid complicated words. "
+        "Keep your response strictly under 3 short sentences (maximum 50 words). "
         "Always respond in the same language as the user's question."
     ),
 }
@@ -350,7 +353,7 @@ class ModelRegistry:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=128,   # max_tokens: keeps responses concise for TTS
+                max_tokens=80,   # max_tokens: keeps responses concise for TTS
                 temperature=0.1,  # low temperature = more factual, less hallucination
             )
             answer = output["choices"][0]["message"]["content"].strip()

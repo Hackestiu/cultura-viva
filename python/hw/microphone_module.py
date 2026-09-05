@@ -36,7 +36,9 @@ except ModuleNotFoundError:
 DOMAIN_PROMPT = (
     "Cultura Viva audio guide in Barcelona about Antoni Gaudí, Sagrada Família basilica, "
     "Nativity, Passion, and Glory facades, Catalan modernisme architecture, Casa Batlló, "
-    "Casa Milà, Park Güell, dragon and salamander sculptures, and trencadís mosaics."
+    "Casa Milà, Park Güell, dragon and salamander sculptures, trencadís mosaics, "
+    "viaductes, Casa Museu Gaudí, escalinata del drac, pavellons de consergeria, "
+    "Plaça de la Natura, Sala Hipòstila, Turó de les Tres Creus, cúpula, and torres."
 )
 
 DOMAIN_KEYWORD_ALIASES = [
@@ -44,7 +46,10 @@ DOMAIN_KEYWORD_ALIASES = [
     "Sagrada Família", "basilica", "facade", "Nativity facade", "Passion facade",
     "Glory facade", "modernisme", "Catalan", "Casa Batlló", "Casa Milà",
     "La Pedrera", "Park Güell", "Eixample", "trencadís", "salamander", "dragon",
-    "catenary arch"
+    "catenary arch", "Viaductes", "Casa Museu", "Escalinata del drac", 
+    "Pavellons de consergeria", "Plaça de la Natura", "Placa de la Natura", 
+    "Sala Hipòstila", "Sala Hipostila", "Turó de les Tres Creus", "Turó de les 3 Creus", 
+    "Cúpula", "Façana del Naixement", "Façana de la Passió", "Torres"
 ]
 
 # Post-transcription corrections: ASR commonly misspells these proper nouns.
@@ -63,8 +68,18 @@ _CORRECTIONS = {
     r"\bmodernism\b": "modernisme",
     r"\bcatalonian\b": "Catalan",
     r"\bdrag on\b": "dragon",
+    # Correcciones de las carpetas/elementos añadidos
+    r"\bplaca (de la )?natura\b": "Plaça de la Natura",
+    r"\bsala hipostila\b": "Sala Hipòstila",
+    r"\bturo (de les )?tres creus\b": "Turó de les Tres Creus",
+    r"\bturo 3 creus\b": "Turó de les 3 Creus",
+    r"\bfacana (del )?naixement\b": "Façana del Naixement",
+    r"\bfacana (de la )?passio\b": "Façana de la Passió",
+    r"\bcupula\b": "cúpula",
+    r"\bescalinata (del )?drac\b": "Escalinata del drac",
+    r"\bpavellons (de )?consergeria\b": "Pavellons de consergeria",
+    r"\bcasa museu\b": "Casa Museu",
 }
-
 
 def build_hotwords() -> str:
     """Return the shared domain vocabulary for faster-whisper hotword biasing."""

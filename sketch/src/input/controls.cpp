@@ -79,7 +79,11 @@ int16_t readKnobFiltered() {
     return knobFiltered;
   }
 
-  int16_t diff = raw - knobFiltered;
+  // Use a wider type for the delta: raw and knobFiltered are int16_t,
+  // and on a fast spin their true difference can exceed the int16_t range.
+  // Computing/storing the diff as int16_t would silently overflow/wrap,
+  // flipping its sign and corrupting the outlier check below.
+  int32_t diff = (int32_t)raw - (int32_t)knobFiltered;
 
   // Protect against extreme single-cycle electrical noise spikes,
   // but if the new value persists for 2 consecutive cycles, accept it
@@ -324,10 +328,15 @@ void updateControls() {
       knobVolumeInit = true;
     }
   } else {
-    int16_t diff = currentKnobPos - lastKnobPos;
+    // Same overflow hazard as in readKnobFiltered(): on a fast/abrupt spin
+    // the per-cycle delta between two int16_t positions can exceed the
+    // int16_t range. Compute it in int32_t so it can never wrap sign,
+    // which previously caused the volume to be driven far below 0 (and
+    // therefore clamped to 0) regardless of turn direction.
+    int32_t diff = (int32_t)currentKnobPos - (int32_t)lastKnobPos;
     if (diff != 0) {
       lastKnobPos = currentKnobPos;
-      currentVolume += diff * 2;
+      currentVolume += (int)(diff * 2);
       if (currentVolume < 0) currentVolume = 0;
       if (currentVolume > 100) currentVolume = 100;
       Monitor.print("[EVENT] Volume changed -> ");

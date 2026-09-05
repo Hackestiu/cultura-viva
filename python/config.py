@@ -87,7 +87,7 @@ RECORD_MAX_SECONDS = 60.0
 
 # ---------- Camera (Logitech Brio 105, USB) ----------
 # Video device index for V4L2 on UNO Q (/dev/video2 for capture)
-CAMERA_DEVICE_INDEX = 2
+CAMERA_DEVICE_INDEX = 0
 
 # Full resolution photo capture settings
 CAMERA_PHOTO_WIDTH = 1920

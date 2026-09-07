@@ -164,7 +164,7 @@ void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
     tft.setTextColor(0xFFFF); // White
     tft.setTextSize(1);
     tft.setCursor(24, 72);
-    tft.print(F("Scanning photo "));
+    tft.print(F("Scanning photo   "));
   }
 
   // Animated dots only — erase & redraw the dot area

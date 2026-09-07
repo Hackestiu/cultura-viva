@@ -155,6 +155,9 @@ Totes les funcions que el **sketch exposa** (`Bridge.provide`) i el **Python cri
 | `receive_camera_chunk(idx, total, data_b64)` | — | Rep un chunk de la miniatura de la vista en directe |
 | `get_personality_index()` | `int` 0/1/2 | Personalitat activa seleccionada amb A/B/C |
 | `is_recording_active()` | `bool` | `True` mentre s'està gravant (toggle del push button D7; el switch no ho controla) |
+| `set_recording_active(active)` | — | Permet a Python sincronitzar/aturar la gravació |
+| `set_processing_active(active)` | — | `True` durant la generació de la resposta (STT, SLM, síntesi TTS) per mostrar l'overlay groc |
+| `set_playback_active(active)` | — | `True` mentre el TTS està reproduint la resposta pels auriculars per mostrar l'overlay verd |
 | `get_volume()` | `int` 0–100 | Posició actual del Modulino Knob com a % de volum |
 | `has_gps_fix()` | `bool` | El GPS té fix vàlid en aquest moment |
 | `get_gps_lat()` / `get_gps_lon()` | `float` | Coordenades actuals (0.0 si no hi ha fix) |

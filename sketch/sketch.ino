@@ -101,6 +101,8 @@ void loop() {
     Monitor.print(recordingActive ? "YES" : "no");
     Monitor.print(" | Processing: ");
     Monitor.print(processingActive ? "YES" : "no");
+    Monitor.print(" | Playback: ");
+    Monitor.print(playbackActive ? "YES" : "no");
     Monitor.print(" | GPS fix: ");
     if (has_gps_fix()) {
       Monitor.print(get_gps_lat(), 6);

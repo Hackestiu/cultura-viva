@@ -12,8 +12,11 @@ void initRPC() {
   Bridge.provide("receive_camera_chunk", receive_camera_chunk);
   Bridge.provide("get_personality_index", get_personality_index);
   Bridge.provide("is_recording_active", is_recording_active);
+  Bridge.provide("set_recording_active", set_recording_active);
   Bridge.provide("camera_live_view_active", camera_live_view_active);
   Bridge.provide("set_processing_active", set_processing_active);
+  Bridge.provide("set_playback_active", set_playback_active);
+  Bridge.provide("is_playback_active", is_playback_active);
   Bridge.provide("get_volume", get_volume);
   Bridge.provide("has_gps_fix", has_gps_fix);
   Bridge.provide("get_gps_lat", get_gps_lat);

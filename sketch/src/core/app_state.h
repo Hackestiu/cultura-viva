@@ -22,12 +22,28 @@ extern uint8_t personalityIndex;
 extern int16_t currentVolume;
 extern bool recordingActive;
 extern bool processingActive;
+extern bool playbackActive;
 extern bool photoTriggerFlag;
 extern bool playShutterSoundFlag;
 extern bool viewSwitchDebounced;
 extern bool hasCapturedPhoto;
 extern bool photoConfirmed;
 extern bool photoWaitingConfirmation;
+extern bool volumeOverlayVisible;
+extern unsigned long lastVolumeChangeMillis;
+const unsigned long VOLUME_OVERLAY_TIMEOUT_MS = 1500;
+
+/**
+ * Assistant status overlay states for UI pill messages.
+ */
+enum UiOverlayType {
+  UI_OVERLAY_NONE = 0,
+  UI_OVERLAY_RECORDING,
+  UI_OVERLAY_GENERATING,
+  UI_OVERLAY_SPEAKING
+};
+
+UiOverlayType getCurrentOverlayType();
 
 /**
  * Vision validation state for the photo flow.
@@ -55,9 +71,19 @@ uint8_t get_personality_index();
 int get_volume();
 
 /**
+ * Sets whether user audio recording is active.
+ */
+void set_recording_active(bool active);
+
+/**
  * Returns whether user audio recording is currently active.
  */
 bool is_recording_active();
+
+/**
+ * Returns whether audio playback is currently active.
+ */
+bool is_playback_active();
 
 /**
  * Returns whether Python should continue sending live camera frames.
@@ -65,9 +91,14 @@ bool is_recording_active();
 bool camera_live_view_active();
 
 /**
- * Sets whether the Python audio/AI pipeline is processing the current question.
+ * Sets whether the Python audio/AI pipeline is processing the current question (STT, SLM, TTS synthesis).
  */
 void set_processing_active(bool active);
+
+/**
+ * Sets whether the Python audio playback is active through headphones/speaker.
+ */
+void set_playback_active(bool active);
 
 /**
  * Returns true if a photo capture was triggered and clears the trigger flag.

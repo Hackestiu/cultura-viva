@@ -148,26 +148,50 @@ class AudioPlayer:
         print(f"[OK] TTS response saved to: {out_file}")
         return out_file
 
-    def synthesize_and_play(self, text: str, personality: str | None = None, bridge=None) -> bool:
+    def synthesize(self, text: str, personality: str | None = None) -> Optional[Path]:
         """Synthesizes text as speech using the voice associated with personality,
-        saves the result to RESPONSES_DIR, and plays it through the configured audio device.
-        Returns True on success, False if text is empty or any step fails.
-
-        :param text:        The text to speak.
-        :param personality: 'artistic' | 'technical' | 'child', or None for the default voice.
-        :param bridge:      Optional Bridge object to monitor volume during playback.
-        """
+        saves the result to RESPONSES_DIR, and returns the path to the saved .wav file,
+        or None on error."""
         if not text or not text.strip():
-            print("[WARN] AudioPlayer: synthesize_and_play called with empty text — skipping.")
-            return False
+            print("[WARN] AudioPlayer: synthesize called with empty text — skipping.")
+            return None
 
         voice_key = PERSONALITY_VOICE.get(personality, DEFAULT_VOICE) if personality else DEFAULT_VOICE
         wav_bytes = self._synthesize(text, voice_key)
         if wav_bytes is None:
+            return None
+
+        return self.save_response(wav_bytes)
+
+    def synthesize_and_play(self, text: str, personality: str | None = None, bridge=None) -> bool:
+        """Synthesizes text as speech using the voice associated with personality,
+        saves the result to RESPONSES_DIR, and plays it through the configured audio device.
+        Switches Bridge state from processing (generating) to playback (speaking) when audio begins.
+        Returns True on success, False if text is empty or any step fails.
+
+        :param text:        The text to speak.
+        :param personality: 'artistic' | 'technical' | 'child', or None for the default voice.
+        :param bridge:      Optional Bridge object to monitor volume and update UI status during playback.
+        """
+        out_file = self.synthesize(text, personality=personality)
+        if out_file is None:
             return False
 
-        out_file = self.save_response(wav_bytes)
-        return self.play(out_file, bridge=bridge)
+        if bridge is not None:
+            try:
+                bridge.call("set_processing_active", False)
+                bridge.call("set_playback_active", True)
+            except Exception as exc:
+                print(f"[WARN] AudioPlayer: failed to set playback active on bridge: {exc}")
+
+        try:
+            return self.play(out_file, bridge=bridge)
+        finally:
+            if bridge is not None:
+                try:
+                    bridge.call("set_playback_active", False)
+                except Exception:
+                    pass
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
         """Returns WAV audio bytes for text spoken in the voice identified by voice_key,

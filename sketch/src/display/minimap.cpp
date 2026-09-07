@@ -221,8 +221,12 @@ void markVisited(uint8_t id) {
   lastVisitedId = id;
   if (!viewSwitchDebounced) {
     drawParkMap();
-    if (processingActive) {
-      drawGeneratingAnswerOverlay(0, true);
+    UiOverlayType overlay = getCurrentOverlayType();
+    if (overlay != UI_OVERLAY_NONE) {
+      drawAssistantOverlay(overlay, 0, true);
+    }
+    if (volumeOverlayVisible) {
+      drawVolumeBar(currentVolume);
     }
   }
 }
@@ -233,8 +237,12 @@ void setLocation(int16_t x, int16_t y) {
   hasLocation = true;
   if (!viewSwitchDebounced) {
     drawParkMap();
-    if (processingActive) {
-      drawGeneratingAnswerOverlay(0, true);
+    UiOverlayType overlay = getCurrentOverlayType();
+    if (overlay != UI_OVERLAY_NONE) {
+      drawAssistantOverlay(overlay, 0, true);
+    }
+    if (volumeOverlayVisible) {
+      drawVolumeBar(currentVolume);
     }
   }
 }
@@ -245,8 +253,12 @@ void resetMinimapState() {
   hasLocation = false;
   if (!viewSwitchDebounced) {
     drawParkMap();
-    if (processingActive) {
-      drawGeneratingAnswerOverlay(0, true);
+    UiOverlayType overlay = getCurrentOverlayType();
+    if (overlay != UI_OVERLAY_NONE) {
+      drawAssistantOverlay(overlay, 0, true);
+    }
+    if (volumeOverlayVisible) {
+      drawVolumeBar(currentVolume);
     }
   }
 }

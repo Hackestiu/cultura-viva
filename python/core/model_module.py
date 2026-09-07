@@ -317,9 +317,13 @@ class ModelRegistry:
                 from llama_cpp import Llama
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=512,      # context_window
-                    n_threads=4,     # threads (Cortex-A53 has 4 cores)
-                    n_batch=512,     # batch_size for prompt processing
+                    n_ctx=512,        # context window — keep small on A53
+                    n_threads=4,      # Cortex-A53 has 4 cores; use all
+                    n_threads_batch=4,  # also parallelise prefill
+                    n_batch=128,      # smaller batches are faster on in-order A53
+                    n_gpu_layers=0,   # CPU-only (no GPU on UNO Q)
+                    use_mlock=True,   # lock model weights in RAM; avoids paging under load
+                    flash_attn=False, # not supported on A53 llama.cpp CPU path
                     verbose=False,
                 )
                 print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
@@ -356,8 +360,10 @@ class ModelRegistry:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=80,   # max_tokens: keeps responses concise for TTS
-                temperature=0.1,  # low temperature = more factual, less hallucination
+                max_tokens=60,        # fewer decode steps → faster; prompt instructs ≤50 words
+                temperature=0.1,      # low temperature = more factual, less hallucination
+                repeat_penalty=1.1,   # slight penalty helps model hit <eos> sooner
+                stop=["\n\n", "<|im_end|>"],  # early-stop on double newline or chat end token
             )
             answer = output["choices"][0]["message"]["content"].strip()
             print(f"[OK] SLM response generated ({len(answer)} characters).")

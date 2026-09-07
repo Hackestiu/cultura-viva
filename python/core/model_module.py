@@ -317,9 +317,9 @@ class ModelRegistry:
                 from llama_cpp import Llama
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=2048,      # context_window
-                    n_threads=4,     # threads (Cortex-A53 has 4 cores)
-                    n_batch=256,     # batch_size for prompt processing
+                    n_ctx=512,      # context_window
+                    n_threads=3,     # threads (Cortex-A53 has 4 cores)
+                    n_batch=512,     # batch_size for prompt processing
                     verbose=False,
                 )
                 print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")

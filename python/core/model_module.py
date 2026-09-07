@@ -318,7 +318,7 @@ class ModelRegistry:
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
                     n_ctx=512,      # context_window
-                    n_threads=3,     # threads (Cortex-A53 has 4 cores)
+                    n_threads=4,     # threads (Cortex-A53 has 4 cores)
                     n_batch=512,     # batch_size for prompt processing
                     verbose=False,
                 )

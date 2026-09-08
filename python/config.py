@@ -51,7 +51,7 @@ LOCATIONS_CONFIG_FILE = LOCATIONS_DIR / "locations.json"
 
 # Default fallback location when GPS has no fix (e.g. testing indoors)
 # Options: 'park_guell' | 'sagrada_familia'
-DEFAULT_LOCATION = "park_guell"
+DEFAULT_LOCATION = "sagrada_familia"
 
 # Ensure all runtime output and model folders exist on startup
 for _dir in (

@@ -135,9 +135,9 @@ void updateControls() {
   }
   bool viewSwitchOn = viewSwitchDebounced;
 
-  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation or vision validation)
+  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation, playback, or vision validation)
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (!processingActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+  if (!processingActive && !playbackActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
       buzzer.tone(900, 90);
@@ -191,8 +191,12 @@ void updateControls() {
       if (photoWaitingConfirmation) {
         drawPhotoConfirmationOverlay();
       }
-      if (processingActive) {
-        drawGeneratingAnswerOverlay(0, true);
+      UiOverlayType overlay = getCurrentOverlayType();
+      if (overlay != UI_OVERLAY_NONE) {
+        drawAssistantOverlay(overlay, 0, true);
+      }
+      if (volumeOverlayVisible) {
+        drawVolumeBar(currentVolume);
       }
     }
   }
@@ -210,8 +214,8 @@ void updateControls() {
   btnBHeldPrev = btnBHeld;
   btnCHeldPrev = btnCHeld;
 
-  // Make all buttons unavailable when generating an answer or validating photo
-  if (processingActive || photoValidationState != -1) {
+  // Make all buttons unavailable when generating an answer, speaking, or validating photo
+  if (processingActive || playbackActive || photoValidationState != -1) {
     btnAPressedEdge = false;
     btnBPressedEdge = false;
     btnCPressedEdge = false;
@@ -282,7 +286,7 @@ void updateControls() {
       drawCurrentView();
     }
   } else if (currentUiState == UI_ACTIVE) {
-    if (!recordingActive && !processingActive
+    if (!recordingActive && !processingActive && !playbackActive
         && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
       Monitor.print("[EVENT] Personality selected: index ");
@@ -300,7 +304,7 @@ void updateControls() {
   } else if (currentUiState == UI_VOICE_SELECT) {
     ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_ACTIVE) {
-    if (recordingActive || processingActive) {
+    if (recordingActive || processingActive || playbackActive) {
       bool blink = ((millis() / 300) % 2) == 0;
       ledA = blink; ledB = blink; ledC = blink;
     } else {
@@ -342,29 +346,46 @@ void updateControls() {
       Monitor.print("[EVENT] Volume changed -> ");
       Monitor.print(currentVolume);
       Monitor.println("%");
+
+      if (currentUiState == UI_ACTIVE) {
+        lastVolumeChangeMillis = millis();
+        volumeOverlayVisible = true;
+        drawVolumeBar(currentVolume);
+      }
     }
   }
 
-  // Generating answer overlay handling (message appears at top-left, only animated dots move)
-  static bool lastProcessingActive = false;
-  static unsigned long lastGeneratingAnimMillis = 0;
-  static uint8_t animDotCount = 0;
-
-  if (processingActive != lastProcessingActive) {
-    lastProcessingActive = processingActive;
-    if (processingActive) {
-      drawGeneratingAnswerOverlay(0, true);
-      lastGeneratingAnimMillis = millis();
-      animDotCount = 0;
-    } else {
-      // Completed generating answer -> restore current view to clear the overlay
+  // Auto-hide volume bar after timeout
+  if (volumeOverlayVisible && currentUiState == UI_ACTIVE) {
+    if (millis() - lastVolumeChangeMillis >= VOLUME_OVERLAY_TIMEOUT_MS) {
+      volumeOverlayVisible = false;
       drawCurrentView();
     }
-  } else if (processingActive) {
-    if (millis() - lastGeneratingAnimMillis >= 400) {
-      lastGeneratingAnimMillis = millis();
-      animDotCount = (animDotCount + 1) % 4;
-      drawGeneratingAnswerOverlay(animDotCount, false);
+  }
+
+  // Assistant overlay handling (Recording / Generating / Speaking with animated dots)
+  static UiOverlayType lastOverlayType = UI_OVERLAY_NONE;
+  static unsigned long lastOverlayAnimMillis = 0;
+  static uint8_t overlayDotCount = 0;
+
+  UiOverlayType currentOverlay = getCurrentOverlayType();
+
+  if (currentOverlay != lastOverlayType) {
+    if (lastOverlayType != UI_OVERLAY_NONE && currentOverlay == UI_OVERLAY_NONE) {
+      // Completed all assistant phases -> restore current view to clear the overlay
+      drawCurrentView();
+    }
+    lastOverlayType = currentOverlay;
+    if (currentOverlay != UI_OVERLAY_NONE) {
+      drawAssistantOverlay(currentOverlay, 0, true);
+      lastOverlayAnimMillis = millis();
+      overlayDotCount = 0;
+    }
+  } else if (currentOverlay != UI_OVERLAY_NONE) {
+    if (millis() - lastOverlayAnimMillis >= 400) {
+      lastOverlayAnimMillis = millis();
+      overlayDotCount = (overlayDotCount + 1) % 4;
+      drawAssistantOverlay(currentOverlay, overlayDotCount, false);
     }
   }
 

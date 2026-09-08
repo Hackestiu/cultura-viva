@@ -204,10 +204,17 @@ def run_app() -> None:
                                 kg_context=kg_context,
                             )
 
-                            # 4. TTS audio reading (with real-time Modulino knob volume tracking)
+                            # 4. TTS audio reading (with real-time Modulino knob volume tracking & speaking status)
                             player.synthesize_and_play(answer, personality=model_name, bridge=Bridge)
                         finally:
-                            Bridge.call("set_processing_active", False)
+                            try:
+                                Bridge.call("set_processing_active", False)
+                            except Exception:
+                                pass
+                            try:
+                                Bridge.call("set_playback_active", False)
+                            except Exception:
+                                pass
                     else:
                         print("[WARN] Empty recording (0 chunks captured)")
         except Exception as exc:

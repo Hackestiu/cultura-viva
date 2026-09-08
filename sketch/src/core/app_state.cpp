@@ -6,12 +6,15 @@ uint8_t personalityIndex = 0;
 int16_t currentVolume = 70;
 bool recordingActive = false;
 bool processingActive = false;
+bool playbackActive = false;
 bool photoTriggerFlag = false;
 bool playShutterSoundFlag = false;
 bool viewSwitchDebounced = true;
 bool hasCapturedPhoto = false;
 bool photoConfirmed = false;
 bool photoWaitingConfirmation = false;
+bool volumeOverlayVisible = false;
+unsigned long lastVolumeChangeMillis = 0;
 int8_t photoValidationState = -1;
 char retakeLocationLabel[40] = "this location";
 
@@ -23,16 +26,41 @@ int get_volume() {
   return (int)currentVolume;
 }
 
+void set_recording_active(bool active) {
+  recordingActive = active;
+}
+
 bool is_recording_active() {
   return recordingActive;
 }
 
+bool is_playback_active() {
+  return playbackActive;
+}
+
 bool camera_live_view_active() {
-  return viewSwitchDebounced && !photoWaitingConfirmation && !processingActive && (photoValidationState == -1);
+  return viewSwitchDebounced && !photoWaitingConfirmation && !processingActive && !playbackActive && (photoValidationState == -1);
 }
 
 void set_processing_active(bool active) {
   processingActive = active;
+}
+
+void set_playback_active(bool active) {
+  playbackActive = active;
+}
+
+UiOverlayType getCurrentOverlayType() {
+  if (recordingActive) {
+    return UI_OVERLAY_RECORDING;
+  }
+  if (processingActive) {
+    return UI_OVERLAY_GENERATING;
+  }
+  if (playbackActive) {
+    return UI_OVERLAY_SPEAKING;
+  }
+  return UI_OVERLAY_NONE;
 }
 
 bool photo_trigger() {

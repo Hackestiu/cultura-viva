@@ -27,7 +27,10 @@ try:
 except ModuleNotFoundError:
     Bridge = None
 
-LANDMARKS_FILE = MINIMAP_DIR / "landmarks.json"
+LANDMARKS_FILES = {
+    "park_guell": MINIMAP_DIR / "landmarks_guell.json",
+    "sagrada_familia": MINIMAP_DIR / "landmarks_sagrada.json",
+}
 
 # ---------------------------------------------------------------------------
 # Mapping: vision model label  →  landmark code (per location)
@@ -59,15 +62,33 @@ VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
 
 class MinimapManager:
     def __init__(self):
-        self._landmarks = self._load_landmarks()
+        self._landmarks = []
+        self._active_location = None
 
-    def _load_landmarks(self):
-        if not LANDMARKS_FILE.exists():
-            print(f"[WARN] Landmarks file not found: {LANDMARKS_FILE}")
+    def _load_landmarks(self, location: str):
+        landmarks_file = LANDMARKS_FILES.get(location)
+        if landmarks_file is None or not landmarks_file.exists():
+            print(f"[WARN] Landmarks file not found for {location}: {landmarks_file}")
             return []
-        with open(LANDMARKS_FILE, "r", encoding="utf-8") as f:
+        with open(landmarks_file, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data["landmarks"]
+
+    def set_location(self, location: str) -> bool:
+        """Selects the map and landmark data used by the firmware."""
+        if location not in LANDMARKS_FILES:
+            print(f"[WARN] minimap: unknown location '{location}'")
+            return False
+        if location == self._active_location:
+            return True
+
+        self._landmarks = self._load_landmarks(location)
+        self._active_location = location
+        map_id = 1 if location == "sagrada_familia" else 0
+        if Bridge is None:
+            print(f"[dry run] set_minimap_location({map_id})")
+            return True
+        return bool(Bridge.call("set_minimap_location", map_id))
 
     def _resolve_id(self, label: str):
         """Returns the numeric landmark id for a landmark code (e.g. 'FN'),

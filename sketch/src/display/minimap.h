@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "landmarks.h"
+#include "landmarks_guell.h"
 
 extern bool visited[NUM_LANDMARKS];
 extern int8_t lastVisitedId;
@@ -42,6 +42,11 @@ void setLocation(int16_t x, int16_t y);
  * Resets all visited landmark states and location marker.
  */
 void resetMinimapState();
+
+/**
+ * RPC callback: Selects the active map (0 = Park Guell, 1 = Sagrada Familia).
+ */
+bool set_minimap_location(int location);
 
 /**
  * RPC callback: Marks landmark visited by ID.

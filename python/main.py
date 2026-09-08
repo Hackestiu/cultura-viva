@@ -103,6 +103,9 @@ def run_app() -> None:
     def loop():
         nonlocal last_camera_send, last_volume, last_detected_element, last_detected_site
 
+        # Keep the LCD minimap synchronized with the GPS fallback/current site.
+        minimap.set_location(location.current())
+
         # --- Modulino Knob: Volume control ---
         try:
             current_volume = Bridge.call("get_volume")

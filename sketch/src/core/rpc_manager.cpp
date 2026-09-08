@@ -24,6 +24,7 @@ void initRPC() {
   Bridge.provide("mark_landmark_visited", mark_landmark_visited);
   Bridge.provide("set_location_by_id", set_location_by_id);
   Bridge.provide("set_location_xy", set_location_xy);
+  Bridge.provide("set_minimap_location", set_minimap_location);
   Bridge.provide("reset_minimap", reset_minimap);
   Bridge.provide("set_photo_validation_state", set_photo_validation_state);
   Bridge.provide("set_retake_message", set_retake_message);

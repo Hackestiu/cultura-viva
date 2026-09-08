@@ -317,13 +317,13 @@ class ModelRegistry:
                 from llama_cpp import Llama
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=512,        # context window — keep small on A53
-                    n_threads=4,      # Cortex-A53 has 4 cores; use all
-                    n_threads_batch=4,  # also parallelise prefill
-                    n_batch=128,      # smaller batches are faster on in-order A53
-                    n_gpu_layers=0,   # CPU-only (no GPU on UNO Q)
-                    use_mlock=True,   # lock model weights in RAM; avoids paging under load
-                    flash_attn=False, # not supported on A53 llama.cpp CPU path
+                    n_ctx=2048,           # context window (matches README; Qwen2.5-1.5B default)
+                    n_threads=4,          # Cortex-A53 has 4 cores; use all for CPU layers
+                    n_threads_batch=4,    # parallelise prefill on CPU layers
+                    n_batch=256,          # larger prefill batches are faster on Adreno GPU path
+                    n_gpu_layers=-1,      # offload ALL layers to Adreno GPU (-1 = auto-max)
+                    use_mlock=True,       # lock weights in RAM; avoids paging under load
+                    flash_attn=True,      # enabled: reduces memory bandwidth on GPU path
                     verbose=False,
                 )
                 print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")

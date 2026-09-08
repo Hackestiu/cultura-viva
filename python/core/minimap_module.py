@@ -1,7 +1,7 @@
 """
-Minimap state management for the Park Güell map display (switch D6 OFF).
+Minimap state management for the Sagrada Família map display (switch D6 OFF).
 
-This module translates human-readable landmark identifiers (e.g. 'DR', 3)
+This module translates human-readable landmark identifiers (e.g. 'FN', 3)
 into RPC calls exposed by the sketch:
     mark_landmark_visited(id)
     set_location_by_id(id)
@@ -45,13 +45,14 @@ VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
         "pavellons_consergeria":"PL",  # Porter's Lodge
     },
     "sagrada_familia": {
-        # Sagrada Família has no minimap landmarks yet; extend as needed.
-        "cupula":           None,
-        "facana_naixement": None,
-        "facana_passio":    None,
-        "laterals":         None,
-        "posterior":        None,
-        "torres":           None,
+        "cupula":              "CU",  # Cúpula / Absis interior
+        "facana_naixement":    "FN",  # Façana del Naixement (Nativity)
+        "facana_passio":       "FP",  # Façana de la Passió  (Passion)
+        "lateral_esquerra":    "NL",  # Nau Lateral esquerra
+        "lateral_dreta":       "NR",  # Nau Lateral dreta
+        "laterals":            "NL",  # Nau Lateral genèric → esquerra
+        "posterior":           "PO",  # Absis / Posterior exterior
+        "torres":              "TO",  # Torres del Creuer
     },
 }
 
@@ -69,7 +70,7 @@ class MinimapManager:
         return data["landmarks"]
 
     def _resolve_id(self, label: str):
-        """Returns the numeric landmark id for a landmark code (e.g. 'DR'),
+        """Returns the numeric landmark id for a landmark code (e.g. 'FN'),
         a numeric index as a string, or a landmark name.
         Returns None if label does not match any known landmark."""
         label = label.strip()
@@ -113,7 +114,7 @@ class MinimapManager:
 
     def mark_visited(self, label: str) -> bool:
         """Marks the landmark identified by label as visited.
-        label may be a landmark code (e.g. 'DR') or a numeric index as a string.
+        label may be a landmark code (e.g. 'FN') or a numeric index as a string.
         Returns True if the landmark was resolved and the RPC call was dispatched,
         False if label does not match any known landmark."""
         landmark_id = self._resolve_id(label)

@@ -317,10 +317,10 @@ class ModelRegistry:
                 from llama_cpp import Llama
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=2048,           # context window (matches README; Qwen2.5-1.5B default)
+                    n_ctx=512,           # context window (matches README; Qwen2.5-1.5B default)
                     n_threads=4,          # Cortex-A53 has 4 cores; use all for CPU layers
                     n_threads_batch=4,    # parallelise prefill on CPU layers
-                    n_batch=256,          # larger prefill batches are faster on Adreno GPU path
+                    n_batch=128,          # larger prefill batches are faster on Adreno GPU path
                     n_gpu_layers=-1,      # offload ALL layers to Adreno GPU (-1 = auto-max)
                     use_mlock=True,       # lock weights in RAM; avoids paging under load
                     flash_attn=True,      # enabled: reduces memory bandwidth on GPU path

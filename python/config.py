@@ -75,7 +75,7 @@ MIC_DEVICE = "hw:0,0"
 # ---------- Audio Playback (Jack 3.5mm headphones, volume via Modulino Knob) ----------
 # ALSA output device for wired headphones connected via 3.5mm jack.
 # "default" routes to the standard system audio output.
-PLAYBACK_DEVICE = "default"
+PLAYBACK_DEVICE = "plughw:0,0"
 
 # Default volume percentage (0 - 100%)
 DEFAULT_VOLUME_PERCENT = 70

@@ -16,11 +16,11 @@ venv/
 build/
 .arduino/
 
-# Sistema Operatiu
+# Operating System
 .DS_Store
 Thumbs.db
 
-# Imatges i àudios generats en temps d'execució
+# Runtime Generated Media
 python/data/photos/*.jpg
 python/data/recordings/*.wav
 python/data/responses/*.wav
@@ -28,8 +28,7 @@ python/data/responses/*.wav
 !python/data/recordings/.gitkeep
 !python/data/responses/.gitkeep
 
-# Models pesats (>100MB - GitHub rebutja fitxers de més de 100MB)
-# Si vols pujar-los a GitHub, fes servir Git LFS (instruccions al README)
+# AI Model Files
 *.onnx
 *.safetensors
 *.gguf

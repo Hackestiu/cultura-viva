@@ -96,6 +96,11 @@ bool camera_live_view_active();
 void set_processing_active(bool active);
 
 /**
+ * Returns whether the system is currently processing an answer.
+ */
+bool is_processing_active();
+
+/**
  * Sets whether the Python audio playback is active through headphones/speaker.
  */
 void set_playback_active(bool active);

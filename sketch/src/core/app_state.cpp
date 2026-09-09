@@ -46,6 +46,10 @@ void set_processing_active(bool active) {
   processingActive = active;
 }
 
+bool is_processing_active() {
+  return processingActive;
+}
+
 void set_playback_active(bool active) {
   playbackActive = active;
 }

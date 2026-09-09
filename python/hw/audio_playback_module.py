@@ -179,6 +179,9 @@ class AudioPlayer:
 
         if bridge is not None:
             try:
+                if not bridge.call("is_processing_active"):
+                    print("[INFO] AudioPlayer: Generation was cancelled before playback.")
+                    return False
                 bridge.call("set_processing_active", False)
                 bridge.call("set_playback_active", True)
             except Exception as exc:

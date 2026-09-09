@@ -64,6 +64,36 @@ void drawCurrentView() {
   }
 }
 
+void drawCurrentUiStateScreen() {
+  switch (currentUiState) {
+    case UI_BOOT_INTRO:
+      drawScreenIntro();
+      break;
+    case UI_OPTIONS:
+      drawScreenOptions();
+      break;
+    case UI_TUTORIAL_1:
+      drawScreenTutorial1();
+      break;
+    case UI_TUTORIAL_2:
+      drawScreenTutorial2();
+      break;
+    case UI_TUTORIAL_3:
+      drawScreenTutorial3();
+      break;
+    case UI_VOICE_SELECT:
+      drawScreenPersonalitySelect();
+      break;
+    case UI_ACTIVE:
+    default:
+      drawCurrentView();
+      break;
+  }
+  if (volumeOverlayVisible) {
+    drawVolumeBar(currentVolume);
+  }
+}
+
 void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw) {
   if (type == UI_OVERLAY_NONE) return;
 
@@ -108,6 +138,16 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
     tft.setTextSize(1);
     tft.setCursor(5, 5);
     tft.print(msg);
+
+    // If generating, display a sleek cancellation hint at the bottom pill
+    if (type == UI_OVERLAY_GENERATING) {
+      tft.fillRoundRect(10, 114, 140, 12, 2, ST77XX_BLACK);
+      tft.drawRoundRect(10, 114, 140, 12, 2, 0xFFE0);
+      tft.setTextColor(0xFFE0, 0x0000);
+      tft.setTextSize(1);
+      tft.setCursor(14, 116);
+      tft.print("Push button: STOP");
+    }
   }
 
   // Only the animated dots update

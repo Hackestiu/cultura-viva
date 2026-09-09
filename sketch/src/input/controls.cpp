@@ -135,9 +135,15 @@ void updateControls() {
   }
   bool viewSwitchOn = viewSwitchDebounced;
 
-  // External button D7 handling (active only in UI_ACTIVE state, disabled during answer generation, playback, or vision validation)
+  // External button D7 handling
   bool extBtnPressed = (digitalRead(EXT_BUTTON_PIN) == LOW);
-  if (!processingActive && !playbackActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+  if (processingActive && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+    // Cancel answer generation on button press
+    processingActive = false;
+    buzzer.tone(700, 120);
+    Monitor.println("[EVENT] Button D7 pressed -> CANCELLED answer generation!");
+    drawCurrentView();
+  } else if (!processingActive && !playbackActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
       buzzer.tone(900, 90);
@@ -347,7 +353,13 @@ void updateControls() {
       Monitor.print(currentVolume);
       Monitor.println("%");
 
-      if (currentUiState == UI_ACTIVE) {
+      // Show volume overlay during active use or tutorial walkthrough
+      if (currentUiState == UI_ACTIVE ||
+          currentUiState == UI_TUTORIAL_1 ||
+          currentUiState == UI_TUTORIAL_2 ||
+          currentUiState == UI_TUTORIAL_3 ||
+          currentUiState == UI_OPTIONS ||
+          currentUiState == UI_VOICE_SELECT) {
         lastVolumeChangeMillis = millis();
         volumeOverlayVisible = true;
         drawVolumeBar(currentVolume);
@@ -355,11 +367,11 @@ void updateControls() {
     }
   }
 
-  // Auto-hide volume bar after timeout
-  if (volumeOverlayVisible && currentUiState == UI_ACTIVE) {
+  // Auto-hide volume bar after timeout and restore screen
+  if (volumeOverlayVisible) {
     if (millis() - lastVolumeChangeMillis >= VOLUME_OVERLAY_TIMEOUT_MS) {
       volumeOverlayVisible = false;
-      drawCurrentView();
+      drawCurrentUiStateScreen();
     }
   }
 

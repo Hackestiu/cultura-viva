@@ -188,6 +188,9 @@ def run_app() -> None:
 
                             # 1. STT interpretation
                             question_text = microphone.transcribe(wav_path)
+                            if not Bridge.call("is_processing_active"):
+                                print("[INFO] Generation cancelled by user after STT.")
+                                return
 
                             # 2. Use element already detected at photo time (no second vision run)
                             element  = last_detected_element
@@ -199,6 +202,10 @@ def run_app() -> None:
                                 if element and element != VISION_UNKNOWN_LABEL:
                                     minimap.mark_detected(site, element)
 
+                            if not Bridge.call("is_processing_active"):
+                                print("[INFO] Generation cancelled by user before SLM.")
+                                return
+
                             kg_context = models.get_kg_context(element, personality=model_name) if element else ""
                             answer     = models.generate_response(
                                 question=question_text,
@@ -206,6 +213,10 @@ def run_app() -> None:
                                 personality=model_name,
                                 kg_context=kg_context,
                             )
+
+                            if not Bridge.call("is_processing_active"):
+                                print("[INFO] Generation cancelled by user after SLM.")
+                                return
 
                             # 4. TTS audio reading (with real-time Modulino knob volume tracking & speaking status)
                             player.synthesize_and_play(answer, personality=model_name, bridge=Bridge)

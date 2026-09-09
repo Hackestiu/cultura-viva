@@ -17,6 +17,11 @@ void initDisplay();
 void drawCurrentView();
 
 /**
+ * Redraws the current screen based on currentUiState (used to restore screen after volume bar overlay in tutorial/options/active).
+ */
+void drawCurrentUiStateScreen();
+
+/**
  * Renders an assistant status overlay pill at the top-left corner with animated dots:
  *  - UI_OVERLAY_RECORDING:  Red border, "Recording audio"
  *  - UI_OVERLAY_GENERATING: Yellow border, "Generating answer"

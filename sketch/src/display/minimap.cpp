@@ -9,7 +9,7 @@ bool visited[NUM_LANDMARKS] = { false };
 int8_t lastVisitedId = -1;
 bool hasLocation = false;
 int16_t locX = 0, locY = 0;
-static bool sagradaMap = false;
+static bool sagradaMap = true;
 
 static uint16_t C_VOID[2], C_BLOCK[2], C_BLOCKD[2], C_FORESTDD[2], C_FOREST[2], C_FORESTL[2],
                 C_SCRUB[2], C_SCRUBL[2], C_PATH[2], C_PATHD[2], C_SAND[2], C_SANDD[2],

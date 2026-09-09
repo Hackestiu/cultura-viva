@@ -1,3 +1,0 @@
-# All AI dependencies are installed system-wide on the Arduino UNO Q platform:
-# - faster-whisper, onnxruntime, llama-cpp-python, piper-tts, pillow, numpy, sounddevice
-# (main.py automatically adds system dist-packages to sys.path).

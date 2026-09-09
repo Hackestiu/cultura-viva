@@ -1,5 +1,4 @@
 {
-  "_comment": "v7: paleta de colors de pedra calcaria calida real (limestone warm tones), coordenades dels landmarks ajustades a la imatge de referencia de la planta de la Sagrada Familia, nova seccio zoneColors amb el color d'il·luminacio de cada zona (morat CU, taronja PO, verd TO, rosa-salmo NL+NR, blau perla FN, cian FP), zones actualitzades a les arees visuals de la imatge. Mapa de tiles sense canvis (arquitectura correcta des de v6).",
   "screen": {
     "width": 160,
     "height": 128,

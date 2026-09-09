@@ -403,6 +403,8 @@ void updateControls() {
 
   // Vision validation state machine — non-blocking, millis()-based
   // State: -1=idle, 0=checking (animated dots), 1=valid (hold ~1.8s), 2=invalid (hold ~2.0s)
+  // Vision validation state machine
+  // State: -1=idle, 0=checking (animated dots), 1=valid (hold ~5.0s), 2=invalid (hold ~6.0s)
   static int8_t lastPhotoValidationState = -1;
   static unsigned long validationHoldStart = 0;
   static uint8_t visionDotCount = 0;
@@ -452,6 +454,7 @@ void updateControls() {
   }
 
   // Auto-advance from state 1 (valid) after ~1800ms -> show photo confirmation
+  // Auto-advance from state 1 (valid) after hold period -> show photo confirmation
   if (photoValidationState == 1 && (millis() - validationHoldStart >= 5000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;
@@ -466,6 +469,7 @@ void updateControls() {
   }
 
   // Auto-advance from state 2 (invalid) after ~2000ms -> back to camera live view
+  // Auto-advance from state 2 (invalid) after hold period -> back to camera live view
   if (photoValidationState == 2 && (millis() - validationHoldStart >= 6000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;

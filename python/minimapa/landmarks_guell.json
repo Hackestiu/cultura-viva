@@ -1,5 +1,4 @@
 {
-  "_comment": "Source of truth for the tile-map design (adapted from a reference pixel map — see README). Screen is 160x128 landscape: a 160x112 tile-painted terrain map (40x28 grid of 4px tiles) plus a 16px HUD status bar. Keep arduino/{landmarks.h,tilemap.h} in sync with this file by hand.",
   "screen": { "width": 160, "height": 128, "mapHeight": 112, "statusBarHeight": 16, "tile": 4, "cols": 40, "rows": 28 },
 
   "palette": {
@@ -62,13 +61,13 @@
   ],
 
   "landmarks": [
-    { "id": 0, "code": "PL", "name": "Porter's Lodge",      "screen": "PORTERS LODGE",  "x": 50,  "y": 94 },
-    { "id": 1, "code": "DR", "name": "Dragon Stairway",     "screen": "DRAGON STAIRS",  "x": 70,  "y": 82 },
-    { "id": 2, "code": "HH", "name": "Hypostyle Hall",      "screen": "HYPOSTYLE HALL", "x": 74,  "y": 70 },
-    { "id": 3, "code": "NS", "name": "Nature Square",       "screen": "NATURE SQUARE",  "x": 82,  "y": 58 },
-    { "id": 4, "code": "CG", "name": "Casa Museu Gaudí",    "screen": "CASA GAUDI",     "x": 90,  "y": 18 },
-    { "id": 5, "code": "TV", "name": "The Three Viaducts",  "screen": "3 VIADUCTS",     "x": 124, "y": 34 },
-    { "id": 6, "code": "AG", "name": "Austria Gardens",     "screen": "AUSTRIA GARDEN", "x": 136, "y": 62 },
-    { "id": 7, "code": "CH", "name": "Calvary Hill",        "screen": "CALVARY HILL",   "x": 22,  "y": 62 }
+    { "id": 0, "code": "PL", "name": "Pavelló de Consergeria", "screen": "CONSERGERIA",     "x": 50,  "y": 94 },
+    { "id": 1, "code": "DR", "name": "Escalinata del Drac",    "screen": "ESCALES DRAC",     "x": 70,  "y": 82 },
+    { "id": 2, "code": "HH", "name": "Sala Hipòstila",         "screen": "SALA HIPOSTILA",   "x": 74,  "y": 70 },
+    { "id": 3, "code": "NS", "name": "Plaça de la Natura",     "screen": "PLACA NATURA",     "x": 82,  "y": 58 },
+    { "id": 4, "code": "CG", "name": "Casa Museu Gaudí",       "screen": "CASA GAUDI",       "x": 90,  "y": 18 },
+    { "id": 5, "code": "TV", "name": "Els Tres Viaductes",     "screen": "3 VIADUCTES",      "x": 124, "y": 34 },
+    { "id": 6, "code": "AG", "name": "Jardins d'Àustria",      "screen": "JARDINS AUSTRIA",  "x": 136, "y": 62 },
+    { "id": 7, "code": "CH", "name": "Turó del Calvari",       "screen": "TURO CALVARI",     "x": 22,  "y": 62 }
   ]
 }

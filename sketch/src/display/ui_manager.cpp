@@ -112,17 +112,20 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
   switch (type) {
     case UI_OVERLAY_RECORDING:
       borderColor = 0xF800; // Red border for recording
+      borderColor = 0xF800;
       msg = "Recording audio";
       dotX = 95;
       break;
     case UI_OVERLAY_SPEAKING:
       borderColor = 0x07E0; // Green border for speaking/answering
+      borderColor = 0x07E0;
       msg = "Speaking answer";
       dotX = 95;
       break;
     case UI_OVERLAY_GENERATING:
     default:
       borderColor = 0xFFE0; // Yellow border for generating (STT/SLM/TTS synthesis)
+      borderColor = 0xFFE0;
       msg = "Generating answer";
       dotX = 107;
       break;
@@ -135,11 +138,13 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
 
     // Static message text
     tft.setTextColor(0xFFFF, 0x0000); // White text on black
+    tft.setTextColor(0xFFFF, 0x0000);
     tft.setTextSize(1);
     tft.setCursor(5, 5);
     tft.print(msg);
 
     // If generating, display a sleek cancellation hint at the bottom pill
+    // Cancellation prompt banner shown only during processing
     if (type == UI_OVERLAY_GENERATING) {
       tft.fillRoundRect(10, 114, 140, 12, 2, ST77XX_BLACK);
       tft.drawRoundRect(10, 114, 140, 12, 2, 0xFFE0);
@@ -151,6 +156,7 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
   }
 
   // Only the animated dots update
+  // Update animated dots in-place
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(1);
   tft.setCursor(dotX, 5);
@@ -166,6 +172,7 @@ void drawVolumeBar(int16_t volume) {
   if (volume > 100) volume = 100;
 
   // Very discreet vertical volume bar capsule on the far right edge
+  // Vertical volume bar track on the right edge
   const int16_t trackX = 154;
   const int16_t trackY = 20;
   const int16_t trackW = 5;
@@ -178,8 +185,11 @@ void drawVolumeBar(int16_t volume) {
   // Draw pill track capsule
   tft.fillRoundRect(trackX, trackY, trackW, trackH, 2, 0x2104); // Dark gray track
   tft.drawRoundRect(trackX, trackY, trackW, trackH, 2, 0x52AA); // Subtle border
+  tft.fillRoundRect(trackX, trackY, trackW, trackH, 2, 0x2104);
+  tft.drawRoundRect(trackX, trackY, trackW, trackH, 2, 0x52AA);
 
   // Calculate fill height from bottom upwards
+  // Fill height from bottom upwards
   int16_t fillH = (int16_t)(((int32_t)volume * innerH) / 100);
   if (fillH > innerH) fillH = innerH;
   if (fillH < 0) fillH = 0;

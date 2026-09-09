@@ -1,310 +1,301 @@
 # Cultura Viva — Arduino UNO Q
 
-Audioguia interactiva de Park Güell i la Sagrada Família que combina visió
-per computador, transcripció de veu (STT), model de llenguatge petit (SLM) i
-síntesi de veu (TTS) sobre un Arduino UNO Q.
+Interactive audio guide for Park Güell and the Sagrada Família. The user photographs a Gaudí element, confirms the shot, asks a question aloud, and receives a spoken answer tailored to the chosen personality (Artistic / Technical / Child).
 
-L'usuari fa una foto d'un element de Gaudí, confirma la foto amb el switch,
-fa una pregunta en veu alta i rep una resposta parlada adaptada a la
-personalitat seleccionada (Artístic / Tècnic / Infantil).
+The system combines computer vision (ONNX), speech-to-text (faster-whisper), a small language model (Qwen2.5 via llama-cpp), and text-to-speech (Piper). These run split across the Arduino UNO Q's two processors: the STM32 MCU runs the C++ sketch (real-time UI and hardware), and the Qualcomm QRB2210 Linux MPU runs the Python AI pipeline. The two sides communicate over Bridge RPC.
 
 ---
 
-## Maquinari
+## Hardware
 
-| Component | Detalls |
+| Component | Details |
 |---|---|
-| **Arduino UNO Q** | MCU STM32 (sketch `.ino`, temps real) + MPU Linux Qualcomm QRB2210 (Python). Es comuniquen per **Bridge RPC**. |
-| **LCD TFT ST7735S** | 128×160, 1.8", SPI: CS=10, DC=8, RST=9, backlight=5 |
-| **Webcam Logitech Brio 105** | USB — fotos 1080p i vista en directe. Micròfon integrat (ALSA `hw:0,0`) |
-| **Mòduls Qwiic (I2C via `Wire1`)** | Modulino Buttons (A/B/C — selecció de personalitat), Modulino Knob (volum), Modulino Buzzer (feedback foto) |
-| **Switch** | Switch físic a D6 — commuta entre mode càmera i mode minimapa |
-| **Push button** | Botó físic a D7 — fa foto (mode càmera) / activa gravació (mode minimapa) |
-| **GPS NEO-6M** | `Serial1`, 9600 baud — detecta la ubicació automàticament per proximitat |
-| **Auriculars** | Jack 3.5mm cablejat (sortida ALSA `default`) — volum dinàmic via Modulino Knob |
+| **Arduino UNO Q** | STM32 MCU (C++ sketch, real-time) + Qualcomm QRB2210 Linux MPU (Python). Communication over Bridge RPC. |
+| **LCD TFT ST7735S** | 128×160, 1.8", SPI — CS=10, DC=8, RST=9, backlight=5 |
+| **Logitech Brio 105** | USB webcam — 1080p photos and live view. Built-in microphone (ALSA `hw:0,0`) |
+| **Qwiic modules (I2C via Wire1)** | Modulino Buttons (A/B/C — personality selection), Modulino Knob (volume), Modulino Buzzer (photo feedback) |
+| **Switch (D6)** | Toggles between camera mode and minimap mode |
+| **Push button (D7)** | Takes photo (camera mode) / starts and stops audio recording (minimap mode) |
+| **GPS NEO-6M** | `Serial1`, 9600 baud — automatic location detection by proximity |
+| **Headphones** | 3.5mm jack (ALSA `default`) — volume controlled by Modulino Knob |
 
 ---
 
-## Estructura de fitxers
+## File Structure
 
 ```
 cultura-viva-uno-q/
 │
-├── README.md                    ← Ets aquí
-├── app.yaml                     ← Manifest de l'app (nom, icona)
-├── convert_logo.py              ← Eina per convertir el logo a bitmap C++
+├── README.md
+├── app.yaml                     ← App manifest (name, icon)
 │
-├── sketch/                      ← Codi C++ del MCU (sketch Arduino)
-│   ├── sketch.ino               ← Entry point — inicialitza perifèrics i Bridge RPC
-│   ├── sketch.yaml              ← Dependències de llibreries (versions explícites)
+├── sketch/                      ← C++ MCU code (Arduino sketch)
+│   ├── sketch.ino               ← Entry point: peripheral init and Bridge RPC setup
+│   ├── sketch.yaml              ← Library dependencies (pinned versions)
 │   └── src/
 │       ├── core/
-│       │   ├── app_state.h/cpp  ← Variables globals d'estat (mode, personalitat, flags foto)
-│       │   ├── config.h         ← Pins i constants de maquinari
-│       │   └── rpc_manager.h/cpp← Registre de totes les funcions Bridge.provide(...)
+│       │   ├── app_state.h/cpp  ← Global state variables (mode, personality, photo flags)
+│       │   ├── config.h         ← Hardware pin and constant definitions
+│       │   └── rpc_manager.h/cpp← Bridge.provide() registrations for all RPC endpoints
 │       ├── display/
-│       │   ├── ui_screens.h     ← Pantalles d'acollida (benvinguda, tutorial, selecció)
-│       │   ├── ui_manager.h/cpp ← Màquina d'estats de la UI: transicions entre pantalles
-│       │   ├── camera_view.h/cpp← Vista en directe + overlay confirmació de foto
-│       │   ├── minimap.h/cpp    ← Renderitzat del minimapa de Park Güell
-│       │   ├── landmarks.h      ← Dades dels landmarks del minimapa
-│       │   ├── tilemap.h        ← Paleta i terreny del minimapa
-│       │   └── logo_bitmap.h    ← Bitmap del logo per la pantalla d'inici
+│       │   ├── ui_screens.h     ← Onboarding screens (welcome, tutorial, selection)
+│       │   ├── ui_manager.h/cpp ← UI state machine: screen transitions and overlays
+│       │   ├── camera_view.h/cpp← Live camera view and photo confirmation overlay
+│       │   ├── minimap.h/cpp    ← Minimap render (terrain, landmark pins, location marker)
+│       │   ├── landmarks_guell.h  ← Park Güell landmark coordinates and pin colors
+│       │   ├── landmarks_sagrada.h← Sagrada Família landmark coordinates and pin colors
+│       │   ├── tilemap_guell.h  ← Park Güell 40×28 tile map and terrain color palette
+│       │   └── tilemap_sagrada.h← Sagrada Família 40×28 tile map and terrain color palette
 │       ├── input/
-│       │   └── controls.h/cpp   ← Lectura de botons, switch, knob; lògica de confirmació foto
+│       │   └── controls.h/cpp   ← Button D7, switch D6, Modulino Buttons/Knob polling
 │       └── location/
-│           └── (GPS reading helpers)
+│           └── gps_module.h/cpp ← GPS serial reader (TinyGPSPlus wrapper)
 │
-└── python/                      ← Codi Python del MPU Linux
-    ├── main.py                  ← Bucle principal de l'app (App.run)
-    ├── config.py                ← Tota la configuració centralitzada (paths, devices, mides)
-    ├── requirements.txt         ← Dependències Python
+└── python/                      ← Python code on the Linux MPU
+    ├── main.py                  ← Main application loop (App.run)
+    ├── config.py                ← Centralised configuration (paths, devices, buffer sizes)
+    ├── requirements.txt         ← Python dependencies
     │
-    ├── core/                    ← Serveis d'IA i lògica de domini
-    │   ├── model_module.py      ← ModelRegistry: personalitats, prompts, KG, SLM (llama-cpp)
-    │   ├── vision_module.py     ← VisionClassifier: ONNX — detecta element Gaudí de la foto
-    │   └── minimap_module.py    ← MinimapManager: traducció landmark → RPC del minimapa
+    ├── core/                    ← AI services and domain logic
+    │   ├── model_module.py      ← ModelRegistry: personalities, prompts, knowledge graph, SLM
+    │   ├── vision_module.py     ← VisionClassifier: ONNX element identification
+    │   └── minimap_module.py    ← MinimapManager: landmark code → minimap RPC calls
     │
-    ├── hw/                      ← Gestors de perifèrics hardware
-    │   ├── camera_module.py     ← CameraManager: foto 1080p + vista en directe per chunks
-    │   ├── microphone_module.py ← MicrophoneManager: gravació per chunks + STT (faster-whisper)
-    │   ├── audio_playback_module.py ← AudioPlayer: TTS Piper + reproducció ALSA (Jack 3.5mm)
-    │   └── location_module.py   ← LocationRegistry: GPS + Haversine → ubicació actual
+    ├── hw/                      ← Hardware peripheral managers
+    │   ├── camera_module.py     ← CameraManager: 1080p capture + chunked live view
+    │   ├── microphone_module.py ← MicrophoneManager: chunked recording + STT
+    │   ├── audio_playback_module.py ← AudioPlayer: Piper TTS + ALSA playback
+    │   └── location_module.py   ← LocationRegistry: GPS + Haversine → current location
     │
-    ├── models/                  ← Fitxers de models d'IA (no inclosos al repositori)
-    │   ├── kg.json              ← Graf de coneixement de Gaudí (12 elements, extensible)
-    │   ├── stt/                 ← faster-whisper model (faster-whisper-base.en)
-    │   ├── slm/                 ← Model SLM en GGUF (qwen2.5-1.5b-instruct-q4_k_m.gguf)
-    │   ├── tts/                 ← Models de veu Piper (.onnx + .onnx.json)
-    │   └── vision/              ← Models ONNX de classificació (park_guell/, sagrada_familia/)
+    ├── models/                  ← AI model files (not in repo — download separately)
+    │   ├── knowledge/           ← Gaudí knowledge graph (element_sheets.json, knowledge_base.json)
+    │   ├── stt/                 ← faster-whisper model (faster-whisper-base.en/)
+    │   ├── slm/                 ← SLM in GGUF format (qwen2.5-1.5b-instruct-q4_k_m.gguf)
+    │   ├── tts/                 ← Piper voice pairs (.onnx + .onnx.json)
+    │   └── vision/              ← ONNX classifiers (park_guell/, sagrada_familia/)
     │
-    ├── assets/                  ← Recursos estàtics (imatges, sons)
-    ├── data/                    ← Dades en temps d'execució (es creen soles a l'inici)
-    │   ├── photos/              ← Fotos preses (1080p .jpg)
-    │   ├── recordings/          ← Preguntes gravades (.wav)
-    │   └── responses/           ← Respostes TTS generades (.wav)
-    ├── minimapa/                ← Dades del minimapa (landmarks.json, minimap_module.py)
-    └── locations/               ← Override opcional de coordenades GPS (locations.json)
+    ├── assets/                  ← Static assets (images, sounds)
+    ├── data/                    ← Runtime data (created automatically on first run)
+    │   ├── photos/              ← Captured photos (1080p .jpg)
+    │   ├── recordings/          ← Recorded questions (.wav)
+    │   └── responses/           ← Generated TTS responses (.wav)
+    ├── minimapa/                ← Minimap data (landmarks.json, minimap_module.py)
+    └── locations/               ← Optional GPS coordinate overrides (locations.json)
 ```
 
 ---
 
-## Flux d'interacció (com funciona de cara a l'usuari)
+## Interaction Flow
 
-### El switch commuta entre dos modes:
+### The switch selects between two modes:
 
-| Switch (D6) | Pantalla | Push button (D7) fa... |
+| Switch D6 | Display | Push button D7 action |
 |---|---|---|
-| **ON — Mode càmera** | Vista en directe de la webcam | Fa una **foto** |
-| **OFF — Mode minimapa** | Minimapa de Park Güell | 1r click **comença** a gravar / 2n click **para** i processa |
+| **ON — Camera mode** | Webcam live view | Takes a **photo** |
+| **OFF — Map mode** | Park Güell minimap | First press **starts** recording / second press **stops** and processes |
 
-### Flux complet d'una interacció:
+### Full interaction sequence:
 
 ```
-1. Switch ON  → Pantalla en directe de la càmera
-2. Push button → Fa la foto → previsualització a la LCD
-               → "Are you sure?" apareix a la pantalla
-3. Switch OFF  → Confirma la foto → buzzer → desbloqueig de l'àudio
-4. [Opcional] Botons A/B/C → Selecciona personalitat (Artístic/Tècnic/Infantil)
-5. Push button D7 → Grava la pregunta → un segon toc del mateix botó atura la gravació
-6. Pipeline automàtica:
-     STT     → Transcriu la pregunta (faster-whisper)
-     Visió   → Classifica l'element Gaudí de la foto (ONNX)
-     KG      → Recupera context factual de kg.json
-     SLM     → Genera la resposta (Qwen2.5 via llama-cpp)
-     TTS     → Sintetitza la veu (Piper) → reprodueix per auriculars Jack 3.5mm
+1. Switch ON  → Camera live view
+2. Push button → Photo taken → preview shown on LCD
+                → "Do you like the photo?" confirmation prompt appears
+3. Switch OFF  → Photo confirmed → buzzer feedback → audio recording unlocked
+4. [Optional] Buttons A/B/C → Select personality (Artistic / Technical / Child)
+5. Push button D7 → Record question → second press stops recording
+6. Automatic pipeline:
+     STT     → Transcribe question (faster-whisper)
+     Vision  → Classify Gaudí element from photo (ONNX)
+     KG      → Retrieve factual context (knowledge graph)
+     SLM     → Generate answer (Qwen2.5 via llama-cpp)
+     TTS     → Synthesise speech (Piper) → play through headphones
 ```
 
-> ⚠️ **Sense foto confirmada no es pot gravar àudio.** Si s'intenta gravar
-> sense foto, la LCD mostra un avís i es descarta la gravació.
+> ⚠️ **Audio recording is blocked until a photo has been confirmed.** Attempting to record without a confirmed photo shows a warning on the LCD and discards the attempt.
 
-### Botons A/B/C — Personalitats:
+### Personality buttons A/B/C:
 
-Els LEDs dels botons reflecteixen la personalitat activa. Durant la gravació,
-els tres parpellegen junts com a feedback visual.
+The Modulino button LEDs reflect the active personality. During recording, all three blink in sync as visual feedback.
 
-| Botó | Personalitat | Veu Piper | Estil de resposta |
+| Button | Personality | Piper voice | Response style |
 |---|---|---|---|
-| **A** | Artístic | libriTTS r-medium (en-US) | Evocador, metàfores, passió |
-| **B** | Tècnic | Semaine Spike (en-GB) | Precís, dimensions, materials |
-| **C** | Infantil | Semaine Prudence (en-GB) | Simple, curiós, anecdòtic |
+| **A** | Artistic | LibriTTS-R medium (en-US) | Evocative, metaphors, passion |
+| **B** | Technical | Semaine Spike (en-GB) | Precise, dimensions, materials |
+| **C** | Child | Semaine Prudence (en-GB) | Simple, curious, anecdotal |
 
-### GPS i ubicació:
+### GPS and location:
 
-La ubicació (Park Güell / Sagrada Família) es determina automàticament per
-proximitat GPS (Haversine). El sketch exposa el fix cru via RPC;
-`location_module.py` calcula el lloc més proper. Si no hi ha fix GPS
-(interiors, test), el sistema usa `park_guell` com a fallback.
+Location (Park Güell / Sagrada Família) is determined automatically by GPS proximity (Haversine distance). The sketch exposes the raw fix via RPC; `location_module.py` resolves the nearest site. If no GPS fix is available (indoors, testing), the system defaults to `park_guell`.
 
-> ⚠️ El minimapa de la LCD només té dades de **Park Güell**. El GPS
-> serveix exclusivament per triar el classificador de visió i el KG correcte,
-> no per canviar la pantalla del minimapa.
+> ⚠️ The LCD minimap only has tile data for **Park Güell**. GPS is used exclusively to select the correct vision classifier and knowledge graph — it does not change the minimap display.
 
 ---
 
-## Interfície RPC (Bridge) — sketch ↔ Python
+## RPC Interface (Bridge) — sketch ↔ Python
 
-Totes les funcions que el **sketch exposa** (`Bridge.provide`) i el **Python crida** (`Bridge.call`):
+All functions the **sketch exposes** (`Bridge.provide`) and **Python calls** (`Bridge.call`):
 
-| Funció RPC | Retorna | Descripció |
+| RPC function | Returns | Description |
 |---|---|---|
-| `photo_trigger()` | `bool` | `True` una sola vegada quan es prem el push button en mode càmera (auto-consumida) |
-| `confirm_photo_saved()` | — | Python la crida quan la foto s'ha desat → fa sonar el buzzer i mostra confirmació |
-| `view_switch_state()` | `bool` | Estat debounced del switch (`True`=càmera, `False`=minimapa) |
-| `camera_live_view_active()` | `bool` | Indica si Python ha de continuar actualitzant la vista de càmera; queda `False` durant la confirmació de la foto |
-| `receive_camera_chunk(idx, total, data_b64)` | — | Rep un chunk de la miniatura de la vista en directe |
-| `get_personality_index()` | `int` 0/1/2 | Personalitat activa seleccionada amb A/B/C |
-| `is_recording_active()` | `bool` | `True` mentre s'està gravant (toggle del push button D7; el switch no ho controla) |
-| `set_recording_active(active)` | — | Permet a Python sincronitzar/aturar la gravació |
-| `set_processing_active(active)` | — | `True` durant la generació de la resposta (STT, SLM, síntesi TTS) per mostrar l'overlay groc |
-| `set_playback_active(active)` | — | `True` mentre el TTS està reproduint la resposta pels auriculars per mostrar l'overlay verd |
-| `get_volume()` | `int` 0–100 | Posició actual del Modulino Knob com a % de volum |
-| `has_gps_fix()` | `bool` | El GPS té fix vàlid en aquest moment |
-| `get_gps_lat()` / `get_gps_lon()` | `float` | Coordenades actuals (0.0 si no hi ha fix) |
-| `mark_landmark_visited(id)` | `bool` | Marca un landmark del minimapa com a visitat |
-| `set_location_by_id(id)` | `bool` | Mou el marcador "estàs aquí" a un landmark |
-| `set_location_xy(x, y)` | `bool` | Mou el marcador a coordenades de pantalla arbitràries |
-| `reset_minimap()` | `bool` | Neteja landmarks visitats i marcador de posició |
+| `photo_trigger()` | `bool` | `True` once when push button is pressed in camera mode (auto-consumed on read) |
+| `confirm_photo_saved()` | — | Called by Python when the photo has been saved; triggers buzzer and shows confirmation prompt |
+| `view_switch_state()` | `bool` | Debounced switch state (`True`=camera mode, `False`=map mode) |
+| `camera_live_view_active()` | `bool` | Whether Python should continue sending live camera frames |
+| `receive_camera_chunk(idx, total, data_b64)` | — | Receives one chunk of a Base64-encoded RGB565 live-view thumbnail |
+| `get_personality_index()` | `int` 0/1/2 | Active personality selected via A/B/C |
+| `is_recording_active()` | `bool` | `True` while the user's question is being recorded |
+| `set_recording_active(active)` | — | Allows Python to sync or force-stop recording |
+| `set_processing_active(active)` | — | `True` during STT/SLM/TTS synthesis; shows yellow overlay on LCD |
+| `set_playback_active(active)` | — | `True` while TTS audio is playing; shows green overlay on LCD |
+| `get_volume()` | `int` 0–100 | Current Modulino Knob position as a volume percentage |
+| `has_gps_fix()` | `bool` | Whether a valid GPS location fix is currently available |
+| `get_gps_lat()` / `get_gps_lon()` | `float` | Current coordinates (0.0 if no fix) |
+| `mark_landmark_visited(id)` | `bool` | Marks a minimap landmark as visited by numeric index |
+| `set_location_by_id(id)` | `bool` | Moves the "you are here" marker to a landmark's coordinates |
+| `set_location_xy(x, y)` | `bool` | Moves the marker to arbitrary screen coordinates |
+| `set_minimap_location(location)` | `bool` | Switches active map: 0=Park Güell, 1=Sagrada Família |
+| `reset_minimap()` | `bool` | Clears all visited landmarks and the location marker |
+| `set_photo_validation_state(state)` | — | Vision validation state: -1=idle, 0=checking, 1=valid, 2=invalid |
+| `set_retake_message(msg)` | — | Sets the location label shown on the retake screen; call before `set_photo_validation_state(2)` |
 
-### Vista de càmera per chunks:
+### Camera live view — chunked transfer:
 
-El canal RPC té un límit de mida per missatge. Per això, cada fotograma es
-redueix a `CAM_THUMB_W × CAM_THUMB_H` en RGB565 i s'envia en blocs de
-`CAM_CHUNK_PIXELS` píxels via `receive_camera_chunk`. **Aquestes tres
-constants han de coincidir EXACTAMENT entre `config.py` i `sketch.ino`.**
+The Bridge RPC channel has a per-message size limit. Each frame is downscaled to `CAM_THUMB_W × CAM_THUMB_H` pixels in RGB565 format and sent in blocks of `CAM_CHUNK_PIXELS` pixels via `receive_camera_chunk`.
+
+> **These three constants must match exactly between `config.py` and `sketch/src/core/config.h`.**
 
 ---
 
-## Configuració (`python/config.py`)
+## Configuration (`python/config.py`)
 
-Centralitza **tot** — paths, dispositius, mides de buffer. Si necessites canviar
-alguna cosa, és aquí i **només aquí**.
+All paths, device identifiers, and buffer sizes are centralised in `config.py`. If anything needs changing, it changes here and nowhere else.
 
-### Valors verificats contra el maquinari real:
+### Values verified on real hardware:
 
 ```python
-MIC_DEVICE             = "hw:0,0"   # Logitech Brio 105
-CAMERA_DEVICE_INDEX    = 2          # /dev/video2
+MIC_DEVICE             = "hw:0,0"       # Logitech Brio 105 microphone
+CAMERA_DEVICE_INDEX    = 2              # /dev/video2
 CAMERA_FOURCC          = "MJPG"
-PLAYBACK_DEVICE        = "default"  # Jack 3.5mm (ALSA)
+PLAYBACK_DEVICE        = "plughw:0,0"   # Jack 3.5mm (ALSA)
 DEFAULT_VOLUME_PERCENT = 70
 ```
 
-### Paths dels models d'IA:
+### AI model paths:
 
 ```python
 STT_MODEL_PATH   = MODELS_DIR / "stt" / "faster-whisper-base.en"
 SLM_MODEL_PATH   = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
-KG_PATH          = MODELS_DIR / "kg.json"
+KG_PATH          = MODELS_DIR / "knowledge" / "element_sheets.json"
+KG_BASE_PATH     = MODELS_DIR / "knowledge" / "knowledge_base.json"
 TTS_MODEL_DIR    = MODELS_DIR / "tts"
 VISION_MODEL_DIR = MODELS_DIR / "vision"
 ```
 
 ---
 
-## Instal·lació dels models d'IA
+## AI Model Installation
 
-Els fitxers de model **no estan al repositori** (massa grans). Cal baixar-los manualment:
+Model files are **not included in the repository** (too large). Download them manually.
 
 ### STT — faster-whisper
 
 ```bash
-pip install faster-whisper
-python -c "from faster_whisper import WhisperModel; WhisperModel('base.en', device='cpu')"
-# Mou el model resultant a python/models/stt/faster-whisper-base.en/
+huggingface-cli download Systran/faster-whisper-base.en \
+    --local-dir python/models/stt/faster-whisper-base.en
 ```
+
+See [`python/models/stt/README.md`](python/models/stt/README.md) for full instructions and optimisation parameters.
 
 ### SLM — Qwen2.5 1.5B (llama-cpp-python)
 
 ```bash
-pip install llama-cpp-python
-# Baixa el GGUF de Hugging Face:
+# Download the GGUF from Hugging Face:
 # https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF
-# Fitxer: qwen2.5-1.5b-instruct-q4_k_m.gguf → python/models/slm/
+# File: qwen2.5-1.5b-instruct-q4_k_m.gguf → python/models/slm/
+
+# Build llama-cpp-python for aarch64 (Cortex-A53):
+CMAKE_ARGS="-DGGML_NATIVE=OFF -DCMAKE_C_FLAGS='-march=armv8-a -mtune=cortex-a53' \
+            -DCMAKE_CXX_FLAGS='-march=armv8-a -mtune=cortex-a53'" \
+sudo pip install --break-system-packages llama-cpp-python
 ```
+
+See [`python/models/README.md`](python/models/README.md) for download and build details.
 
 ### TTS — Piper
 
 ```bash
 pip install piper-tts
-# Baixa els models de veu de https://huggingface.co/rhasspy/piper-voices:
+# Download from https://huggingface.co/rhasspy/piper-voices:
 #   en_US-libritts_r-medium.onnx + .onnx.json
 #   en_GB-semaine-medium.onnx    + .onnx.json
 # → python/models/tts/
 ```
 
-### Visió — ONNX
+See [`python/models/tts/README.md`](python/models/tts/README.md) for full instructions.
 
-Els models de classificació han de tenir l'estructura:
+### Vision — ONNX classifiers
 
 ```
 python/models/vision/
 ├── park_guell/
 │   ├── model.onnx
-│   └── meta.json   # {"labels": ["escalinata_drac", "placa_natura", ...], "input_size": 224, ...}
+│   └── labels.json    # ["3_viaductes", "casa_museu", ..., "unknown"]
 └── sagrada_familia/
     ├── model.onnx
-    └── meta.json
+    └── labels.json    # ["cupula", "facana_naixement", ..., "unknown"]
 ```
 
 ---
 
-## Graf de coneixement (`python/models/kg.json`)
+## Knowledge Graph (`python/models/knowledge/`)
 
-Conté 12 elements Gaudí (7 de Park Güell, 5 de Sagrada Família). Cada entrada:
+Two complementary files:
 
-```json
-"escalinata_drac": {
-  "full_name": "Dragon Stairway (Trencadís Salamander)",
-  "location": "park_guell",
-  "description": "Monumental entrance staircase featuring the famous multicolored mosaic salamander/dragon."
-}
-```
+- **`element_sheets.json`** — Detailed fact sheets per Gaudí element, indexed by `id` and `aliases`. Used when the vision classifier identifies a specific element.
+- **`knowledge_base.json`** — General Gaudí and monument context. Used as a fallback when the classifier returns `"unknown"`.
 
-Per enriquir-lo afegeix camps com `year_built`, `materials`, `dimensions`,
-`curiosities` (llista de strings) — `ModelRegistry.get_kg_context()` els
-serialitza tots automàticament i els passa al SLM com a context.
+`ModelRegistry.get_kg_context(element, personality)` selects the relevant fields per personality automatically. To extend the knowledge base, add fields such as `year_built`, `materials`, `dimensions`, or `curiosities` (list of strings) — they are all serialised and injected into the SLM prompt as context.
 
 ---
 
-## Estat actual del projecte
+## Project Status
 
-### ✅ Verificat i funcionant (placa real, 3 set. 2026)
+### ✅ Verified on real hardware (3 Sep 2026)
 
-- **Sketch C++**: compilat i flaix a la UNO Q
-  - UI d'acollida: benvinguda → opcions → tutorial ×3 → selecció de personalitat
-  - Vista en directe de la càmera per chunks RPC
-  - Flux de confirmació de foto: foto → previsualització → "Are you sure?" → switch confirma → buzzer → desbloqueig àudio
-  - Minimapa de Park Güell amb landmarks i marcador de posició actual
-  - Perifèrics: botons A/B/C, switch D6, push button D7, Modulino Knob (volum), buzzer
+- **C++ sketch**: compiled and flashed to UNO Q
+  - Onboarding UI: welcome → options → tutorial ×3 → personality selection
+  - Camera live view via chunked RPC
+  - Photo confirmation flow: photo → preview → "Do you like the photo?" → switch confirms → buzzer → audio unlocked
+  - Park Güell minimap with landmark pins and location marker
+  - All peripherals: buttons A/B/C, switch D6, push button D7, Modulino Knob, buzzer
 
-- **Python — maquinari**:
-  - `CameraManager`: fotos 1080p + live view chunked ✅
-  - `MicrophoneManager`: gravació per chunks ✅
-  - `AudioPlayer`: `aplay` ALSA + volum dinàmic via `amixer` (Jack 3.5mm) ✅
+- **Python — hardware**:
+  - `CameraManager`: 1080p capture + chunked live view ✅
+  - `MicrophoneManager`: chunked recording ✅
+  - `AudioPlayer`: `aplay` ALSA + dynamic volume via `amixer` (3.5mm jack) ✅
 
-- **Python — IA (verificat que carrega i executa)**:
-  - `faster-whisper` carregat i transcriu (STT) ✅
-  - `onnxruntime` carregat, classifica elements (Visió, 99.3% al Drac) ✅
-  - `llama-cpp-python` carregat, genera respostes (SLM, Qwen2.5 1.5B) ✅
-  - `piper-tts` carrega la veu — **síntesi pendent de verificar** ⚠️
+- **Python — AI (loads and runs)**:
+  - `faster-whisper`: loaded and transcribes (STT) ✅
+  - `onnxruntime`: loaded, classifies elements (Vision, 99.3% on Dragon Stairway) ✅
+  - `llama-cpp-python`: loaded, generates answers (SLM, Qwen2.5 1.5B) ✅
+  - `piper-tts`: voice loads — **speech output not yet confirmed on speaker** ⚠️
 
-### ⚠️ Pendent / Limitacions conegudes
+### ⚠️ Known issues
 
-| # | Problema | Impacte |
+| # | Issue | Impact |
 |---|---|---|
-| 1 | **Síntesi Piper no verificada a l'altaveu** | Fix aplicat a l'API (`synthesize()`), però cal confirmar que surt so real pel jack 3.5mm |
-| 2 | **STT retorna string buit** | `faster-whisper` carrega bé però la transcripció és `''` — possible problema de silenci al micròfon o de VAD massa estricte |
-| 3 | **Minimapa Sagrada Família inexistent** | Si GPS detecta SF, la visió/KG funciona però el minimapa de la LCD segueix mostrant Park Güell |
-| 4 | **GPS no verificat físicament** | El GPS pot no llegir si el pinout físic de la UNO Q difereix del sketch |
+| 1 | **Piper TTS output unverified on speaker** | API fix applied (`synthesize()`), but actual audio output through the 3.5mm jack still needs confirmation |
+| 2 | **STT returns empty string** | `faster-whisper` loads correctly but transcription is `''` — likely a microphone silence or overly aggressive VAD threshold issue |
+| 3 | **Sagrada Família minimap not implemented** | If GPS resolves to Sagrada Família, vision/KG work correctly but the LCD still shows the Park Güell map |
+| 4 | **GPS not physically verified** | GPS may not receive data if the physical pinout on the UNO Q differs from the sketch |
 
 ---
 
-## Reproducció de l'àudio (Jack 3.5mm)
+## Audio Playback (3.5mm Jack)
 
-L'àudio surt per **jack 3.5mm** directament per ALSA (`PLAYBACK_DEVICE = "default"`).
+Audio plays through the **3.5mm jack** via ALSA (`PLAYBACK_DEVICE = "default"`).
 
-Verificació ràpida des de la UNO Q (MPU Linux):
+Quick verification from the UNO Q MPU shell:
 
 ```bash
 aplay -D default /usr/share/sounds/alsa/Front_Center.wav
@@ -313,55 +304,41 @@ amixer set Master 70%
 
 ---
 
-## Instal·lació de dependències a l'Arduino UNO Q — Problemes i Solucions
+## Dependency Troubleshooting (Arduino UNO Q)
 
-Aquesta secció documenta tots els problemes sorgits durant la instal·lació de les
-llibreries d'IA a la placa i les solucions definitives aplicades.
-
-### Arquitectura del sistema
-
-L'**Arduino UNO Q** executa el codi Python sobre un MPU Linux amb CPU
-**Qualcomm QRB2210 (ARM Cortex-A53, `aarch64`, 64-bit)**. Totes les
-dependències d'IA han de ser compilades per a `aarch64`; els paquets
-precompilats per a `x86_64` no serveixen.
-
-**Python disponible**: 3.13.5 (a `/usr/bin/python3`)
+The UNO Q's Linux MPU runs **Python 3.13.5** on **aarch64 (Qualcomm QRB2210, ARM Cortex-A53)**. All AI packages must be compiled or downloaded for `aarch64`; `x86_64` pre-built wheels will not work.
 
 ---
 
-### Problema 1 — SSL: verificació de certificat fallida
+### Issue 1 — SSL certificate verification failure
 
-**Símptoma:**
+**Symptom:**
 ```
 SSLError: CERTIFICATE_VERIFY_FAILED - certificate verify failed:
 Hostname mismatch, certificate is not valid for 'pypi.org'
 ```
 
-**Causa:** La xarxa de la UPC (UPCguest) fa intercepció TLS amb portal captiu.
-El certificat del portal (`portal-upcguest.upc.edu`) es presenta en lloc del de PyPI.
+**Cause:** The UPC network (UPCguest) performs TLS interception with a captive portal. The portal certificate (`portal-upcguest.upc.edu`) is presented instead of PyPI's.
 
-**Solució:** Connectar la placa a un hotspot mòbil (sense proxy corporatiu) o
-passar `--trusted-host` si l'entorn ho permet:
+**Fix:** Use a mobile hotspot, or pass `--trusted-host` if the environment allows:
 ```bash
-pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <paquet>
+pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org <package>
 ```
 
 ---
 
-### Problema 2 — El rellotge del sistema desactualitzat trenca SSL
+### Issue 2 — System clock out of date breaks SSL
 
-**Símptoma:** El certificat TLS és rebutjat per data invàlida fins i tot sense
-portal captiu.
+**Symptom:** TLS certificate rejected for invalid date even without a captive portal.
 
-**Causa:** El rellotge de la placa estava desfasat > 1 any (p.ex. 2024 quan
-l'any real és 2026). TLS rebutja certificats quan `not_before > now`.
+**Cause:** The board clock was more than a year behind (e.g. 2024 when the actual date is 2026). TLS rejects certificates when `not_before > now`.
 
-**Solució temporal (fins al proper boot):**
+**Temporary fix (until next reboot):**
 ```bash
 sudo date -s "2026-09-03 14:41:00"
 ```
 
-**Solució permanent:**
+**Permanent fix:**
 ```bash
 sudo apt install ntp
 sudo systemctl enable ntp --now
@@ -369,67 +346,54 @@ sudo systemctl enable ntp --now
 
 ---
 
-### Problema 3 — `pip install` falla perquè el sistema és *externally managed*
+### Issue 3 — `pip install` blocked by externally managed environment
 
-**Símptoma:**
+**Symptom:**
 ```
 error: externally-managed-environment
 × This environment is externally managed
 ```
 
-**Causa:** A partir de Python 3.11, Debian/Ubuntu marquen el Python del
-sistema com a gestionat per `apt`. `pip` directe queda bloquejat.
+**Cause:** From Python 3.11 onward, Debian/Ubuntu mark the system Python as apt-managed. Direct `pip` installs are blocked.
 
-**Solució:** Usar el flag `--break-system-packages` o millor, usar `uv`:
+**Fix:** Use `uv` (recommended) or `--break-system-packages`:
 ```bash
-# Instal·lar uv (gestor de paquets ultra ràpid en Rust)
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Instal·lar dependències amb uv
 cd ~/ArduinoApps/cultura-viva-uno-q/python
 sudo ~/.local/bin/uv pip install --system --break-system-packages -r requirements.txt
 ```
 
 ---
 
-### Problema 4 — `llama-cpp-python` no es pot compilar dins Arduino App Lab
+### Issue 4 — `llama-cpp-python` fails to build inside Arduino App Lab
 
-**Símptoma:**
+**Symptom:**
 ```
 × Failed to build `llama-cpp-python==0.3.35`
 CMake Error: CMAKE_C_COMPILER not found
 ```
 
-**Causa:** Arduino App Lab executa `python/main.py` en un contenidor sandbox
-(`/app/`) que **no té accés a `gcc`, `cmake` ni eines de compilació**. Quan
-`llama-cpp-python` no és al cache de `uv`, App Lab intenta compilar-lo des de
-zero i falla.
+**Cause:** Arduino App Lab runs `python/main.py` in a sandboxed container (`/app/`) with no access to `gcc`, `cmake`, or build tools. When `llama-cpp-python` is not in the `uv` cache, App Lab tries to compile it from source and fails. The cache is wiped between App Lab sessions.
 
-**Per què passa cada vegada que s'obre App Lab:** App Lab buida el cache de
-`uv` entre sessions i torna a intentar compilar.
-
-**Solució definitiva — Preinstalar al sistema host de la placa:**
+**Fix — pre-install on the host system (outside App Lab):**
 ```bash
-# A la shell de la placa (fora d'App Lab)
 CMAKE_ARGS="-DGGML_NATIVE=OFF -DCMAKE_C_FLAGS='-march=armv8-a -mtune=cortex-a53' \
             -DCMAKE_CXX_FLAGS='-march=armv8-a -mtune=cortex-a53'" \
 sudo pip install --break-system-packages llama-cpp-python
 ```
 
-I afegir els paths del sistema al `sys.path` d'App Lab via `python/config.py`:
+Then add the system site-packages paths to `sys.path` in `python/config.py` so App Lab can find them:
 ```python
-# config.py — al principi del fitxer, ABANS de qualsevol import de IA
+# config.py — before any AI imports
 import sys
 from pathlib import Path
 
 APP_DIR = Path(__file__).parent
 
-# Libs vendoritzades dins l'app (si existeixen)
 _lib_dir = APP_DIR / "lib"
 if _lib_dir.exists() and str(_lib_dir) not in sys.path:
     sys.path.insert(0, str(_lib_dir))
 
-# Paquets instal·lats al sistema host de la placa
 for _p in [
     "/usr/local/lib/python3.13/dist-packages",
     "/home/arduino/.local/lib/python3.13/site-packages",
@@ -440,42 +404,34 @@ for _p in [
 
 ---
 
-### Problema 5 — `opencv-python-headless` conflicte amb el sistema
+### Issue 5 — `opencv-python-headless` conflicts with system OpenCV
 
-**Símptoma:**
+**Symptom:**
 ```
 ImportError: libGL.so.1: cannot open shared object file
-# o bé:
+# or:
 error: conflicting distribution 'opencv-python 4.13.0...' found in the system
 ```
 
-**Causa:** El SO de l'Arduino UNO Q porta un build propi i optimitzat de
-`opencv` (`4.13.0+1ddb20b`) preinstal·lat. Instal·lar `opencv-python-headless`
-via pip genera conflictes de versió o dependències de biblioteques `.so` absents.
+**Cause:** The UNO Q OS ships its own optimised OpenCV build (`4.13.0+1ddb20b`). Installing `opencv-python-headless` via pip creates version conflicts or missing `.so` dependencies.
 
-**Solució:** Eliminar `opencv-python-headless` del `requirements.txt` i del
-`pyproject.toml`. El OpenCV del sistema funciona perfectament a 1080p.
+**Fix:** Remove `opencv-python-headless` from `requirements.txt` and `pyproject.toml`. The system OpenCV works correctly at 1080p.
 
 ```bash
-# Verificació:
 python3 -c "import cv2; print(cv2.__version__)"
 # → 4.13.0
 ```
 
 ---
 
-### Problema 6 — `onnxruntime` s'instal·la a un path diferent
+### Issue 6 — `onnxruntime` installed to a path App Lab cannot find
 
-**Símptoma:** `[WARN] vision_module: 'onnxruntime' is not installed` a App Lab
-tot i que `python3 -c "import onnxruntime"` funciona a la shell.
+**Symptom:** `[WARN] vision_module: 'onnxruntime' is not installed` in App Lab, even though `python3 -c "import onnxruntime"` works in the shell.
 
-**Causa:** `onnxruntime` s'havia instal·lat a
-`/home/arduino/.local/lib/python3.13/site-packages/` (instal·lació d'usuari)
-mentre que App Lab usa Python de `/usr`. El path d'usuari no era al `sys.path`
-del contenidor.
+**Cause:** `onnxruntime` was installed to `/home/arduino/.local/lib/python3.13/site-packages/` (user install), which is not on the `sys.path` of the App Lab container.
 
-**Solució:** Afegit al `sys.path` de `config.py` (vegeu Problema 4).
-Verificació:
+**Fix:** Add the path to `sys.path` in `config.py` (see Issue 4 fix).
+
 ```bash
 python3 -c "import onnxruntime; print(onnxruntime.__file__)"
 # → /home/arduino/.local/lib/python3.13/site-packages/onnxruntime/__init__.py
@@ -483,19 +439,17 @@ python3 -c "import onnxruntime; print(onnxruntime.__file__)"
 
 ---
 
-### Problema 7 — API de Piper `synthesize_wav()` incompatible
+### Issue 7 — Piper `synthesize_wav()` API incompatibility
 
-**Símptoma:**
+**Symptom:**
 ```
 [ERROR] AudioPlayer: synthesis failed for voice 'semaine_prudence':
 PiperVoice.synthesize_wav() got an unexpected keyword argument 'speaker_id'
 ```
 
-**Causa:** La versió de `piper-tts` instal·lada a `aarch64` exposa `synthesize()`
-en lloc de `synthesize_wav()`, o bé no accepta el kwarg `speaker_id` en veus
-mono-parlant.
+**Cause:** The `piper-tts` build for `aarch64` exposes `synthesize()` rather than `synthesize_wav()`, or does not accept `speaker_id` for single-speaker voices.
 
-**Solució aplicada a `hw/audio_playback_module.py`:**
+**Fix applied in `hw/audio_playback_module.py`:**
 ```python
 try:
     if speaker_id is not None:
@@ -504,29 +458,25 @@ try:
         voice_obj.synthesize(text, wf)
 except (TypeError, AttributeError):
     try:
-        voice_obj.synthesize(text, wf)       # sense speaker_id
+        voice_obj.synthesize(text, wf)
     except (TypeError, AttributeError):
-        voice_obj.synthesize_wav(text, wf)   # fallback a API antiga
+        voice_obj.synthesize_wav(text, wf)   # fallback to older API
 ```
 
 ---
 
-### Problema 8 — `element_sheets.json` no troba `escalinata_drac`
+### Issue 8 — Vision label does not match knowledge graph key
 
-**Símptoma:**
+**Symptom:**
 ```
 [WARN] KG: element 'escalinata_drac' not found in any knowledge file.
 ```
 
-**Causa:** El model de visió retorna l'etiqueta `escalinata_drac` (de
-`labels.json`), però `element_sheets.json` tenia l'element amb `"id":
-"drac_park_guell"` i sense cap àlies que coincidís amb `escalinata_drac`.
+**Cause:** The vision model returns the label `escalinata_drac` (from `labels.json`), but the knowledge graph entry used the key `drac_park_guell` with no matching alias.
 
-**Solució:** Afegida `"escalinata_drac"` a la llista `aliases` de l'element
-`drac_park_guell`. Igualment s'han mapejat totes les etiquetes dels models de
-visió als seus elements:
+**Fix:** Added `"escalinata_drac"` to the `aliases` list of the `drac_park_guell` entry. All vision labels are now mapped:
 
-| Etiqueta del model | Element al KG |
+| Vision label | Knowledge graph key |
 |---|---|
 | `escalinata_drac` | `drac_park_guell` |
 | `pavellons_consergeria` | `porters_lodge_park_guell` |
@@ -536,7 +486,9 @@ visió als seus elements:
 
 ---
 
-### Resum de l'estat de les dependències (verificat 3 set. 2026)
+### Dependency verification
+
+Run this snippet on the board to verify all AI packages are importable:
 
 ```bash
 python3 -c "
@@ -545,11 +497,11 @@ for m in mods:
     try:
         __import__(m); print(f'[OK] {m}')
     except Exception as e:
-        print(f'[FALTA] {m}: {e}')
+        print(f'[MISSING] {m}: {e}')
 "
 ```
 
-Resultat esperat (placa verificada):
+Expected output on a verified board:
 ```
 [OK] numpy
 [OK] PIL
@@ -562,44 +514,40 @@ Resultat esperat (placa verificada):
 
 ---
 
-## Primers passos (setup des de zero)
+## Quick Start
 
 ```bash
-# 1. Clona el repositori
+# 1. Clone the repository
 git clone https://github.com/Hackestiu/cultura-viva-uno-q
 cd cultura-viva-uno-q
 
-# 2. Instal·la les dependències Python:
-# Opció A: Amb uv (Recomanat — ultra ràpid):
-#   curl -LsSf https://astral.sh/uv/install.sh | sh
-#   cd python && uv sync
+# 2. Install Python dependencies:
+#    Option A (recommended — uses uv):
+curl -LsSf https://astral.sh/uv/install.sh | sh
+cd python && uv sync
 #
-# Opció B: Amb pip tradicional:
+#    Option B (pip):
 pip install -r python/requirements.txt
 
-# 3. Descarrega els models d'IA (veure secció "Instal·lació dels models")
+# 3. Download AI models (see "AI Model Installation" above)
 
-# 4. Obre el sketch a Arduino Lab i fes el flash a la UNO Q
-#    (sketch/sketch.ino — placa: Arduino UNO Q)
+# 4. Flash the sketch in Arduino Lab (sketch/sketch.ino — board: Arduino UNO Q)
 
-# 5. Llança l'app des d'Arduino Lab (botó "Run")
-#    La UNO Q executa automàticament python/main.py al MPU Linux
+# 5. Launch the app from Arduino Lab (Run button)
+#    The UNO Q automatically runs python/main.py on the Linux MPU
 ```
 
 ---
 
-## Git — Commits i sincronització
+## Git
 
 ```bash
-# Commit i push
 git add -A
-git commit -m "descripció del canvi"
+git commit -m "description"
 git push
 
-# Actualitzar des del remot
 git pull --rebase
 
-# Estat i historial
 git status
 git log --oneline -10
 ```

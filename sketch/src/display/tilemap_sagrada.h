@@ -1,20 +1,15 @@
 #pragma once
 
 #include <stdint.h>
-#include "tilemap_guell.h" // reutilitza struct ParkColor (definit per Park Güell)
+#include "tilemap_guell.h"  // reuses the ParkColor struct defined for Park Güell
 
 /**
- * 40x28 grid tilemap representation of la Sagrada Família (planta de creu
- * llatina). Mateixes dimensions de pantalla que Park Güell (160x112 àrea
- * de mapa, tile 4px) perquè és el mateix LCD.
+ * 40×28 grid tilemap for the Sagrada Família (Latin-cross floor plan).
+ * Same screen dimensions as the Park Güell map (160×112 tile area, 4px/tile).
  *
- * v7: paleta de colors actualitzada a tons de pedra calcaria calida reals
- * (limestone/sandstone warm tones). Les constants SAG_PAL_* ara fan servir
- * valors RGB directes en lloc de remapaments dels PAL_* de Park Güell, per
- * reflectir fidelment els colors arquitectonics de la Sagrada Familia:
- * exterior crema calid, murs de pedra calida, sagristies blau-turquesa,
- * creuer ocre daurat, torres terracota, nau central pedra clara calida.
- * Mapa de tiles sense canvis respecte a v6 (arquitectura ja correcta).
+ * Palette uses warm limestone/sandstone tones to match the real architecture:
+ * cream exterior, warm stone walls, blue-teal sacristies, golden ochre crossing,
+ * terracotta towers, and pale warm stone for the nave.
  */
 
 #define MAP_COL_COUNT_SAGRADA 40

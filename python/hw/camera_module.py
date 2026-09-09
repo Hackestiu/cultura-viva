@@ -1,15 +1,19 @@
 """
-USB webcam management (Logitech Brio 105) via OpenCV/V4L2:
-- Full resolution photos (1080p), verifying that the camera accepted the requested resolution.
-- LCD Live View: generates an RGB565 thumbnail reduced from the 1080p frame and sends it
-  IN CHUNKS (see send_view_frame_chunked) to stay within RPC message size limits.
+USB webcam management (Logitech Brio 105) via OpenCV/V4L2.
+
+Handles two capture modes:
+- Full-resolution photos (1080p), verifying that the camera actually accepted
+  the requested resolution.
+- LCD Live View: generates an RGB565 thumbnail downscaled from the 1080p
+  frame and sends it in chunks (see send_view_frame_chunked) to stay within
+  RPC message size limits.
 """
 
 import base64
 import math
 import time
 
-import cv2
+import cv2  # type: ignore[import]
 import numpy as np
 
 from config import (
@@ -23,28 +27,31 @@ from config import (
 
 class CameraManager:
     def __init__(self):
+        """Initializes the manager with no open capture device; the camera is opened lazily on first use via ensure_open()."""
         self._cap = None
-        self.last_photo_path = None  # path of the last captured photo (for vision_module)
+        self.last_photo_path = (
+            None  # path of the last captured photo (for vision_module)
+        )
 
-    # ---------- Lifecycle ----------
     def ensure_open(self):
+        """Returns an active cv2.VideoCapture instance, opening and configuring the device if it isn't already open, or None if opening fails."""
         if self._cap is None or not self._cap.isOpened():
             self._cap = self._open()
         return self._cap
 
     def close(self):
+        """Releases the camera device and clears the internal capture handle."""
         if self._cap is not None:
             self._cap.release()
             self._cap = None
 
     def _open(self):
-        # V4L2 is the native Linux backend
         cap = cv2.VideoCapture(CAMERA_DEVICE_INDEX, cv2.CAP_V4L2)
         if not cap.isOpened():
             print(f"[ERROR] Could not open camera at index {CAMERA_DEVICE_INDEX}")
             return None
 
-        # fourcc must be set before width/height; required for 1080p on this webcam
+        # fourcc must precede resolution configuration for MJPG mode
         fourcc = cv2.VideoWriter_fourcc(*CAMERA_FOURCC)
         cap.set(cv2.CAP_PROP_FOURCC, fourcc)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_PHOTO_WIDTH)
@@ -55,11 +62,13 @@ class CameraManager:
 
     @staticmethod
     def _verify_resolution(cap) -> bool:
-        """Checks if the camera actually accepted the requested resolution."""
+        """Checks whether an open capture device actually accepted the configured target resolution, logging a warning with a v4l2-ctl diagnostic hint if not. Returns True if the resolution matches, False otherwise."""
         actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if (actual_w, actual_h) == (CAMERA_PHOTO_WIDTH, CAMERA_PHOTO_HEIGHT):
-            print(f"[OK] Camera opened at index {CAMERA_DEVICE_INDEX} ({actual_w}x{actual_h})")
+            print(
+                f"[OK] Camera opened at index {CAMERA_DEVICE_INDEX} ({actual_w}x{actual_h})"
+            )
             return True
 
         print(
@@ -69,7 +78,7 @@ class CameraManager:
         )
         return False
 
-    def _grab_frame(self, flush=5):
+    def _grab_frame(self, flush: int = 5):
         cap = self.ensure_open()
         if cap is None:
             return None
@@ -81,11 +90,8 @@ class CameraManager:
             return None
         return frame
 
-    # ---------- Photos (Button D7) ----------
     def take_photo(self):
-        """Captures a frame from the camera and saves it as a JPEG to PHOTOS_DIR.
-        The filename encodes the timestamp and actual frame dimensions.
-        Returns the saved file path, or None if the camera is unavailable or capture fails."""
+        """Captures a single frame and writes it as a timestamped, resolution-tagged JPEG to PHOTOS_DIR, updating last_photo_path on success. Returns the written file's path, or None if frame acquisition fails."""
         frame = self._grab_frame(flush=5)
         if frame is None:
             return None
@@ -102,14 +108,18 @@ class CameraManager:
         filename = PHOTOS_DIR / f"capture_{timestamp}_{width}x{height}.jpg"
         cv2.imwrite(str(filename), frame)
         print(f"[OK] Photo saved to: {filename} ({width}x{height})")
-        self.last_photo_path = filename  # save path for vision_module
+        self.last_photo_path = filename
         return filename
 
-    # ---------- Live View (switch D6 ON), sent in chunks ----------
-    def send_view_frame_chunked(self, bridge, thumb_w, thumb_h, chunk_pixels, chunk_delay_s):
-        """Captures a frame, resizes to thumb_w x thumb_h in RGB565, and sends
-        it to sketch in consecutive chunks via 'receive_camera_chunk'.
-        Returns True if successful, False otherwise."""
+    def send_view_frame_chunked(
+        self,
+        bridge,
+        thumb_w: int,
+        thumb_h: int,
+        chunk_pixels: int,
+        chunk_delay_s: float,
+    ) -> bool:
+        """Captures a frame, downscales it to thumb_w by thumb_h in RGB565 format, and streams it to the sketch over the Bridge RPC connection as a sequence of Base64-encoded chunks of chunk_pixels each, pausing chunk_delay_s seconds between chunks to avoid overloading the link. Returns True once all chunks are sent, or False if frame capture fails."""
         frame = self._grab_frame(flush=2)
         if frame is None:
             return False
@@ -130,7 +140,7 @@ class CameraManager:
 
     @staticmethod
     def _frame_to_rgb565_bytes(frame: np.ndarray, width: int, height: int) -> bytes:
-        """Converts BGR OpenCV frame to RGB565 bytes (2 bytes/pixel, little-endian)."""
+        """Resizes a BGR OpenCV frame to the given dimensions and packs it into a little-endian 16-bit RGB565 byte buffer suitable for the LCD."""
         resized = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         r = (rgb[:, :, 0].astype(np.uint16) >> 3) << 11

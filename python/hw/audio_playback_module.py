@@ -1,10 +1,10 @@
 """
-Audio playback management — TTS synthesized voice responses from the Cultura Viva
-pipeline played through 3.5mm jack headphones (or ALSA speaker), with volume
-controlled dynamically via the Modulino Knob.
+TTS playback for synthesized voice responses from the Cultura Viva pipeline,
+played through 3.5mm jack headphones (or an ALSA speaker), with volume controlled
+dynamically via the Modulino Knob.
 
-TTS engine: Piper (piper-tts Python library, in-process synthesis via PiperVoice).
-Three personality voices are supported (from tts-benchmark pipeline):
+TTS engine: Piper (piper-tts Python library, in-process synthesis via
+PiperVoice). Three personality voices are supported:
 
     artistic  -> libriTTS_r_medium  (en-US, neutral American English)
     technical -> semaine_spike      (en-GB, male British English)
@@ -27,21 +27,17 @@ from typing import Optional
 from config import DEFAULT_VOLUME_PERCENT, MODELS_DIR, PLAYBACK_DEVICE, RESPONSES_DIR
 
 
-# ---------------------------------------------------------------------------
 # Voice registry — maps voice keys to (onnx_stem, speaker_id)
-# Semaine shares one ONNX pair; speaker IDs are defined by the downloaded JSON.
-# ---------------------------------------------------------------------------
-
 _VOICE_REGISTRY: dict[str, tuple[str, Optional[int]]] = {
     "libriTTS_r_medium": ("en_US-libritts_r-medium", None),
-    "semaine_spike":     ("en_GB-semaine-medium", 1),
-    "semaine_prudence":  ("en_GB-semaine-medium", 0),
+    "semaine_spike": ("en_GB-semaine-medium", 1),
+    "semaine_prudence": ("en_GB-semaine-medium", 0),
 }
 
 PERSONALITY_VOICE: dict[str, str] = {
-    "artistic":  "semaine_spike",
+    "artistic": "semaine_spike",
     "technical": "libriTTS_r_medium",
-    "child":     "semaine_prudence",
+    "child": "semaine_prudence",
 }
 
 DEFAULT_VOICE = "libriTTS_r_medium"
@@ -49,25 +45,21 @@ DEFAULT_VOICE = "libriTTS_r_medium"
 _DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
 
 
-# ---------------------------------------------------------------------------
 # AudioPlayer
-# ---------------------------------------------------------------------------
-
 class AudioPlayer:
     def __init__(self):
+        """Initializes playback state at the configured device and default volume, with an empty per-voice cache populated lazily on first synthesis."""
         self._device = PLAYBACK_DEVICE or "default"
         self._current_volume = DEFAULT_VOLUME_PERCENT
         self._tts_models_dir = _DEFAULT_TTS_MODELS_DIR
         self._voices: dict[str, object] = {}
 
     def _resolve_device(self):
-        """Returns the ALSA device string for aplay (-D flag)."""
+        """Returns the ALSA device string to pass to aplay's -D flag."""
         return self._device or "default"
 
     def set_volume(self, volume_percent: int) -> bool:
-        """Sets the system audio output volume, clamped to [0, 100].
-        Always returns True; if no ALSA mixer control accepts the value, the
-        level is tracked in software only."""
+        """Sets the system output volume to a percentage clamped within [0, 100], attempting to apply it across the common ALSA mixer controls ('Master', 'Headphone', 'Speaker', 'PCM') and tracking the level in software regardless of whether any control accepted it. Always returns True."""
         clamped = max(0, min(100, int(volume_percent)))
         self._current_volume = clamped
 
@@ -83,7 +75,10 @@ class AudioPlayer:
             except Exception:
                 pass
 
-        print(f"[OK] Volume set to: {clamped}%" + ("" if success else " (software tracked)"))
+        print(
+            f"[OK] Volume set to: {clamped}%"
+            + ("" if success else " (software tracked)")
+        )
         return True
 
     @property
@@ -91,10 +86,7 @@ class AudioPlayer:
         return self._current_volume
 
     def play(self, audio_path, bridge=None) -> bool:
-        """Plays a .wav file. If bridge is provided, monitors volume via
-        Bridge.call("get_volume") during playback so the Modulino knob can
-        dynamically adjust volume in real-time while audio is playing.
-        Returns True if played successfully, False otherwise."""
+        """Plays a WAV file through ALSA's aplay. If a bridge is supplied, polls Bridge.call('get_volume') during playback so the Modulino knob can adjust volume in real time. Returns True on successful completion, and False if the file is missing, playback exceeds a 60-second safety timeout, aplay fails or isn't installed, or another playback error occurs."""
         path = Path(audio_path)
         if not path.exists():
             print(f"[ERROR] Audio file not found: {path}")
@@ -107,13 +99,17 @@ class AudioPlayer:
         cmd.append(str(path))
 
         try:
-            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+            )
             last_vol = self._current_volume
             start_time = time.time()
             while proc.poll() is None:
                 if time.time() - start_time > 60:
                     proc.kill()
-                    print(f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted")
+                    print(
+                        f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted"
+                    )
                     return False
                 if bridge is not None:
                     try:
@@ -126,7 +122,9 @@ class AudioPlayer:
                 time.sleep(0.05)
 
             if proc.returncode != 0:
-                stderr = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+                stderr = (
+                    proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+                )
                 print(f"[ERROR] aplay failed playing {path}: {stderr.strip()}")
                 return False
 
@@ -140,8 +138,8 @@ class AudioPlayer:
             return False
 
     @staticmethod
-    def save_response(audio_bytes: bytes):
-        """Saves .wav bytes (e.g. from TTS synthesis) to RESPONSES_DIR with a unique timestamp."""
+    def save_response(audio_bytes: bytes) -> Path:
+        """Writes raw WAV bytes to a timestamped file in RESPONSES_DIR and returns the resulting path."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RESPONSES_DIR / f"response_{timestamp}.wav"
         out_file.write_bytes(audio_bytes)
@@ -149,30 +147,26 @@ class AudioPlayer:
         return out_file
 
     def synthesize(self, text: str, personality: str | None = None) -> Optional[Path]:
-        """Synthesizes text as speech using the voice associated with personality,
-        saves the result to RESPONSES_DIR, and returns the path to the saved .wav file,
-        or None on error."""
+        """Synthesizes text into a WAV file using the voice assigned to the given personality ('artistic', 'technical', 'child'), falling back to the default voice if no personality is given, and writes the result into RESPONSES_DIR. Returns the output path, or None if the text is empty/whitespace or synthesis fails."""
         if not text or not text.strip():
             print("[WARN] AudioPlayer: synthesize called with empty text — skipping.")
             return None
 
-        voice_key = PERSONALITY_VOICE.get(personality, DEFAULT_VOICE) if personality else DEFAULT_VOICE
+        voice_key = (
+            PERSONALITY_VOICE.get(personality, DEFAULT_VOICE)
+            if personality
+            else DEFAULT_VOICE
+        )
         wav_bytes = self._synthesize(text, voice_key)
         if wav_bytes is None:
             return None
 
         return self.save_response(wav_bytes)
 
-    def synthesize_and_play(self, text: str, personality: str | None = None, bridge=None) -> bool:
-        """Synthesizes text as speech using the voice associated with personality,
-        saves the result to RESPONSES_DIR, and plays it through the configured audio device.
-        Switches Bridge state from processing (generating) to playback (speaking) when audio begins.
-        Returns True on success, False if text is empty or any step fails.
-
-        :param text:        The text to speak.
-        :param personality: 'artistic' | 'technical' | 'child', or None for the default voice.
-        :param bridge:      Optional Bridge object to monitor volume and update UI status during playback.
-        """
+    def synthesize_and_play(
+        self, text: str, personality: str | None = None, bridge=None
+    ) -> bool:
+        """Synthesizes text with the personality's voice and plays it back on the configured output device, updating bridge UI state (processing/playback flags) around the transition if a bridge is provided. Aborts without playing if the bridge reports generation was cancelled beforehand. Returns True on successful playback, False if synthesis, cancellation, or playback fails."""
         out_file = self.synthesize(text, personality=personality)
         if out_file is None:
             return False
@@ -180,12 +174,16 @@ class AudioPlayer:
         if bridge is not None:
             try:
                 if not bridge.call("is_processing_active"):
-                    print("[INFO] AudioPlayer: Generation was cancelled before playback.")
+                    print(
+                        "[INFO] AudioPlayer: Generation was cancelled before playback."
+                    )
                     return False
                 bridge.call("set_processing_active", False)
                 bridge.call("set_playback_active", True)
             except Exception as exc:
-                print(f"[WARN] AudioPlayer: failed to set playback active on bridge: {exc}")
+                print(
+                    f"[WARN] AudioPlayer: failed to set playback active on bridge: {exc}"
+                )
 
         try:
             return self.play(out_file, bridge=bridge)
@@ -197,8 +195,7 @@ class AudioPlayer:
                     pass
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
-        """Returns WAV audio bytes for text spoken in the voice identified by voice_key,
-        or None if the voice cannot be loaded or synthesis fails."""
+        """Runs Piper synthesis for the given text using the voice identified by voice_key, applying that voice's configured speaker id and prosody settings. Returns the resulting WAV bytes, or None if the voice cannot be loaded, synthesis produces no usable audio, or an error occurs."""
         voice_obj = self._load_voice(voice_key)
         if voice_obj is None:
             return None
@@ -210,7 +207,9 @@ class AudioPlayer:
             cfg = getattr(voice_obj, "config", None)
             length_scale = getattr(cfg, "length_scale", None)
             noise_scale = getattr(cfg, "noise_scale", None)
-            noise_w_scale = getattr(cfg, "noise_w_scale", None) or getattr(cfg, "noise_w", None)
+            noise_w_scale = getattr(cfg, "noise_w_scale", None) or getattr(
+                cfg, "noise_w", None
+            )
 
             syn_config = SynthesisConfig(
                 speaker_id=speaker_id,
@@ -226,30 +225,36 @@ class AudioPlayer:
 
             wav_bytes = buf.getvalue()
             if len(wav_bytes) <= 44:
-                print(f"[ERROR] AudioPlayer: synthesis generated empty audio ({len(wav_bytes)} bytes) for voice '{voice_key}'")
+                print(
+                    f"[ERROR] AudioPlayer: synthesis generated empty audio ({len(wav_bytes)} bytes) for voice '{voice_key}'"
+                )
                 return None
 
-            print(f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}').")
+            print(
+                f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}')."
+            )
             return wav_bytes
         except Exception as exc:
-            print(f"[ERROR] AudioPlayer: synthesis failed for voice '{voice_key}': {exc}")
+            print(
+                f"[ERROR] AudioPlayer: synthesis failed for voice '{voice_key}': {exc}"
+            )
             return None
 
     def _load_voice(self, voice_key: str) -> Optional[object]:
-        """Returns the PiperVoice instance for voice_key,
-        or None if the voice is unknown, the model files are missing,
-        or piper-tts is not installed."""
+        """Returns the cached or newly loaded PiperVoice instance for voice_key, or None if the key is unrecognized, its model files are missing, or piper-tts is not installed."""
         if voice_key in self._voices:
             return self._voices[voice_key]
 
         entry = _VOICE_REGISTRY.get(voice_key)
         if entry is None:
-            print(f"[WARN] AudioPlayer: unknown voice '{voice_key}'. Available: {', '.join(_VOICE_REGISTRY)}")
+            print(
+                f"[WARN] AudioPlayer: unknown voice '{voice_key}'. Available: {', '.join(_VOICE_REGISTRY)}"
+            )
             return None
 
         onnx_stem, _ = entry
         onnx_file = self._tts_models_dir / f"{onnx_stem}.onnx"
-        json_file  = self._tts_models_dir / f"{onnx_stem}.onnx.json"
+        json_file = self._tts_models_dir / f"{onnx_stem}.onnx.json"
 
         if not onnx_file.is_file():
             print(
@@ -265,6 +270,7 @@ class AudioPlayer:
         if not hasattr(self, "_piper_available"):
             try:
                 from piper import PiperVoice  # type: ignore[import]
+
                 self._piper_available = True
             except ImportError:
                 print(
@@ -279,10 +285,13 @@ class AudioPlayer:
 
         try:
             from piper import PiperVoice  # type: ignore[import]
+
             print(f"[OK] AudioPlayer: loading voice '{voice_key}' ...")
             voice_obj = PiperVoice.load(str(onnx_file), str(json_file))
             self._voices[voice_key] = voice_obj
-            print(f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz).")
+            print(
+                f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz)."
+            )
             return voice_obj
         except Exception as exc:
             print(f"[ERROR] AudioPlayer: failed to load voice '{voice_key}': {exc}")

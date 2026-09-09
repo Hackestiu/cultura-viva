@@ -1,15 +1,11 @@
 """
-Voice/response model selector associated with Modulino buttons A/B/C.
+Personality selection and response generation.
 
-The models/ folder is where your own model files (weights, prompts, configs...) reside;
-this module is responsible for knowing WHICH model name corresponds to each button,
-for tagging recordings and for selecting which model to load when processing audio.
-
-By default, each button maps to a generic personality name:
-    A -> "model_a", B -> "model_b", C -> "model_c"
-
-This can be overridden by creating models/models.json (see models/models.example.json):
-    {"A": "artistic", "B": "technical", "C": "child"}
+Maps the three Modulino buttons (A/B/C) to named "guide personalities"
+(artistic, technical, child by default, overridable via models/models.json),
+retrieves factual context for a detected element from the knowledge base
+files, and generates the spoken response using a local SLM (Qwen2.5-1.5B via
+llama-cpp-python).
 """
 
 import json
@@ -18,6 +14,7 @@ try:
     from config import MODELS_CONFIG_FILE, MODELS_DIR, VISION_UNKNOWN_LABEL
 except ImportError:
     from config import MODELS_CONFIG_FILE, MODELS_DIR
+
     VISION_UNKNOWN_LABEL = "unknown"
 
 _DEFAULT_NAMES = {"A": "artistic", "B": "technical", "C": "child"}
@@ -54,10 +51,12 @@ PERSONALITY_PROMPTS: dict[str, str] = {
 
 class ModelRegistry:
     def __init__(self):
+        """Initializes the button-to-personality mapping from defaults, then applies any overrides found in models/models.json."""
         self._names = dict(_DEFAULT_NAMES)
         self._load_overrides()
 
     def _load_overrides(self) -> None:
+        """Applies personality-name overrides from models/models.json onto the default A/B/C mapping, ignoring unrecognized keys or malformed entries and leaving defaults untouched if the file is absent or unreadable."""
         if not MODELS_CONFIG_FILE.exists():
             return
         try:
@@ -71,16 +70,16 @@ class ModelRegistry:
             print(f"[WARN] Could not read {MODELS_CONFIG_FILE}: {exc}")
 
     def name_for(self, button_id: str) -> str:
-        """Name of the model assigned to this button ('A'/'B'/'C'). If the
-        button is not recognized, returns the identifier itself."""
+        """Returns the personality name assigned to a hardware button ('A', 'B', or 'C'), or the button id itself if it has no mapping."""
         return self._names.get(button_id.strip().upper(), button_id)
 
     @property
     def models_dir(self):
+        """Exposes the root directory containing model weights, prompts, and configuration files."""
         return MODELS_DIR
 
     def _load_kg(self) -> None:
-        """Lazily loads element_sheets.json and builds id and alias indices."""
+        """Lazily loads element_sheets.json into an index by element id and an alias index (alias, lowercased, mapped to id); a no-op once already loaded, and leaves both indices empty if the file is missing."""
         if hasattr(self, "_kg_index"):
             return
         from config import KG_PATH
@@ -103,7 +102,6 @@ class ModelRegistry:
                 sid = sheet.get("id", "")
                 if sid:
                     self._kg_index[sid] = sheet
-                    # Index by name and all aliases
                     for alias in [sheet.get("name", "")] + sheet.get("aliases", []):
                         if alias:
                             self._kg_alias_index[alias.lower()] = sid
@@ -112,7 +110,7 @@ class ModelRegistry:
             print(f"[ERROR] Could not read element_sheets.json: {exc}")
 
     def _load_kg_base(self) -> dict:
-        """Lazily loads knowledge_base.json. Returns {} on error."""
+        """Lazily loads and caches knowledge_base.json, which provides monument-level overview context used as a fallback when a specific element sheet is unavailable."""
         if hasattr(self, "_kg_base"):
             return self._kg_base
         from config import KG_BASE_PATH
@@ -129,35 +127,20 @@ class ModelRegistry:
         return self._kg_base
 
     def get_kg_context(self, element: str, personality: str = "artistic") -> str:
-        """Returns a factual context string for *element* from the Gaudí knowledge sheets.
-
-        Looks up element by id or alias (case-insensitive). If not found, tries
-        knowledge_base.json. Returns '' if nothing is found.
-
-        Mirrors the structure of GaudiKnowledgeStore.context_for_element() from
-        slm-benchmark: own sheet + a short parent summary (if the element belongs
-        to a larger monument) + top related elements. Kept deliberately compact
-        (no full parent fact-dump) because the on-device SLM only has a 2048-token
-        context window and the response budget is 128 tokens.
-
-        :param element:     Element id or name from the vision module
-                            (e.g. 'drac_park_guell', 'El Drac').
-        :param personality: 'artistic' | 'technical' | 'child' — selects which
-                            fact fields to prioritise in the returned string.
-        """
+        """Retrieves and formats factual context for an architectural element, prioritizing fields according to the requested guide personality. Falls back to monument-level overview data if no specific element sheet is found, and returns an empty string if the element is empty, unknown, or absent from both knowledge files."""
         if not element or element == VISION_UNKNOWN_LABEL:
             return ""
 
         self._load_kg()
 
-        # --- look up sheet by id, then by alias ---
+        # look up sheet by id, then by alias
         sheet = self._kg_index.get(element)
         if sheet is None:
             sid = self._kg_alias_index.get(element.lower())
             if sid:
                 sheet = self._kg_index.get(sid)
 
-        # --- fallback: monument level from knowledge_base.json ---
+        # fallback: monument level from knowledge_base.json
         if sheet is None:
             base = self._load_kg_base()
             entry = base.get(element, {})
@@ -170,10 +153,7 @@ class ModelRegistry:
         return self._build_element_context(sheet, personality)
 
     def _build_element_context(self, sheet: dict, personality: str) -> str:
-        """Assembles the full context for a sheet: own facts + parent summary
-        + related elements, following the shape of benchmark.py's
-        context_for_element() but trimmed for the on-device SLM's small
-        context window."""
+        """Assembles the full context block for an element sheet: its own facts, a short summary of its parent monument if any, and up to two related-element notes, following the shape used by benchmark.py's context builder but trimmed for the on-device SLM's small context window."""
         parts = [self._format_sheet(sheet, personality)]
 
         parent_id = sheet.get("parent")
@@ -189,11 +169,7 @@ class ModelRegistry:
         return "\n---\n".join(p for p in parts if p)
 
     def _render_parent_summary(self, parent_sheet: dict) -> str:
-        """Compact 2-3 line summary of the parent monument/area a sub-element
-        belongs to (e.g. the Dragon Stairway's parent is Park Güell). Unlike
-        benchmark.py's _render_sheet (which dumps the full sheet for offline
-        eval grounding), this stays short since it's extra context riding
-        alongside the element's own facts."""
+        """Produces a compact 2-3 line summary of the parent monument or area a sub-element belongs to (e.g. Park Güell for the Dragon Stairway). Unlike benchmark.py's full-sheet renderer used for offline eval grounding, this stays short since it rides alongside the element's own facts."""
         name = parent_sheet.get("name", "")
         lines = [f"Part of: {name}"] if name else []
         if parent_sheet.get("creator"):
@@ -203,7 +179,7 @@ class ModelRegistry:
         return "\n".join(lines)
 
     def _format_sheet(self, sheet: dict, personality: str) -> str:
-        """Formats a knowledge sheet into a compact factual string for the SLM prompt."""
+        """Formats a knowledge sheet into a compact factual string for the SLM prompt, selecting technical, child-friendly, or artistic fields depending on the active personality."""
         lines: list[str] = []
         name = sheet.get("name", "")
         if name:
@@ -251,18 +227,7 @@ class ModelRegistry:
         return "\n".join(lines)
 
     def _render_kb_entry(self, entry: dict) -> str:
-        """Formats a knowledge_base.json (monument-level) entry into a compact,
-        labeled string.
-
-        Labels are derived from the JSON keys themselves ('unesco_status' ->
-        'Unesco Status') rather than a hardcoded key/label table, so adding a
-        new field to knowledge_base.json (e.g. 'restoration_year') shows up
-        here automatically — no code change needed. 'name' is pulled to the
-        top since every entry has one; list-of-strings fields (like
-        'notable_facts') render as bullets, nested dicts are flattened one
-        level, everything else is a single 'Label: value' line. Empty/falsy
-        values are skipped.
-        """
+        """Formats a monument-level knowledge_base.json entry into a labeled string, deriving each label from its JSON key so new fields appear automatically without code changes. The 'name' field is surfaced first; list-of-strings fields render as bullets, nested dicts are flattened one level, and empty or falsy values are skipped."""
         lines: list[str] = []
         if name := entry.get("name"):
             lines.append(f"Name: {name}")
@@ -292,16 +257,7 @@ class ModelRegistry:
         personality: str,
         kg_context: str,
     ) -> str:
-        """Generates a spoken response to question, adopting the tone defined by personality
-        and grounded in kg_context and element when provided.
-        Returns the generated text, or a descriptive error string if the model is unavailable
-        (no exception is raised).
-
-        :param question:    The user's transcribed question.
-        :param element:     Gaudí element detected in the last photo, or None.
-        :param personality: 'artistic' | 'technical' | 'child' (from name_for(button_id)).
-        :param kg_context:  Factual context string from get_kg_context(), or ''.
-        """
+        """Generates a spoken audio-guide reply from the on-device SLM, adopting the given personality and conditioning on the user's question, the detected element (if any), and retrieved factual context. Lazily loads and caches the Llama model on first call; returns a descriptive fallback string instead of raising if the model file or the llama-cpp-python dependency is missing, or if inference fails."""
         from config import SLM_MODEL_PATH
 
         if not SLM_MODEL_PATH.exists():
@@ -314,16 +270,17 @@ class ModelRegistry:
 
         if not hasattr(self, "_llm"):
             try:
-                from llama_cpp import Llama
+                from llama_cpp import Llama  # type: ignore[import]
+
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=512,           # context window (matches README; Qwen2.5-1.5B default)
-                    n_threads=4,          # Cortex-A53 has 4 cores; use all for CPU layers
-                    n_threads_batch=4,    # parallelise prefill on CPU layers
-                    n_batch=128,          # larger prefill batches are faster on Adreno GPU path
-                    n_gpu_layers=-1,      # offload ALL layers to Adreno GPU (-1 = auto-max)
-                    use_mlock=True,       # lock weights in RAM; avoids paging under load
-                    flash_attn=True,      # enabled: reduces memory bandwidth on GPU path
+                    n_ctx=512,  # context window
+                    n_threads=4,  # Cortex-A53 has 4 cores
+                    n_threads_batch=4,  # parallelise prefill on CPU layers
+                    n_batch=128,  # larger prefill batches are faster on Adreno GPU path
+                    n_gpu_layers=-1,  # offload ALL layers to Adreno GPU
+                    use_mlock=True,  # lock weights in RAM
+                    flash_attn=True,  # enabled: reduces memory bandwidth on GPU path
                     verbose=False,
                 )
                 print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
@@ -352,7 +309,9 @@ class ModelRegistry:
         elif element:
             user_content += f"\n\n[Detected element in photo: {element}]"
         if kg_context:
-            user_content += f"\n\n[Factual information about the element:\n{kg_context}]"
+            user_content += (
+                f"\n\n[Factual information about the element:\n{kg_context}]"
+            )
 
         try:
             output = self._llm.create_chat_completion(
@@ -360,10 +319,13 @@ class ModelRegistry:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=60,        # fewer decode steps → faster; prompt instructs ≤50 words
-                temperature=0.1,      # low temperature = more factual, less hallucination
-                repeat_penalty=1.1,   # slight penalty helps model hit <eos> sooner
-                stop=["\n\n", "<|im_end|>"],  # early-stop on double newline or chat end token
+                max_tokens=60,  # fewer decode steps → faster
+                temperature=0.1,  # low temperature = more factual
+                repeat_penalty=1.1,  # slight penalty helps model hit <eos> sooner
+                stop=[
+                    "\n\n",
+                    "<|im_end|>",
+                ],  # early-stop on double newline or chat end token
             )
             answer = output["choices"][0]["message"]["content"].strip()
             print(f"[OK] SLM response generated ({len(answer)} characters).")

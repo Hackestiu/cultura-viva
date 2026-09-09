@@ -1,12 +1,12 @@
 """
-Current location (Park Güell / Sagrada Família), determined by GPS PROXIMITY.
+Resolves the current site from GPS proximity.
 
-The sketch exposes raw GPS fix data via Serial1 + TinyGPSPlus:
-has_gps_fix(), get_gps_lat(), get_gps_lon().
-This module holds reference coordinates for both known sites and computes
-the nearest location using the Haversine distance formula (~2km apart).
+The sketch exposes raw GPS fix data via Serial1 + TinyGPSPlus through
+has_gps_fix(), get_gps_lat(), and get_gps_lon(). This module holds reference
+coordinates for both known sites (Park Güell and Sagrada Família) and picks the
+nearest one using the Haversine distance formula.
 
-Two locations in Barcelona:
+Reference coordinates (Barcelona):
     park_guell      -> 41.414052, 2.152335
     sagrada_familia -> 41.403879, 2.173909
 """
@@ -17,7 +17,7 @@ import math
 from config import DEFAULT_LOCATION, LOCATIONS_CONFIG_FILE
 
 try:
-    from arduino.app_utils import Bridge
+    from arduino.app_utils import Bridge  # type: ignore[import]
 except ModuleNotFoundError:
     Bridge = None
 
@@ -30,19 +30,25 @@ _EARTH_RADIUS_M = 6371000.0
 
 
 def _haversine_m(lat1, lon1, lat2, lon2) -> float:
+    """Returns the great-circle distance in meters between two lat/lon points."""
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
     return 2 * _EARTH_RADIUS_M * math.asin(math.sqrt(a))
 
 
 class LocationRegistry:
     def __init__(self):
+        """Initializes the registry with the default site coordinates, then applies any overrides found in the locations config file."""
         self._locations = dict(_DEFAULT_LOCATIONS)
         self._load_overrides()
 
     def _load_overrides(self) -> None:
+        """Merges site coordinate overrides from LOCATIONS_CONFIG_FILE into the registry, skipping entries missing a 'lat' or 'lon' key and leaving defaults untouched if the file is absent or unreadable."""
         if not LOCATIONS_CONFIG_FILE.exists():
             return
         try:
@@ -55,7 +61,7 @@ class LocationRegistry:
             print(f"[WARN] Could not read {LOCATIONS_CONFIG_FILE}: {exc}")
 
     def nearest_to(self, lat: float, lon: float) -> str:
-        """Returns the name of the nearest known location to (lat, lon)."""
+        """Finds the registered site closest to the given coordinates using Haversine distance. Returns that site's identifier (e.g. 'park_guell'), or DEFAULT_LOCATION if no sites are registered."""
         if not self._locations:
             return DEFAULT_LOCATION
         best_name = min(
@@ -67,8 +73,7 @@ class LocationRegistry:
         return best_name
 
     def current(self) -> str:
-        """Queries GPS via Bridge and returns the nearest known location name,
-        or DEFAULT_LOCATION ('park_guell') if no GPS fix is available yet (e.g. testing indoors)."""
+        """Reads the current GPS fix from the sketch via Bridge and resolves it to the nearest registered site. Returns DEFAULT_LOCATION if Bridge is unavailable, there is no valid GPS fix, or the RPC call raises an error."""
         if Bridge is None:
             return DEFAULT_LOCATION
         try:

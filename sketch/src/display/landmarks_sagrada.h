@@ -1,23 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include "landmarks_guell.h"  // reutilitza el struct Landmark ja definit per Park Güell
+#include "landmarks_guell.h"  // reuses the Landmark struct defined for Park Güell
 
 /**
- * Landmark definitions for la Sagrada Família (switch D6 ON).
- *
- * v7: coordenades de píxel actualitzades per coincidir amb els dots de color
- * de la imatge de referencia de la planta (160x112 px, tile 4px):
- *   CU (30, 14)  — punt morat, sagristia esquerra / zona absis
- *   PO (138,  8) — punt taronja, exterior NE (exterior Façana del Naixement)
- *   TO ( 80, 58) — punt verd, creuer / confluencia nau central
- *   NL ( 50, 84) — punt vermell fosc, nau lateral esquerra (inferior)
- *   NR (110, 84) — punt vermell fosc, nau lateral dreta (inferior)
- *   FN (118, 54) — punt blau, brac dret del transsepte / Façana Naixement
- *   FP ( 38, 54) — punt cian, brac esquerre del transsepte / Façana Passio
- *
- * Colors del marcador actualitzats a tons calids que complementen la paleta
- * de pedra calcaria real de la Sagrada Familia.
+ * Landmark definitions for the Sagrada Família.
+ * Pixel coordinates are mapped to the 160x112 tile-map area (4px/tile).
+ * Pin colors use warm tones to complement the real limestone palette of the building.
  */
 
 const uint8_t NUM_LANDMARKS_SAGRADA = 7;
@@ -32,7 +21,7 @@ const Landmark LANDMARKS_SAGRADA[NUM_LANDMARKS_SAGRADA] = {
   /* 6 FP */ { "FP", "F. PASSIO",    38,   54 },  // Façana de la Passió (brac esq.)
 };
 
-// NL i NR es desbloquegen junts (naus laterals simètriques)
+// NL and NR are unlocked together (symmetric lateral naves)
 const uint8_t LINKED_LATERALS[2] = { 3, 4 };
 
 // ---------------------------------------------------------------------------

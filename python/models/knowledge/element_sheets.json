@@ -1,5 +1,4 @@
 {
-    "_readme": "Short, self-contained information sheets for a document-RAG strategy over Park Guell, Casa Mila (La Pedrera), Sagrada Família and Casa Batlló, covering both monuments and their notable elements. Cross-monument connections are NOT modeled as shared 'technique' nodes -- each sheet instead carries a 'similarities' field with short, inline cross-references so a single retrieved chunk stays self-contained. 'general_knowledge_facts' are facts not stated verbatim in the cited local articles; they are common art/architecture-history knowledge or explicitly flagged as disputed/popular interpretation, and should be treated with slightly lower confidence than 'artistic_facts'/'technical_facts'. Every sheet lists its own 'sources'; see the top-level 'sources' block for full citations.",
     "sheets": [
         {
             "id": "park_guell",

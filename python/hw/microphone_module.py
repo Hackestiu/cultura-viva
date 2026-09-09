@@ -1,10 +1,6 @@
 """
-Audio recording using the Logitech Brio 105 microphone, triggered via the D7 toggle
-button. Recordings are saved to RECORDINGS_DIR tagged with the selected personality.
-
-Technical note: The Microphone API exposes record_wav(duration=X) without streaming start/stop.
-Variable-length recording is achieved by recording short consecutive chunks (RECORD_CHUNK_SECONDS)
-while the D7 recording state remains active, then concatenating them into a single .wav file.
+Audio recording via the Logitech Brio 105 microphone, triggered by the D7 toggle button.
+Recordings are saved to RECORDINGS_DIR tagged with the selected personality.
 
 STT: faster-whisper with Gaudí domain optimizations (see transcribe()).
 """
@@ -18,20 +14,17 @@ import numpy as np
 from config import MIC_DEVICE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
 
 try:
-    import sounddevice as sd
+    import sounddevice as sd  # type: ignore[import]
 except ModuleNotFoundError:
     sd = None
 
 try:
-    from arduino.app_peripherals.microphone import Microphone
+    from arduino.app_peripherals.microphone import Microphone  # type: ignore[import]
 except ModuleNotFoundError:
     Microphone = None
 
 
-# ---------------------------------------------------------------------------
-# Gaudí domain vocabulary — used by faster-whisper to bias recognition
-# towards terms that appear frequently in the audioguide context.
-# ---------------------------------------------------------------------------
+# Gaudí domain vocabulary — used by faster-whisper to recognize terms that appear frequently in the audioguide context.
 
 DOMAIN_PROMPT = (
     "Cultura Viva audio guide in Barcelona about Antoni Gaudí, Sagrada Família basilica, "
@@ -42,17 +35,45 @@ DOMAIN_PROMPT = (
 )
 
 DOMAIN_KEYWORD_ALIASES = [
-    "Antoni Gaudí", "Gaudí", "Barcelona", "Passeig de Gràcia", "Temple Expiatori",
-    "Sagrada Família", "basilica", "facade", "Nativity facade", "Passion facade",
-    "Glory facade", "modernisme", "Catalan", "Casa Batlló", "Casa Milà",
-    "La Pedrera", "Park Güell", "Eixample", "trencadís", "salamander", "dragon",
-    "catenary arch", "Viaductes", "Casa Museu", "Escalinata del drac", 
-    "Pavellons de consergeria", "Plaça de la Natura", "Placa de la Natura", 
-    "Sala Hipòstila", "Sala Hipostila", "Turó de les Tres Creus", "Turó de les 3 Creus", 
-    "Cúpula", "Façana del Naixement", "Façana de la Passió", "Torres"
+    "Antoni Gaudí",
+    "Gaudí",
+    "Barcelona",
+    "Passeig de Gràcia",
+    "Temple Expiatori",
+    "Sagrada Família",
+    "basilica",
+    "facade",
+    "Nativity facade",
+    "Passion facade",
+    "Glory facade",
+    "modernisme",
+    "Catalan",
+    "Casa Batlló",
+    "Casa Milà",
+    "La Pedrera",
+    "Park Güell",
+    "Eixample",
+    "trencadís",
+    "salamander",
+    "dragon",
+    "catenary arch",
+    "Viaductes",
+    "Casa Museu",
+    "Escalinata del drac",
+    "Pavellons de consergeria",
+    "Plaça de la Natura",
+    "Placa de la Natura",
+    "Sala Hipòstila",
+    "Sala Hipostila",
+    "Turó de les Tres Creus",
+    "Turó de les 3 Creus",
+    "Cúpula",
+    "Façana del Naixement",
+    "Façana de la Passió",
+    "Torres",
 ]
 
-# Post-transcription corrections: ASR commonly misspells these proper nouns.
+# Post-transcription corrections: ASR commonly misspells these nouns.
 _CORRECTIONS = {
     r"\bgaudi\b": "Gaudí",
     r"\bgaudy\b": "Gaudí",
@@ -68,7 +89,6 @@ _CORRECTIONS = {
     r"\bmodernism\b": "modernisme",
     r"\bcatalonian\b": "Catalan",
     r"\bdrag on\b": "dragon",
-    # Correcciones de las carpetas/elementos añadidos
     r"\bplaca (de la )?natura\b": "Plaça de la Natura",
     r"\bsala hipostila\b": "Sala Hipòstila",
     r"\bturo (de les )?tres creus\b": "Turó de les Tres Creus",
@@ -81,26 +101,22 @@ _CORRECTIONS = {
     r"\bcasa museu\b": "Casa Museu",
 }
 
+
 def build_hotwords() -> str:
-    """Return the shared domain vocabulary for faster-whisper hotword biasing."""
+    """Returns the domain keyword aliases joined into a single space-separated string for Whisper hotword biasing."""
     return " ".join(DOMAIN_KEYWORD_ALIASES)
 
 
 def canonicalize_domain_entities(text: str) -> str:
-    """Applies regex-based spelling corrections to domain-specific proper nouns in text
-    (e.g. 'gaudi' -> 'Gaudí', 'park guell' -> 'Park Güell').
-    Returns the corrected text. Substrings not matching any known pattern are left unchanged."""
+    """Normalizes known ASR misspellings of domain proper nouns and architectural terms in transcribed text (e.g. 'gaudi' to 'Gaudí', 'park guell' to 'Park Güell'), leaving text with no matching pattern unchanged."""
     for pattern, replacement in _CORRECTIONS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text.strip()
 
 
-# ---------------------------------------------------------------------------
-# MicrophoneManager
-# ---------------------------------------------------------------------------
-
 class MicrophoneManager:
     def __init__(self):
+        """Initializes the manager, configuring the Arduino Microphone peripheral at 16kHz mono if the app_peripherals module is available; recording otherwise falls back to sounddevice."""
         self._mic = None
         if Microphone is not None:
             self._mic = Microphone(
@@ -120,10 +136,7 @@ class MicrophoneManager:
             self._mic.start()
 
     def record_until_stopped(self, is_recording):
-        """Records after the first D7 click until the second D7 click.
-        The callback reads the sketch recording state between chunks, so the
-        physical switch cannot start or stop the recording.
-        Returns the complete concatenated audio as np.ndarray, or None if empty."""
+        """Captures audio continuously — via sounddevice if available, otherwise via successive Microphone.record_wav() chunks — checking the is_recording predicate between chunks and stopping once it returns false or RECORD_MAX_SECONDS is reached. Returns the captured samples concatenated into a single 1D numpy array, or None if no audio backend is available, no audio was captured, or capture fails."""
         chunks = []
         if sd is not None:
             sample_rate = 16000
@@ -172,25 +185,25 @@ class MicrophoneManager:
 
     @staticmethod
     def save(button_id: str, model_name: str, audio: np.ndarray):
-        """Saves audio to RECORDINGS_DIR as a 16-bit PCM, 16 kHz mono WAV file.
-        The filename encodes the timestamp, button_id, and model_name.
-        Returns the path of the saved file."""
+        """Writes raw audio samples to RECORDINGS_DIR as a 16-bit PCM, 16kHz mono WAV file, tagging the filename with a timestamp, button_id, and model_name. Normalizes unsigned 8-bit, floating-point, and signed 16-bit input formats to 16-bit PCM before writing. Returns the path to the written file."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        out_file = RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
-        
+        out_file = (
+            RECORDINGS_DIR / f"recording_{timestamp}_{button_id}-{model_name}.wav"
+        )
+
         audio = np.asarray(audio).reshape(-1)
 
-        # Inspect audio characteristics
         min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
         max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
         mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
-        print(f"[DEBUG MIC] dtype={audio.dtype}, length={len(audio)}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}")
+        print(
+            f"[DEBUG MIC] dtype={audio.dtype}, length={len(audio)}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}"
+        )
 
-        # Handle various ALSA audio formats
+        # Handle various audio formats
         if audio.dtype == np.uint8:
             samples = (audio.astype(np.int16) - 128) << 8
         elif np.issubdtype(audio.dtype, np.floating):
-            # Float audio normalized [-1.0, 1.0]
             if max(abs(min_v), abs(max_v)) <= 1.5:
                 samples = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
             else:
@@ -200,19 +213,17 @@ class MicrophoneManager:
 
         max_sample = int(np.max(np.abs(samples))) if len(samples) > 0 else 0
         with wave.open(str(out_file), "wb") as wf:
-            wf.setnchannels(1)       # mono (Microphone.CHANNELS_MONO)
-            wf.setsampwidth(2)       # 16-bit = 2 bytes
-            wf.setframerate(16000)   # 16 kHz (Microphone.RATE_16K)
+            wf.setnchannels(1)  # Microphone.CHANNELS_MONO
+            wf.setsampwidth(2)  # 16-bit = 2 bytes
+            wf.setframerate(16000)  # Microphone.RATE_16K
             wf.writeframes(samples.tobytes())
-        print(f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767, duration: {len(samples)/16000:.1f}s)")
+        print(
+            f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767, duration: {len(samples)/16000:.1f}s)"
+        )
         return out_file
 
     def transcribe(self, audio_path) -> str:
-        """Transcribes the WAV file at audio_path using faster-whisper, with domain
-        biasing toward Gaudí-related vocabulary and post-correction of common ASR spelling errors.
-        Returns the transcribed text as a string, or '' if the model is unavailable
-        or transcription fails.
-        The faster-whisper model is loaded on the first call and reused thereafter."""
+        """Transcribes a WAV file to text with faster-whisper, biasing recognition toward Gaudí domain vocabulary via an initial prompt and hotwords, and canonicalizing known misspellings in the result. Lazily loads the WhisperModel on first call. Returns the transcribed text, or an empty string if the model file is missing, faster-whisper isn't installed, or transcription fails."""
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
@@ -225,7 +236,7 @@ class MicrophoneManager:
 
         if not hasattr(self, "_whisper"):
             try:
-                from faster_whisper import WhisperModel
+                from faster_whisper import WhisperModel  # type: ignore[import]
 
                 # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
                 self._whisper = WhisperModel(

@@ -40,6 +40,14 @@ const char* const MAP_ROWS[MAP_ROW_COUNT] = {
   "   ff         ####     ####       gg    "
 };
 
+// Tile legend:
+//  ' ' void / exterior       '#' perimeter wall / boundary
+//  'F' dense forest          'f' light forest
+//  'g' scrub / garden lawn   'p' walking path
+//  'S' sand / open esplanade 'w' stone masonry / viaduct
+//  'b' building roof         'c' mosaic trencadis tile
+//  'r' rock / rocky outcrop
+
 // Color structure for terrain rendering (named ParkColor to prevent platform identifier conflicts)
 struct ParkColor { uint8_t r, g, b; };
 

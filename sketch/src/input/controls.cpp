@@ -119,6 +119,7 @@ void updateControls() {
         if (hasCapturedPhoto) {
           photoConfirmed = true;
           photoWaitingConfirmation = false;
+          highResPhotoDrawn = false;
           Monitor.println("[EVENT] Photo CONFIRMED via switch -> Map mode unlocked for audio!");
           buzzer.tone(1600, 80);
           delay(90);
@@ -126,6 +127,7 @@ void updateControls() {
         }
       } else {
         photoWaitingConfirmation = false;
+        highResPhotoDrawn = false;
       }
 
       if (currentUiState == UI_ACTIVE) {
@@ -153,6 +155,7 @@ void updateControls() {
         hasCapturedPhoto = false;
         photoConfirmed = false;
         photoWaitingConfirmation = false;
+        highResPhotoDrawn = false;
         Monitor.println("[EVENT] Button D7 pressed -> photo rejected, returning to live camera");
         buzzer.tone(700, 100);
         drawCameraViewPlaceholder();
@@ -193,8 +196,9 @@ void updateControls() {
   if (newCameraFrameFlag) {
     newCameraFrameFlag = false;
     if (viewSwitchOn && currentUiState == UI_ACTIVE) {
-      drawCameraFrame();
-      if (photoWaitingConfirmation) {
+      if (!photoWaitingConfirmation) {
+        drawCameraFrame();
+      } else {
         drawPhotoConfirmationOverlay();
       }
       UiOverlayType overlay = getCurrentOverlayType();
@@ -461,7 +465,9 @@ void updateControls() {
     hasCapturedPhoto = true;
     photoWaitingConfirmation = true;
     if (viewSwitchOn && currentUiState == UI_ACTIVE) {
-      drawCameraFrame();
+      if (!highResPhotoDrawn) {
+        drawCameraFrame();
+      }
       drawPhotoConfirmationOverlay();
     }
     buzzer.tone(2000, 100);

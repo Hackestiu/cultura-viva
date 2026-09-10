@@ -1,5 +1,6 @@
 #include "camera_view.h"
 #include "ui_manager.h"
+#include "../core/app_state.h"
 
 uint8_t camFrameBuf[CAM_TOTAL_PIXELS * 2];
 int camExpectedChunk = 0;
@@ -62,6 +63,37 @@ void receive_camera_chunk(int chunkIndex, int totalChunks, String data) {
   if (chunkIndex == totalChunks - 1) {
     newCameraFrameFlag = true;
     camExpectedChunk = 0;
+  }
+}
+
+void receive_photo_chunk(int chunkIndex, int totalChunks, String data) {
+  if (totalChunks != PHOTO_TOTAL_CHUNKS) {
+    return;
+  }
+
+  // On first chunk, activate confirmation flags and set high-res rendering active
+  if (chunkIndex == 0) {
+    photoWaitingConfirmation = true;
+    hasCapturedPhoto = true;
+    highResPhotoDrawn = true;
+  }
+
+  uint16_t chunkPixels[PHOTO_CHUNK_PIXELS];
+  int maxBytes = PHOTO_CHUNK_PIXELS * 2;
+  int decodedBytes = base64Decode(data, (uint8_t *)chunkPixels, maxBytes);
+  if (decodedBytes <= 0) return;
+
+  // Calculate coordinates: each line is PHOTO_PREVIEW_W (160) pixels.
+  // Since PHOTO_CHUNK_PIXELS is 80, exactly 2 chunks form one full row.
+  int col = (chunkIndex % 2) * PHOTO_CHUNK_PIXELS;
+  int row = chunkIndex / 2;
+  if (row < PHOTO_PREVIEW_H) {
+    tft.drawRGBBitmap(col, row, chunkPixels, PHOTO_CHUNK_PIXELS, 1);
+  }
+
+  // Once all chunks have been painted, draw the confirmation bottom banner
+  if (chunkIndex == totalChunks - 1) {
+    drawPhotoConfirmationOverlay();
   }
 }
 

@@ -11,6 +11,7 @@ Handles two capture modes:
 
 import base64
 import math
+from pathlib import Path
 import time
 
 import cv2  # type: ignore[import]
@@ -153,3 +154,62 @@ class CameraManager:
         r = resized[:, :, 2].astype(np.uint16) >> 3
         bgr565 = (b | g | r).astype("<u2")
         return bgr565.tobytes()
+
+    def send_photo_preview(
+        self,
+        bridge,
+        photo_path: Path | str,
+        preview_w: int = 160,
+        preview_h: int = 86,
+        chunk_pixels: int = 80,
+    ) -> bool:
+        """Loads the captured JPEG photo from disk, crops and resizes it to preview_w x preview_h
+        with subtle sharpening, converts it to BGR565 format for the ST7735 LCD, and streams it
+        in chunks via the 'receive_photo_chunk' Bridge RPC method."""
+        path = Path(photo_path)
+        if not path.exists():
+            print(f"[WARN] send_photo_preview: photo not found: {path}")
+            return False
+
+        frame = cv2.imread(str(path))
+        if frame is None:
+            print(f"[WARN] send_photo_preview: failed to read image: {path}")
+            return False
+
+        # Fit aspect ratio to preview_w x preview_h (160x86 is ~1.86, 16:9 is 1.78)
+        h_orig, w_orig = frame.shape[:2]
+        scale = preview_w / w_orig
+        new_h = int(h_orig * scale)
+        resized = cv2.resize(frame, (preview_w, new_h), interpolation=cv2.INTER_AREA)
+
+        # Center crop vertically to preview_h
+        if new_h > preview_h:
+            y_start = (new_h - preview_h) // 2
+            cropped = resized[y_start : y_start + preview_h, :]
+        elif new_h < preview_h:
+            cropped = cv2.resize(frame, (preview_w, preview_h), interpolation=cv2.INTER_AREA)
+        else:
+            cropped = resized
+
+        # Subtle unsharp masking filter for crisp edges on the small TFT display
+        blurred = cv2.GaussianBlur(cropped, (0, 0), 1.0)
+        sharpened = cv2.addWeighted(cropped, 1.3, blurred, -0.3, 0)
+
+        # Format to BGR565 for ST7735
+        b = (sharpened[:, :, 0].astype(np.uint16) >> 3) << 11
+        g = (sharpened[:, :, 1].astype(np.uint16) >> 2) << 5
+        r = sharpened[:, :, 2].astype(np.uint16) >> 3
+        bgr565 = (b | g | r).astype("<u2")
+        raw_bytes = bgr565.tobytes()
+
+        total_pixels = preview_w * preview_h
+        total_chunks = math.ceil(total_pixels / chunk_pixels)
+
+        for chunk_index in range(total_chunks):
+            start = chunk_index * chunk_pixels * 2
+            end = min(start + chunk_pixels * 2, len(raw_bytes))
+            chunk_b64 = base64.b64encode(raw_bytes[start:end]).decode("ascii")
+            bridge.call("receive_photo_chunk", chunk_index, total_chunks, chunk_b64)
+
+        print(f"[OK] High-res photo preview streamed ({preview_w}x{preview_h} in {total_chunks} chunks).")
+        return True

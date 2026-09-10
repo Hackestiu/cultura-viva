@@ -13,6 +13,7 @@ bool viewSwitchDebounced = true;
 bool hasCapturedPhoto = false;
 bool photoConfirmed = false;
 bool photoWaitingConfirmation = false;
+bool highResPhotoDrawn = false;
 bool volumeOverlayVisible = false;
 unsigned long lastVolumeChangeMillis = 0;
 int8_t photoValidationState = -1;
@@ -90,4 +91,8 @@ void set_photo_validation_state(int state) {
 void set_retake_message(String msg) {
   strncpy(retakeLocationLabel, msg.c_str(), sizeof(retakeLocationLabel) - 1);
   retakeLocationLabel[sizeof(retakeLocationLabel) - 1] = '\0';
+}
+
+bool is_photo_waiting_confirmation() {
+  return photoWaitingConfirmation;
 }

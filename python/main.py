@@ -28,6 +28,9 @@ from config import (
     MINIMAP_DIR,
     MODELS_DIR,
     PHOTOS_DIR,
+    PHOTO_PREVIEW_W,
+    PHOTO_PREVIEW_H,
+    PHOTO_CHUNK_PIXELS,
     POLL_INTERVAL,
     RECORDINGS_DIR,
     VISION_UNKNOWN_LABEL,
@@ -143,6 +146,16 @@ def run_app() -> None:
 
                         if element and element != VISION_UNKNOWN_LABEL:
                             minimap.mark_detected(site, element)
+
+                        # Wait for the "Photo validated!" hold screen (~4.8s) then stream high-res photo
+                        time.sleep(4.8)
+                        camera.send_photo_preview(
+                            Bridge,
+                            saved_path,
+                            PHOTO_PREVIEW_W,
+                            PHOTO_PREVIEW_H,
+                            PHOTO_CHUNK_PIXELS,
+                        )
 
         except Exception as exc:
             print(f"[ERROR] Checking button D7 / taking photo / vision: {exc}")

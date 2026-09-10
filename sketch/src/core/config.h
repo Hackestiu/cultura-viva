@@ -28,6 +28,14 @@
 #define CAM_CHUNK_TIMEOUT_MS 3000
 #define CAM_SCALE 4
 
+// High-resolution captured photo preview parameters (fits above 42px confirmation overlay)
+#define PHOTO_PREVIEW_W 160
+#define PHOTO_PREVIEW_H 86
+#define PHOTO_CHUNK_PIXELS 80
+#define PHOTO_TOTAL_PIXELS (PHOTO_PREVIEW_W * PHOTO_PREVIEW_H)
+#define PHOTO_TOTAL_CHUNKS ((PHOTO_TOTAL_PIXELS + PHOTO_CHUNK_PIXELS - 1) / PHOTO_CHUNK_PIXELS)
+
+
 // Input filtering and debouncing thresholds
 const int16_t KNOB_MAX_JUMP = 150;
 const unsigned long VIEW_SWITCH_DEBOUNCE_MS = 50;

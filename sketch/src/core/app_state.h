@@ -29,9 +29,12 @@ extern bool viewSwitchDebounced;
 extern bool hasCapturedPhoto;
 extern bool photoConfirmed;
 extern bool photoWaitingConfirmation;
+extern bool highResPhotoDrawn;
 extern bool volumeOverlayVisible;
 extern unsigned long lastVolumeChangeMillis;
 const unsigned long VOLUME_OVERLAY_TIMEOUT_MS = 1500;
+
+bool is_photo_waiting_confirmation();
 
 /**
  * Assistant status overlay states for UI pill messages.

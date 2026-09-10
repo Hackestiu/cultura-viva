@@ -29,4 +29,6 @@ void initRPC() {
   Bridge.provide("reset_minimap", reset_minimap);
   Bridge.provide("set_photo_validation_state", set_photo_validation_state);
   Bridge.provide("set_retake_message", set_retake_message);
+  Bridge.provide("receive_photo_chunk", receive_photo_chunk);
+  Bridge.provide("is_photo_waiting_confirmation", is_photo_waiting_confirmation);
 }

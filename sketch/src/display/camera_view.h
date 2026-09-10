@@ -26,6 +26,16 @@ int base64Decode(const String &input, uint8_t *output, int maxOutputLen);
 void receive_camera_chunk(int chunkIndex, int totalChunks, String data);
 
 /**
+ * Processes an incoming high-resolution captured photo chunk sent via RPC from Python.
+ * Directly renders pixels onto the ST7735 LCD (160x86) and shows the confirmation banner on completion.
+ *
+ * @param chunkIndex   Zero-based index of the received chunk.
+ * @param totalChunks  Total number of expected chunks.
+ * @param data         Base64-encoded BGR565 chunk data.
+ */
+void receive_photo_chunk(int chunkIndex, int totalChunks, String data);
+
+/**
  * Renders a placeholder frame on the display when camera mode is active but awaiting live frames.
  */
 void drawCameraViewPlaceholder();

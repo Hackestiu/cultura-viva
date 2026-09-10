@@ -4,7 +4,7 @@
 #include "minimap.h"
 #include "camera_view.h"
 
-Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+DisplayST7735 tft = DisplayST7735(TFT_CS, TFT_DC, TFT_RST);
 
 bool introPromptVisible = true;
 unsigned long lastIntroBlinkMillis = 0;
@@ -13,6 +13,7 @@ void initDisplay() {
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
   tft.initR(INITR_GREENTAB);
+  tft.setOffsets(0, 0); // Correct hardware row/col offset for generic ST7735S displays
   tft.setRotation(1);
   tft.fillScreen(ST77XX_BLACK);
   tft.setTextColor(ST77XX_WHITE);

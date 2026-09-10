@@ -4,7 +4,20 @@
 #include "ui_screens.h"
 #include "../core/app_state.h"
 
-extern Adafruit_ST7735 tft;
+/**
+ * Subclass of Adafruit_ST7735 exposing setColRowStart() as a public method.
+ * Required to correct the hardware pixel offset (colstart/rowstart) for
+ * generic ST7735S displays that differ from the INITR_GREENTAB default offsets.
+ */
+class DisplayST7735 : public Adafruit_ST7735 {
+public:
+  using Adafruit_ST7735::Adafruit_ST7735;
+  void setOffsets(int8_t col, int8_t row) {
+    setColRowStart(col, row);
+  }
+};
+
+extern DisplayST7735 tft;
 
 /**
  * Initializes ST7735S display hardware, pin modes, and backlight.

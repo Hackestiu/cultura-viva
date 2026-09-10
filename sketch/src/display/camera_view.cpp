@@ -71,11 +71,16 @@ void receive_photo_chunk(int chunkIndex, int totalChunks, String data) {
     return;
   }
 
-  // On first chunk, activate confirmation flags and set high-res rendering active
+  // On the very first chunk: clear the photo area to solid black, transition state,
+  // and draw the confirmation footer immediately so the green validation screen
+  // is never partially visible behind the incoming photo rows.
   if (chunkIndex == 0) {
+    photoValidationState = -1;
     photoWaitingConfirmation = true;
     hasCapturedPhoto = true;
     highResPhotoDrawn = true;
+    tft.fillRect(0, 0, PHOTO_PREVIEW_W, PHOTO_PREVIEW_H, 0x0000);
+    drawPhotoConfirmationOverlay();
   }
 
   uint16_t chunkPixels[PHOTO_CHUNK_PIXELS];
@@ -83,17 +88,12 @@ void receive_photo_chunk(int chunkIndex, int totalChunks, String data) {
   int decodedBytes = base64Decode(data, (uint8_t *)chunkPixels, maxBytes);
   if (decodedBytes <= 0) return;
 
-  // Calculate coordinates: each line is PHOTO_PREVIEW_W (160) pixels.
+  // Calculate coordinates: each row is PHOTO_PREVIEW_W (160) pixels wide.
   // Since PHOTO_CHUNK_PIXELS is 80, exactly 2 chunks form one full row.
   int col = (chunkIndex % 2) * PHOTO_CHUNK_PIXELS;
   int row = chunkIndex / 2;
   if (row < PHOTO_PREVIEW_H) {
     tft.drawRGBBitmap(col, row, chunkPixels, PHOTO_CHUNK_PIXELS, 1);
-  }
-
-  // Once all chunks have been painted, draw the confirmation bottom banner
-  if (chunkIndex == totalChunks - 1) {
-    drawPhotoConfirmationOverlay();
   }
 }
 
@@ -124,26 +124,20 @@ void drawCameraFrame() {
 }
 
 void drawPhotoConfirmationOverlay() {
-  // Solid overlay banner across bottom of the screen
-  tft.fillRect(0, 86, 160, 42, 0x0000); // Black background
-  tft.drawRect(0, 86, 160, 42, 0xFFE0); // Yellow border
-  // Bottom confirmation banner overlay
+  // Solid black banner with yellow border across the bottom 42px of the 128px screen
   tft.fillRect(0, 86, 160, 42, 0x0000);
-  tft.drawRect(0, 86, 160, 42, 0xFFE0);
-  
+  tft.drawRect(0, 86, 160, 42, 0xFFE0); // Yellow border
+
   tft.setTextColor(0xFFE0); // Yellow
-  tft.setTextColor(0xFFE0);
   tft.setTextSize(1);
   tft.setCursor(6, 90);
   tft.print(F("Do you like the photo?"));
-  
+
   tft.setTextColor(0x07E0); // Green
-  tft.setTextColor(0x07E0);
   tft.setCursor(6, 102);
   tft.print(F("Switch to Map: KEEP"));
-  
+
   tft.setTextColor(0xF800); // Red
-  tft.setTextColor(0xF800);
   tft.setCursor(6, 114);
   tft.print(F("Push Button: RETAKE"));
 }

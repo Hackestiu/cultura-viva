@@ -457,17 +457,16 @@ void updateControls() {
     }
   }
 
-  // Auto-advance from state 1 (valid) after ~1800ms -> show photo confirmation
-  // Auto-advance from state 1 (valid) after hold period -> show photo confirmation
+  // Auto-advance from state 1 (valid) after hold period.
+  // The actual screen transition (clear green, show photo) is handled atomically
+  // in receive_photo_chunk() on the first chunk. This timer only guards against
+  // the edge case where Python never sends chunks (e.g. file not found).
   if (photoValidationState == 1 && (millis() - validationHoldStart >= 5000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;
     hasCapturedPhoto = true;
     photoWaitingConfirmation = true;
-    if (viewSwitchOn && currentUiState == UI_ACTIVE) {
-      if (!highResPhotoDrawn) {
-        drawCameraFrame();
-      }
+    if (viewSwitchOn && currentUiState == UI_ACTIVE && !highResPhotoDrawn) {
       drawPhotoConfirmationOverlay();
     }
     buzzer.tone(2000, 100);

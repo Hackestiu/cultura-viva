@@ -147,8 +147,8 @@ def run_app() -> None:
                         if element and element != VISION_UNKNOWN_LABEL:
                             minimap.mark_detected(site, element)
 
-                        # Wait for the "Photo validated!" hold screen (~4.8s) then stream high-res photo
-                        time.sleep(4.8)
+                        # Wait for the "Photo validated!" hold screen (~2.2s) then stream high-res photo
+                        time.sleep(2.2)
                         camera.send_photo_preview(
                             Bridge,
                             saved_path,

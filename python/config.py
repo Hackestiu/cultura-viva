@@ -54,10 +54,10 @@ for _dir in (
     _dir.mkdir(parents=True, exist_ok=True)
 
 # Logitech Brio 105 USB microphone ALSA identifier
-MIC_DEVICE = "hw:0,0"
+MIC_DEVICE = 0
 
 # Standard 3.5mm jack audio output ALSA device
-PLAYBACK_DEVICE = "plughw:0,0"
+PLAYBACK_DEVICE = "plughw:2,0"
 DEFAULT_VOLUME_PERCENT = 70
 
 RECORD_CHUNK_SECONDS = 0.5

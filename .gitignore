@@ -34,4 +34,5 @@ python/data/responses/*.wav
 *.gguf
 *.bin
 *.pt
-*.pth
+*.pth.cache/
+.cache/

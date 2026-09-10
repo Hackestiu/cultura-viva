@@ -20,13 +20,13 @@
 #define GPS_BAUD 9600
 
 // Camera live view thumbnail parameters
-#define CAM_THUMB_W 53
-#define CAM_THUMB_H 40
-#define CAM_CHUNK_PIXELS 106
+#define CAM_THUMB_W 48
+#define CAM_THUMB_H 36
+#define CAM_CHUNK_PIXELS 72
 #define CAM_TOTAL_PIXELS (CAM_THUMB_W * CAM_THUMB_H)
 #define CAM_TOTAL_CHUNKS ((CAM_TOTAL_PIXELS + CAM_CHUNK_PIXELS - 1) / CAM_CHUNK_PIXELS)
 #define CAM_CHUNK_TIMEOUT_MS 3000
-#define CAM_SCALE 3
+#define CAM_SCALE 4
 
 // Input filtering and debouncing thresholds
 const int16_t KNOB_MAX_JUMP = 150;

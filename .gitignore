@@ -36,3 +36,4 @@ python/data/responses/*.wav
 *.pt
 *.pth.cache/
 .cache/
+python/lib/

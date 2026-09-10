@@ -140,11 +140,16 @@ class CameraManager:
 
     @staticmethod
     def _frame_to_rgb565_bytes(frame: np.ndarray, width: int, height: int) -> bytes:
-        """Resizes a BGR OpenCV frame to the given dimensions and packs it into a little-endian 16-bit RGB565 byte buffer suitable for the LCD."""
+        """Resizes a BGR OpenCV frame to the given dimensions and packs it into a
+        little-endian 16-bit BGR565 byte buffer matching the ST7735 (INITR_GREENTAB)
+        hardware channel order. The display expects Blue in bits[15:11], Green in
+        bits[10:5], Red in bits[4:0]. OpenCV frames are already BGR so we map each
+        channel directly — no conversion needed.
+        """
         resized = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
-        rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
-        r = (rgb[:, :, 0].astype(np.uint16) >> 3) << 11
-        g = (rgb[:, :, 1].astype(np.uint16) >> 2) << 5
-        b = rgb[:, :, 2].astype(np.uint16) >> 3
-        rgb565 = (r | g | b).astype("<u2")
-        return rgb565.tobytes()
+        # OpenCV channel 0=B, 1=G, 2=R — maps directly to ST7735 BGR565 layout
+        b = (resized[:, :, 0].astype(np.uint16) >> 3) << 11
+        g = (resized[:, :, 1].astype(np.uint16) >> 2) << 5
+        r = resized[:, :, 2].astype(np.uint16) >> 3
+        bgr565 = (b | g | r).astype("<u2")
+        return bgr565.tobytes()

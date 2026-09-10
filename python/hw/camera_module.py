@@ -6,7 +6,10 @@ Handles two capture modes:
   the requested resolution.
 - LCD Live View: generates an RGB565 thumbnail downscaled from the 1080p
   frame and sends it in chunks (see send_view_frame_chunked) to stay within
-  RPC message size limits.
+  RPC message size limits. The RGB565 words are byte-swapped to big-endian
+  before transmission to match the ST77XX LCD's SPI byte order.
+
+  Current thumbnail size: 53×40 px (scale ×3 → 159×120 px on the 160×128 LCD).
 """
 
 import base64
@@ -140,11 +143,18 @@ class CameraManager:
 
     @staticmethod
     def _frame_to_rgb565_bytes(frame: np.ndarray, width: int, height: int) -> bytes:
-        """Resizes a BGR OpenCV frame to the given dimensions and packs it into a little-endian 16-bit RGB565 byte buffer suitable for the LCD."""
+        """Resizes a BGR OpenCV frame to the given dimensions and packs it into a
+        big-endian 16-bit RGB565 byte buffer suitable for the ST77XX LCD.
+
+        The ST77XX reads each 16-bit pixel high-byte first over SPI, so the
+        numpy little-endian ``<u2`` words must be byte-swapped before sending.
+        Without this swap, red and blue channels appear transposed on screen.
+        """
         resized = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
         rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
         r = (rgb[:, :, 0].astype(np.uint16) >> 3) << 11
         g = (rgb[:, :, 1].astype(np.uint16) >> 2) << 5
         b = rgb[:, :, 2].astype(np.uint16) >> 3
         rgb565 = (r | g | b).astype("<u2")
-        return rgb565.tobytes()
+        return rgb565.byteswap().tobytes()  # swap to big-endian for ST77XX SPI bus
+

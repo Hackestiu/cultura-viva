@@ -83,7 +83,7 @@ STT_MODEL_PATH = (
     else MODELS_DIR / "stt" / "faster-whisper-base.en"
 )
 
-SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-0.5b-instruct-q4_k_m.gguf"
 KG_PATH = MODELS_DIR / "knowledge" / "element_sheets.json"
 KG_BASE_PATH = MODELS_DIR / "knowledge" / "knowledge_base.json"
 TTS_MODEL_DIR = MODELS_DIR / "tts"

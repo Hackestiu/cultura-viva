@@ -274,7 +274,7 @@ class ModelRegistry:
 
                 self._llm = Llama(
                     model_path=str(SLM_MODEL_PATH),
-                    n_ctx=512,  # context window
+                    n_ctx=1024,  # context window
                     n_threads=4,  # Cortex-A53 has 4 cores
                     n_threads_batch=4,  # parallelise prefill on CPU layers
                     n_batch=128,  # larger prefill batches are faster on Adreno GPU path

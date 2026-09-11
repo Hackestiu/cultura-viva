@@ -24,15 +24,19 @@ from config import (
     CAM_THUMB_H,
     CAM_THUMB_W,
     CAMERA_CHUNK_DELAY_S,
+    CAMERA_DEVICE_INDEX,
     CAMERA_SEND_INTERVAL,
+    MIC_DEVICE,
     MINIMAP_DIR,
     MODELS_DIR,
     PHOTOS_DIR,
     PHOTO_PREVIEW_W,
     PHOTO_PREVIEW_H,
     PHOTO_CHUNK_PIXELS,
+    PLAYBACK_DEVICE,
     POLL_INTERVAL,
     RECORDINGS_DIR,
+    RESPONSES_DIR,
     VISION_UNKNOWN_LABEL,
 )
 from core.minimap_module import MinimapManager
@@ -63,6 +67,19 @@ _LOCATION_LABELS: dict[str, str] = {
 }
 
 
+def _clean_dir(directory) -> None:
+    """Deletes all files in a directory without removing the directory itself."""
+    deleted = 0
+    for f in directory.iterdir():
+        if f.is_file():
+            try:
+                f.unlink()
+                deleted += 1
+            except Exception as exc:
+                print(f"[WARN] Could not delete {f}: {exc}")
+    print(f"[STARTUP] Cleaned {deleted} file(s) from '{directory}'.")
+
+
 def run_app() -> None:
     """Initializes hardware connections and runs the main event polling loop.
 
@@ -78,12 +95,21 @@ def run_app() -> None:
     microphone.start()
     camera.ensure_open()
 
+    # Clean transient directories on every startup (photos are kept intentionally)
+    print("[STARTUP] Cleaning recordings and responses directories...")
+    _clean_dir(RECORDINGS_DIR)
+    _clean_dir(RESPONSES_DIR)
+
     print(f"Photos will be saved to: {PHOTOS_DIR}")
     print(f"Recordings will be saved to: {RECORDINGS_DIR}")
     print(f"Models (A/B/C) read from: {MODELS_DIR}")
     print(f"Minimap content at: {MINIMAP_DIR}")
     print(
         f"Camera view: thumbnail {CAM_THUMB_W}x{CAM_THUMB_H} in {CAM_CHUNK_PIXELS}px chunks, every {CAMERA_SEND_INTERVAL:.0f}s"
+    )
+    print(
+        f"Hardware devices: camera=/dev/video{CAMERA_DEVICE_INDEX}, "
+        f"mic=ALSA card {MIC_DEVICE}, playback='{PLAYBACK_DEVICE}'"
     )
     print(
         "Waiting for button D7 (photo/recording), buttons A/B/C (personality), Modulino Knob (volume) and switch D6..."

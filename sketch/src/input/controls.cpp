@@ -145,6 +145,11 @@ void updateControls() {
     buzzer.tone(700, 120);
     Monitor.println("[EVENT] Button D7 pressed -> CANCELLED answer generation!");
     drawCurrentView();
+  } else if (mapCompletionCelebrationActive && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+    // Dismiss map completion celebration on button press
+    mapCompletionCelebrationActive = false;
+    buzzer.tone(1500, 50);
+    drawCurrentView();
   } else if (!processingActive && !playbackActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
@@ -296,6 +301,11 @@ void updateControls() {
       drawCurrentView();
     }
   } else if (currentUiState == UI_ACTIVE) {
+    if (mapCompletionCelebrationActive && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
+      mapCompletionCelebrationActive = false;
+      buzzer.tone(1500, 50);
+      drawCurrentView();
+    }
     if (!recordingActive && !processingActive && !playbackActive
         && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
@@ -314,7 +324,10 @@ void updateControls() {
   } else if (currentUiState == UI_VOICE_SELECT) {
     ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_ACTIVE) {
-    if (recordingActive || processingActive || playbackActive) {
+    if (mapCompletionCelebrationActive) {
+      bool blink = ((millis() / 150) % 2) == 0;
+      ledA = blink; ledB = blink; ledC = blink;
+    } else if (recordingActive || processingActive || playbackActive) {
       bool blink = ((millis() / 300) % 2) == 0;
       ledA = blink; ledB = blink; ledC = blink;
     } else {
@@ -376,6 +389,16 @@ void updateControls() {
     if (millis() - lastVolumeChangeMillis >= VOLUME_OVERLAY_TIMEOUT_MS) {
       volumeOverlayVisible = false;
       drawCurrentUiStateScreen();
+    }
+  }
+
+  // Auto-hide map completion celebration overlay after timeout and restore map
+  if (mapCompletionCelebrationActive) {
+    if (millis() - mapCompletionCelebrationStart >= MAP_COMPLETION_HOLD_MS) {
+      mapCompletionCelebrationActive = false;
+      if (!viewSwitchDebounced && currentUiState == UI_ACTIVE) {
+        drawParkMap();
+      }
     }
   }
 

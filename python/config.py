@@ -53,18 +53,53 @@ for _dir in (
 ):
     _dir.mkdir(parents=True, exist_ok=True)
 
-# Logitech Brio 105 USB microphone ALSA identifier
-MIC_DEVICE = 0
+# ---------------------------------------------------------------------------
+# Hardware device discovery (auto-detects camera, mic, headphone output).
+# Override any value below by setting environment variables before launching:
+#   CULTURA_CAMERA_INDEX, CULTURA_MIC_DEVICE, CULTURA_PLAYBACK_DEVICE
+# ---------------------------------------------------------------------------
 
-# Standard 3.5mm jack audio output ALSA device
-PLAYBACK_DEVICE = "plughw:2,0"
+import os as _os
+
+try:
+    from hw.device_discovery import discover_all as _discover_all
+    _discovered = _discover_all()
+except Exception as _exc:
+    print(f"[WARN] Device discovery failed: {_exc}. Using hardcoded fallbacks.")
+    _discovered = {}
+
+def _env_int(var: str, default) -> int:
+    v = _os.environ.get(var)
+    return int(v) if v is not None else default
+
+def _env_str(var: str, default):
+    v = _os.environ.get(var)
+    return v if v is not None else default
+
+# V4L2 camera index for /dev/videoN  (env override: CULTURA_CAMERA_INDEX)
+CAMERA_DEVICE_INDEX: int = _env_int(
+    "CULTURA_CAMERA_INDEX",
+    _discovered.get("camera", 2),  # fallback to 2 if discovery fails
+)
+
+# ALSA card index for sounddevice microphone  (env override: CULTURA_MIC_DEVICE)
+MIC_DEVICE: int = _env_int(
+    "CULTURA_MIC_DEVICE",
+    _discovered.get("mic", 0),  # fallback to 0 if discovery fails
+)
+
+# ALSA plughw string for headphone output  (env override: CULTURA_PLAYBACK_DEVICE)
+PLAYBACK_DEVICE: str = _env_str(
+    "CULTURA_PLAYBACK_DEVICE",
+    _discovered.get("playback", "plughw:2,0"),  # fallback to original value
+)
+
 DEFAULT_VOLUME_PERCENT = 70
 
 RECORD_CHUNK_SECONDS = 0.5
 RECORD_MAX_SECONDS = 60.0
 
-# V4L2 device index for capture on Arduino UNO Q
-CAMERA_DEVICE_INDEX = 2
+# Camera capture resolution / codec settings
 CAMERA_PHOTO_WIDTH = 1920
 CAMERA_PHOTO_HEIGHT = 1080
 CAMERA_FOURCC = "MJPG"

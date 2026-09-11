@@ -61,6 +61,10 @@ class MinimapManager:
         """Creates a manager with no active site and an empty landmark list; call set_location() before using it."""
         self._landmarks = []
         self._active_location = None
+        self._visited: dict[str, set[int]] = {
+            "park_guell": set(),
+            "sagrada_familia": set(),
+        }
 
     def _load_landmarks(self, location: str):
         """Reads and returns the landmark list for a site from its JSON file, or an empty list if the file is missing or unregistered."""
@@ -103,6 +107,26 @@ class MinimapManager:
         return None
 
     # Public API
+    def is_completed(self, location: str | None = None) -> bool:
+        """Returns True if all landmarks of the specified (or active) location are marked as visited."""
+        loc = location or self._active_location
+        if not loc:
+            return False
+        landmarks = self._load_landmarks(loc)
+        if not landmarks:
+            return False
+        visited_set = self._visited.get(loc, set())
+        return len(visited_set) >= len(landmarks)
+
+    def get_progress(self, location: str | None = None) -> tuple[int, int]:
+        """Returns (visited_count, total_count) for the specified (or active) location."""
+        loc = location or self._active_location
+        if not loc:
+            return (0, 0)
+        landmarks = self._load_landmarks(loc)
+        visited_set = self._visited.get(loc, set())
+        return (len(visited_set), len(landmarks))
+
     def mark_detected(self, location: str, vision_label: str) -> bool:
         """Marks as visited the landmark corresponding to a label recognized by the vision classifier for the given site. Returns False silently if the label is unknown or not yet mapped for that location."""
         location_map = VISION_LABEL_TO_LANDMARK.get(location)
@@ -125,6 +149,18 @@ class MinimapManager:
         if landmark_id is None:
             print(f"[WARN] Unknown landmark: {label!r}")
             return False
+
+        if self._active_location:
+            was_completed = self.is_completed(self._active_location)
+            self._visited.setdefault(self._active_location, set()).add(landmark_id)
+            now_completed = self.is_completed(self._active_location)
+
+            if not was_completed and now_completed:
+                visited_count, total = self.get_progress(self._active_location)
+                print(
+                    f"[CELEBRATION] MAP COMPLETED! Enhorabona! Has visitat tots els {total} monuments de '{self._active_location}'! ({visited_count}/{total})"
+                )
+
         if Bridge is None:
             print(f"[dry run] mark_landmark_visited({landmark_id})")
             return True
@@ -148,8 +184,13 @@ class MinimapManager:
             return True
         return bool(Bridge.call("set_location_by_id", landmark_id))
 
-    def reset(self) -> bool:
+    def reset(self, location: str | None = None) -> bool:
         """Clears all visited-landmark states and the position marker on the display. Always returns True when the reset RPC is dispatched."""
+        if location:
+            self._visited[location] = set()
+        else:
+            for k in self._visited:
+                self._visited[k] = set()
         if Bridge is None:
             print("[dry run] reset_minimap()")
             return True

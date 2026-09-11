@@ -31,4 +31,5 @@ void initRPC() {
   Bridge.provide("set_retake_message", set_retake_message);
   Bridge.provide("receive_photo_chunk", receive_photo_chunk);
   Bridge.provide("is_photo_waiting_confirmation", is_photo_waiting_confirmation);
+  Bridge.provide("is_map_completed", is_map_completed);
 }

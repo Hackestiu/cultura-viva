@@ -95,10 +95,10 @@ def run_app() -> None:
     microphone.start()
     camera.ensure_open()
 
-    # Clean transient directories on every startup (photos are kept intentionally)
-    print("[STARTUP] Cleaning recordings and responses directories...")
-    _clean_dir(RECORDINGS_DIR)
-    _clean_dir(RESPONSES_DIR)
+    # Clean transient directories on every startup (disabled during testing to preserve files)
+    # print("[STARTUP] Cleaning recordings and responses directories...")
+    # _clean_dir(RECORDINGS_DIR)
+    # _clean_dir(RESPONSES_DIR)
 
     print(f"Photos will be saved to: {PHOTOS_DIR}")
     print(f"Recordings will be saved to: {RECORDINGS_DIR}")

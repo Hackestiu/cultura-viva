@@ -25,7 +25,7 @@ from pathlib import Path
 
 # Keywords that identify the Brio 105 camera in /sys or v4l2 driver names.
 # Add extra keywords here if running on a different camera model.
-_CAMERA_KEYWORDS = ("Brio", "Brio 105", "logitech")
+_CAMERA_KEYWORDS = ("brio", "brio 105", "logitech")
 
 # Fallback: try these indices in order if keyword search yields nothing.
 _CAMERA_FALLBACK_INDICES = (0, 1, 2, 3, 4)
@@ -85,7 +85,9 @@ def discover_camera_index() -> int | None:
 # ---------------------------------------------------------------------------
 
 # Keywords that identify the Brio 105 microphone in ALSA card names.
-_MIC_KEYWORDS = ("Brio", "logitech", "usb audio", "usb-audio", "webcam")
+# NOTE: "usb audio" and "usb-audio" are intentionally omitted — they are too
+# generic and would match a plain "USB Audio" card before the Brio 105 card.
+_MIC_KEYWORDS = ("brio", "b105", "logitech", "webcam")
 
 
 def _list_alsa_cards() -> list[tuple[int, str]]:
@@ -139,9 +141,11 @@ _HEADPHONE_KEYWORDS = (
     "ac97",
 )
 
-# Cards listed here are USB audio devices and should NOT be used for playback
-# (prefer the headphone jack over the Brio's audio out).
-_SKIP_PLAYBACK_KEYWORDS = ("brio", "logitech", "webcam", "usb audio")
+# Cards listed here should NOT be used for playback (prefer the headphone jack
+# or the onboard USB Audio output over the Brio's built-in audio out).
+# NOTE: "usb audio" is intentionally NOT listed here — on boards without a
+# built-in headphone jack the generic USB Audio card IS the playback device.
+_SKIP_PLAYBACK_KEYWORDS = ("brio", "b105", "logitech", "webcam")
 
 
 def discover_playback_device() -> str | None:

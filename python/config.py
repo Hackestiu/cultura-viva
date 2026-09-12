@@ -100,7 +100,9 @@ MIC_SAMPLE_RATE: int = _env_int("CULTURA_MIC_RATE", _mic_info.get("sample_rate",
 # ALSA plughw string for headphone output  (env override: CULTURA_PLAYBACK_DEVICE)
 PLAYBACK_DEVICE: str = _env_str(
     "CULTURA_PLAYBACK_DEVICE",
-    _discovered.get("playback", "plughw:0,0"),  # fallback to card 0
+    # `or` (not .get's default): now that discovery actually runs, it returns an
+    # explicit None for "nothing found", which .get would have passed through.
+    _discovered.get("playback") or "plughw:0,0",  # fallback to card 0
 )
 
 DEFAULT_VOLUME_PERCENT = 70

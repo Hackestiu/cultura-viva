@@ -137,37 +137,32 @@ void drawPhotoConfirmationOverlay() {
   tft.setCursor(6, 102);
   tft.print(F("Switch to Map: KEEP"));
 
-  tft.setTextColor(0xF800); // Red
+  tft.setTextColor(0x001F); // Red in BGR display
   tft.setCursor(6, 114);
   tft.print(F("Push Button: RETAKE"));
 }
 
 void drawNoPhotoWarningOverlay() {
   // Red alert box in center of screen
+  // ST7735 BGR: 0x001F is bright red (bits[4:0]=31)
   tft.fillRoundRect(8, 28, 144, 70, 5, 0x0000); // Black fill
-  tft.drawRoundRect(8, 28, 144, 70, 5, 0xF800); // Red border
-  // Centered alert dialogue overlay
-  tft.fillRoundRect(8, 28, 144, 70, 5, 0x0000);
-  tft.drawRoundRect(8, 28, 144, 70, 5, 0xF800);
-  tft.drawRoundRect(9, 29, 142, 68, 4, 0xF800);
+  tft.drawRoundRect(8, 28, 144, 70, 5, 0x001F); // Red border
+  tft.drawRoundRect(9, 29, 142, 68, 4, 0x001F);
   
-  tft.setTextColor(0xF800); // Red
-  tft.setTextColor(0xF800);
+  tft.setTextColor(0x001F); // Red
   tft.setTextSize(1);
   tft.setCursor(18, 36);
   tft.print("! NO PHOTO TAKEN !");
   
-  tft.drawFastHLine(14, 48, 132, 0xF800);
+  tft.drawFastHLine(14, 48, 132, 0x001F);
   
   tft.setTextColor(0xFFFF); // White
-  tft.setTextColor(0xFFFF);
   tft.setCursor(14, 54);
   tft.print("Switch ON to Camera");
   tft.setCursor(14, 66);
   tft.print("& take photo first");
   
   tft.setTextColor(0xFFE0); // Yellow
-  tft.setTextColor(0xFFE0);
   tft.setCursor(14, 80);
   tft.print("to ask your question!");
 }
@@ -188,11 +183,8 @@ void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
 
   if (fullRedraw) {
     tft.fillScreen(0x0000); // Black background
-    tft.fillScreen(0x0000);
-    tft.fillRect(0, 0, 160, 3, 0x07FF);
+    tft.fillRect(0, 0, 160, 3, 0x07FF); // Top cyan stripe
 
-    // Top accent bar
-    tft.fillRect(0, 0, 160, 3, 0x07FF); // Cyan stripe
     // Crosshair viewfinder icon
     tft.drawRect(52, 20, 56, 42, 0x07FF);
     tft.drawRect(54, 22, 52, 38, 0x4208);
@@ -200,33 +192,24 @@ void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
     tft.drawFastVLine(80, 28, 24, 0x07FF);
     tft.fillCircle(80, 41, 5, 0x07FF);
 
-    // Large camera / scan icon (simple crosshair lines)
-    tft.drawRect(52, 20, 56, 42, 0x07FF);         // outer rect
-    tft.drawRect(54, 22, 52, 38, 0x4208);         // inner shadow
-    tft.drawFastHLine(68, 41, 24, 0x07FF);         // horizontal crosshair
-    tft.drawFastVLine(80, 28, 24, 0x07FF);         // vertical crosshair
-    tft.fillCircle(80, 41, 5, 0x07FF);             // center dot
-
-    // Static label
+    // Static label: "Scanning photo" is 14 chars * 6px = 84px.
+    // Starts at X=24, ends at X=107.
     tft.setTextColor(0xFFFF); // White
-    tft.setTextColor(0xFFFF);
     tft.setTextSize(1);
     tft.setCursor(24, 72);
-    tft.print(F("Scanning photo   "));
+    tft.print(F("Scanning photo"));
   }
 
-  // Animated dots only — erase & redraw the dot area
+  // Animated dots only — erase & redraw the dot area.
+  // Starts at X=112 so it never overlaps or cuts off the final 'o' (ends at X=107).
   tft.setTextColor(0x07FF, 0x0000); // Cyan on black background
-  // Update animated dots in-place without refreshing the entire screen
-  tft.setTextColor(0x07FF, 0x0000);
   tft.setTextSize(1);
-  tft.setCursor(104, 72);
+  tft.setCursor(112, 72);
   tft.print(dots);
 
   if (fullRedraw) {
     // Subtitle hint (static)
     tft.setTextColor(0x4208); // Dark grey
-    tft.setTextColor(0x4208);
     tft.setTextSize(1);
     tft.setCursor(14, 88);
     tft.print(F("Checking the monument..."));
@@ -236,83 +219,102 @@ void drawVisionCheckingScreen(uint8_t dotCount, bool fullRedraw) {
   }
 }
 
-void drawVisionValidScreen() {
+void drawVisionValidScreen(const char* monumentLabel) {
   // Dark green background
   tft.fillScreen(tft.color565(10, 60, 25));
-  tft.fillRect(0, 0, 160, 3, 0x07E0);
 
   // Top accent bar
   tft.fillRect(0, 0, 160, 3, 0x07E0); // Bright green
 
-  // Large checkmark (two lines forming a tick)
-  //  left arm: from (54,58) to (68,74)
-  //  right arm: from (68,74) to (106,38)
-  // Multi-stroke tick mark geometry: left arm (54,58)-(68,74), right arm (68,74)-(106,38)
-  for (int t = 0; t <= 6; t++) {
-    tft.drawLine(54 + t, 58, 68 + t, 74, 0x07E0);
-    tft.drawLine(68 + t, 74, 106 + t, 38, 0x07E0);
+  // Compact checkmark tick geometry (Y=12..38, centered horizontally)
+  for (int t = 0; t <= 4; t++) {
+    tft.drawLine(60 + t, 24, 72 + t, 38, 0x07E0);
+    tft.drawLine(72 + t, 38, 100 + t, 12, 0x07E0);
   }
 
   // Title
   tft.setTextColor(0xFFFF); // White
-  tft.setTextColor(0xFFFF);
   tft.setTextSize(1);
-  tft.setCursor(28, 84);
-  tft.print(F("Photo validated!"));
+  const char* title = "Photo validated!";
+  int xTitle = (160 - (strlen(title) * 6)) / 2;
+  tft.setCursor(xTitle, 46);
+  tft.print(title);
 
-  // Subtitle
+  // Observation label: "He observat:"
+  const char* obsLabel = "He observat:";
+  int xObs = (160 - (strlen(obsLabel) * 6)) / 2;
   tft.setTextColor(tft.color565(150, 230, 160)); // Light green
-  tft.setTextColor(tft.color565(150, 230, 160));
-  tft.setCursor(16, 100);
-  tft.print(F("Monument recognised."));
+  tft.setCursor(xObs, 62);
+  tft.print(obsLabel);
+
+  // Detected monument name in prominent warm gold/yellow
+  const char* name = (monumentLabel != nullptr && monumentLabel[0] != '\0')
+                     ? monumentLabel
+                     : "Monument reconegut";
+  int len = strlen(name);
+  int xMon = (160 - (len * 6)) / 2;
+  if (xMon < 4) xMon = 4;
+  tft.setTextColor(0xFFE0); // Yellow / Gold
+  tft.setCursor(xMon, 76);
+  tft.print(name);
+
+  // Subtitle hint
+  tft.setTextColor(tft.color565(120, 200, 140)); // Soft light green
+  const char* hint = "Monument reconegut.";
+  int xHint = (160 - (strlen(hint) * 6)) / 2;
+  tft.setCursor(xHint, 94);
+  tft.print(hint);
 
   // Bottom accent bar
   tft.fillRect(0, 125, 160, 3, 0x07E0);
 }
 
 void drawVisionInvalidScreen(const char* locationLabel) {
- 
-  tft.fillScreen(tft.color565(70, 10, 10));
-  tft.fillRect(0, 0, 160, 3, 0xF800);
+  // ST7735 BGR hardware channel order: bits[15:11]=Blue, bits[10:5]=Green, bits[4:0]=Red.
+  // color565(B, G, R) maps to hardware channels correctly.
+  // 0x001F has bits[4:0]=31 (maximum red, 0 blue).
+  const uint16_t COLOR_RED = 0x001F;
 
-  tft.fillRect(0, 0, 160, 3, 0xF800); // Red
+  // Dark rich red background (Blue=12, Green=10, Red=90)
+  tft.fillScreen(tft.color565(12, 10, 90));
+
+  // Top accent bar
+  tft.fillRect(0, 0, 160, 3, COLOR_RED);
 
   // Cross 'X' icon geometry centered at (80, 30)
   for (int t = -2; t <= 2; t++) {
-    tft.drawLine(68, 18 + abs(t), 92, 42 + abs(t), 0xF800);
-    tft.drawLine(92, 18 + abs(t), 68, 42 + abs(t), 0xF800);
+    tft.drawLine(68, 18 + abs(t), 92, 42 + abs(t), COLOR_RED);
+    tft.drawLine(92, 18 + abs(t), 68, 42 + abs(t), COLOR_RED);
   }
 
   tft.setTextSize(1);
 
   const char* title = "Not a monument in:";
   int xTitle = (160 - (strlen(title) * 6)) / 2;
-  tft.setTextColor(0xFFFF); // Blanco
-  tft.setTextColor(0xFFFF);
+  tft.setTextColor(0xFFFF); // White
   tft.setCursor(xTitle, 52);
   tft.print(title);
 
   // Center location label and prevent underflow if text is long
   int xLabel = (160 - (strlen(locationLabel) * 6)) / 2;
-  if (xLabel < 0) xLabel = 0; // Previene salir de pantalla si es muy largo
-  tft.setTextColor(tft.color565(255, 120, 120)); // Rojo brillante/claro
   if (xLabel < 0) xLabel = 0;
-  tft.setTextColor(tft.color565(255, 120, 120));
+  // Bright soft red text: Blue=120, Green=120, Red=255
+  tft.setTextColor(tft.color565(120, 120, 255));
   tft.setCursor(xLabel, 68);
   tft.print(locationLabel);
 
   const char* line1 = "Retake photo of a";
   int xLine1 = (160 - (strlen(line1) * 6)) / 2;
-  tft.setTextColor(tft.color565(240, 180, 180)); // Rojo suave
-  tft.setTextColor(tft.color565(240, 180, 180));
+  // Soft pastel red: Blue=180, Green=180, Red=240
+  tft.setTextColor(tft.color565(180, 180, 240));
   tft.setCursor(xLine1, 88);
   tft.print(line1);
-
 
   const char* line2 = "valid monument.";
   int xLine2 = (160 - (strlen(line2) * 6)) / 2;
   tft.setCursor(xLine2, 100);
   tft.print(line2);
 
-  tft.fillRect(0, 125, 160, 3, 0xF800);
+  // Bottom accent bar
+  tft.fillRect(0, 125, 160, 3, COLOR_RED);
 }

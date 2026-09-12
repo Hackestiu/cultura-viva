@@ -11,7 +11,7 @@ import re
 
 import numpy as np
 
-from config import MIC_DEVICE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
+from config import MIC_DEVICE, MIC_SAMPLE_RATE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
 
 try:
     import sounddevice as sd  # type: ignore[import]
@@ -136,18 +136,28 @@ class MicrophoneManager:
             self._mic.start()
 
     def record_until_stopped(self, is_recording):
-        """Captures audio continuously — via sounddevice if available, otherwise via successive Microphone.record_wav() chunks — checking the is_recording predicate between chunks and stopping once it returns false or RECORD_MAX_SECONDS is reached. Returns the captured samples concatenated into a single 1D numpy array, or None if no audio backend is available, no audio was captured, or capture fails."""
+        """Captures audio continuously — via sounddevice if available, otherwise via successive
+        Microphone.record_wav() chunks — checking the is_recording predicate between chunks and
+        stopping once it returns false or RECORD_MAX_SECONDS is reached.
+
+        When sounddevice is used the stream is opened at the device's native sample rate
+        (MIC_SAMPLE_RATE) and the result is resampled to 16 kHz so that faster-whisper
+        always receives audio at its expected rate, regardless of the hardware.
+
+        Returns the captured samples as a 1D int16 numpy array at 16 kHz, or None on error.
+        """
+        TARGET_RATE = 16000
         chunks = []
         if sd is not None:
-            sample_rate = 16000
-            block_size = 1024
-            max_frames = int(RECORD_MAX_SECONDS * sample_rate)
+            capture_rate = MIC_SAMPLE_RATE
+            block_size = int(capture_rate * 0.05)   # ~50 ms blocks
+            max_frames = int(RECORD_MAX_SECONDS * capture_rate)
             frames_read = 0
 
             try:
                 with sd.InputStream(
                     device=MIC_DEVICE,
-                    samplerate=sample_rate,
+                    samplerate=capture_rate,
                     channels=1,
                     dtype="int16",
                     blocksize=block_size,
@@ -168,6 +178,37 @@ class MicrophoneManager:
             except Exception as exc:
                 print(f"[ERROR] Continuous microphone capture failed: {exc}")
                 return None
+
+            if not chunks:
+                return None
+
+            audio = np.concatenate(chunks)
+
+            # Resample to 16 kHz if the hardware runs at a different rate
+            if capture_rate != TARGET_RATE:
+                try:
+                    import soxr  # type: ignore[import]
+                    audio_f = audio.astype(np.float32) / 32768.0
+                    resampled_f = soxr.resample(audio_f, capture_rate, TARGET_RATE)
+                    audio = (resampled_f * 32768.0).astype(np.int16)
+                    print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz")
+                except ImportError:
+                    # soxr not available — try scipy
+                    try:
+                        from scipy.signal import resample_poly  # type: ignore[import]
+                        import math as _math
+                        g = _math.gcd(capture_rate, TARGET_RATE)
+                        audio_f = audio.astype(np.float32)
+                        audio_f = resample_poly(audio_f, TARGET_RATE // g, capture_rate // g)
+                        audio = np.clip(audio_f, -32768, 32767).astype(np.int16)
+                        print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (scipy)")
+                    except ImportError:
+                        print(
+                            f"[WARN] soxr and scipy not available; returning audio at {capture_rate} Hz. "
+                            "Install soxr for correct resampling: pip install soxr"
+                        )
+            return audio
+
         elif self._mic is not None:
             elapsed = 0.0
             while elapsed < RECORD_MAX_SECONDS:

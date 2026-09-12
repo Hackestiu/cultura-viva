@@ -82,16 +82,16 @@ CAMERA_DEVICE_INDEX: int = _env_int(
     _discovered.get("camera") if _discovered.get("camera") is not None else 0,
 )
 
-# ALSA card index for sounddevice microphone  (env override: CULTURA_MIC_DEVICE)
-MIC_DEVICE: int = _env_int(
-    "CULTURA_MIC_DEVICE",
-    _discovered.get("mic", 0),  # fallback to 0 if discovery fails
-)
+# Microphone settings  (env override: CULTURA_MIC_DEVICE, CULTURA_MIC_RATE)
+# discover_mic_device() now returns a dict: {alsa_device, card_index, sample_rate}
+_mic_info = _discovered.get("mic") or {}
+MIC_DEVICE: str = _os.environ.get("CULTURA_MIC_DEVICE") or _mic_info.get("alsa_device", "hw:1,0")
+MIC_SAMPLE_RATE: int = _env_int("CULTURA_MIC_RATE", _mic_info.get("sample_rate", 48000))
 
 # ALSA plughw string for headphone output  (env override: CULTURA_PLAYBACK_DEVICE)
 PLAYBACK_DEVICE: str = _env_str(
     "CULTURA_PLAYBACK_DEVICE",
-    _discovered.get("playback", "plughw:2,0"),  # fallback to original value
+    _discovered.get("playback", "plughw:0,0"),  # fallback to card 0
 )
 
 DEFAULT_VOLUME_PERCENT = 70

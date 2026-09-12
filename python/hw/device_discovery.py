@@ -128,13 +128,18 @@ def discover_camera_index() -> int | None:
 
 
 # ---------------------------------------------------------------------------
-# Microphone (ALSA / sounddevice card index)
+# Microphone (ALSA / sounddevice)
 # ---------------------------------------------------------------------------
 
 # Keywords that identify the Brio 105 microphone in ALSA card names.
 # NOTE: "usb audio" and "usb-audio" are intentionally omitted — they are too
 # generic and would match a plain "USB Audio" card before the Brio 105 card.
 _MIC_KEYWORDS = ("brio", "b105", "logitech", "webcam")
+
+# Sample rates to try when negotiating with the ALSA driver (highest first so
+# we keep the native rate if the device supports it; Whisper needs 16 kHz but
+# sounddevice can return any rate and we resample afterwards if necessary).
+_MIC_SAMPLE_RATES = (48000, 44100, 16000, 8000)
 
 
 def _list_alsa_cards() -> list[tuple[int, str]]:
@@ -155,15 +160,53 @@ def _list_alsa_cards() -> list[tuple[int, str]]:
     return cards
 
 
-def discover_mic_device() -> int | None:
+def _probe_mic_sample_rate(alsa_device: str) -> int:
+    """
+    Probes the first sample rate supported by the given ALSA device string
+    (e.g. 'hw:1,0') by querying arecord. Returns the first rate from
+    _MIC_SAMPLE_RATES that works, or 16000 as a last-resort fallback.
+    """
+    try:
+        result = subprocess.run(
+            ["arecord", "-D", alsa_device, "--dump-hw-params"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        output = result.stdout + result.stderr
+        # Look for a RATE line: "RATE: 48000" or "RATE: [ 8000 48000 ]"
+        for line in output.splitlines():
+            if "RATE" in line.upper():
+                numbers = re.findall(r"\d+", line)
+                rates = [int(n) for n in numbers if int(n) >= 8000]
+                for preferred in _MIC_SAMPLE_RATES:
+                    if preferred in rates:
+                        return preferred
+                if rates:
+                    return rates[0]
+    except Exception:
+        pass
+    return 16000  # conservative fallback
+
+
+def discover_mic_device() -> dict | None:
     """
     Scans ALSA sound cards for one whose name contains a microphone keyword.
-    Returns the card index (usable as sounddevice device parameter), or None.
+    Returns a dict with:
+        'alsa_device': str  — ALSA hw device string, e.g. 'hw:1,0'
+        'card_index':  int  — ALSA card number
+        'sample_rate': int  — first sample rate supported by the device
+    or None if no matching card is found.
     """
     for card_idx, card_name in _list_alsa_cards():
         if any(kw in card_name for kw in _MIC_KEYWORDS):
-            print(f"[DISCOVERY] Microphone found: ALSA card {card_idx} ('{card_name}')")
-            return card_idx
+            alsa_device = f"hw:{card_idx},0"
+            rate = _probe_mic_sample_rate(alsa_device)
+            print(
+                f"[DISCOVERY] Microphone found: ALSA card {card_idx} ('{card_name}'), "
+                f"device '{alsa_device}', native rate {rate} Hz"
+            )
+            return {"alsa_device": alsa_device, "card_index": card_idx, "sample_rate": rate}
 
     print("[DISCOVERY] No USB microphone found in ALSA card list.")
     return None
@@ -236,9 +279,9 @@ def discover_all() -> dict:
     Runs all three discovery functions and returns a dict::
 
         {
-            "camera":   <int|None>,    # V4L2 device index for /dev/videoN
-            "mic":      <int|None>,    # ALSA card index for sounddevice
-            "playback": <str|None>,    # 'plughw:N,0' string for aplay
+            "camera":      <int|None>,   # V4L2 device index for /dev/videoN
+            "mic":         <dict|None>,  # keys: alsa_device, card_index, sample_rate
+            "playback":    <str|None>,   # 'plughw:N,0' string for aplay
         }
     """
     return {

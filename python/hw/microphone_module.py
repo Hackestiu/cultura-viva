@@ -191,7 +191,7 @@ class MicrophoneManager:
                     audio_f = audio.astype(np.float32) / 32768.0
                     resampled_f = soxr.resample(audio_f, capture_rate, TARGET_RATE)
                     audio = (resampled_f * 32768.0).astype(np.int16)
-                    print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz")
+                    print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (soxr)")
                 except ImportError:
                     # soxr not available — try scipy
                     try:
@@ -203,10 +203,26 @@ class MicrophoneManager:
                         audio = np.clip(audio_f, -32768, 32767).astype(np.int16)
                         print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (scipy)")
                     except ImportError:
-                        print(
-                            f"[WARN] soxr and scipy not available; returning audio at {capture_rate} Hz. "
-                            "Install soxr for correct resampling: pip install soxr"
-                        )
+                        # Last resort: integer decimation with a simple anti-alias FIR
+                        # Works correctly when capture_rate is an exact integer multiple of TARGET_RATE
+                        # (e.g. 48000 / 16000 = 3).  For other ratios it still works but is
+                        # less accurate — good enough for speech recognition.
+                        import math as _math
+                        ratio = capture_rate / TARGET_RATE
+                        if ratio == int(ratio):
+                            n = int(ratio)
+                            # Simple n-tap moving-average anti-alias filter before decimation
+                            kernel = np.ones(n, dtype=np.float32) / n
+                            audio_f = np.convolve(audio.astype(np.float32), kernel, mode="same")
+                            audio = audio_f[::n].astype(np.int16)
+                        else:
+                            # Non-integer ratio: use numpy linear interpolation (crude but functional)
+                            old_len = len(audio)
+                            new_len = int(old_len * TARGET_RATE / capture_rate)
+                            x_old = np.arange(old_len)
+                            x_new = np.linspace(0, old_len - 1, new_len)
+                            audio = np.interp(x_new, x_old, audio.astype(np.float32)).astype(np.int16)
+                        print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (numpy fallback)")
             return audio
 
         elif self._mic is not None:

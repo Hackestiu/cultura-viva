@@ -79,7 +79,7 @@ def _env_str(var: str, default):
 # V4L2 camera index for /dev/videoN  (env override: CULTURA_CAMERA_INDEX)
 CAMERA_DEVICE_INDEX: int = _env_int(
     "CULTURA_CAMERA_INDEX",
-    _discovered.get("camera", 2),  # fallback to 2 if discovery fails
+    _discovered.get("camera") if _discovered.get("camera") is not None else 0,
 )
 
 # ALSA card index for sounddevice microphone  (env override: CULTURA_MIC_DEVICE)

@@ -25,10 +25,39 @@ from pathlib import Path
 
 # Keywords that identify the Brio 105 camera in /sys or v4l2 driver names.
 # Add extra keywords here if running on a different camera model.
-_CAMERA_KEYWORDS = ("brio", "brio 105", "logitech")
+_CAMERA_KEYWORDS = ("brio", "brio 105", "logitech", "webcam", "camera")
+
+# Devices to explicitly ignore (e.g. Qualcomm Venus hardware decoder/encoder nodes)
+_EXCLUDE_CAMERA_KEYWORDS = ("venus", "decoder", "encoder", "codec", "qcom-venus")
 
 # Fallback: try these indices in order if keyword search yields nothing.
-_CAMERA_FALLBACK_INDICES = (0, 1, 2, 3, 4)
+_CAMERA_FALLBACK_INDICES = (0, 1)
+
+
+def _list_v4l2_devices() -> list[tuple[int, str]]:
+    """Returns [(video_index, device_name), ...] parsed from 'v4l2-ctl --list-devices'."""
+    devices: list[tuple[int, str]] = []
+    try:
+        res = subprocess.run(
+            ["v4l2-ctl", "--list-devices"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if res.returncode == 0:
+            current_name = ""
+            for line in res.stdout.splitlines():
+                if not line.startswith("\t") and not line.startswith(" ") and line.strip():
+                    # Header line like: "Brio 105 (usb-xhci-hcd.2.auto-1.4):"
+                    current_name = line.strip().rstrip(":")
+                elif line.strip().startswith("/dev/video"):
+                    m = re.search(r"/dev/video(\d+)", line.strip())
+                    if m:
+                        idx = int(m.group(1))
+                        devices.append((idx, current_name))
+    except Exception:
+        pass
+    return devices
 
 
 def _v4l2_device_name(index: int) -> str:
@@ -36,18 +65,20 @@ def _v4l2_device_name(index: int) -> str:
     try:
         sysfs = Path(f"/sys/class/video4linux/video{index}/name")
         if sysfs.exists():
-            return sysfs.read_text(encoding="utf-8").strip().lower()
+            return sysfs.read_text(encoding="utf-8").strip()
     except Exception:
         pass
     # Fallback: ask v4l2-ctl
     try:
         result = subprocess.run(
             ["v4l2-ctl", f"--device=/dev/video{index}", "--info"],
-            capture_output=True, text=True, timeout=2
+            capture_output=True,
+            text=True,
+            timeout=2,
         )
         for line in result.stdout.splitlines():
             if "card" in line.lower() or "bus" in line.lower():
-                return line.lower()
+                return line.strip()
     except Exception:
         pass
     return ""
@@ -55,29 +86,45 @@ def _v4l2_device_name(index: int) -> str:
 
 def discover_camera_index() -> int | None:
     """
-    Scans /dev/video0..15 for a device whose name contains one of the Brio 105
-    keywords. Returns the first matching index, or None if not found.
+    Scans V4L2 devices for one whose name contains a camera keyword (e.g. Brio 105)
+    and does NOT belong to a hardware decoder/encoder (e.g. Qualcomm Venus).
+    Returns the first matching index, or fallback if not found.
     """
+    # 1. Try parsing 'v4l2-ctl --list-devices' first (most reliable)
+    for idx, name in _list_v4l2_devices():
+        name_lower = name.lower()
+        if any(exc in name_lower for exc in _EXCLUDE_CAMERA_KEYWORDS):
+            continue
+        if any(kw.lower() in name_lower for kw in _CAMERA_KEYWORDS):
+            print(f"[DISCOVERY] Camera found via v4l2-ctl: /dev/video{idx} ('{name}')")
+            return idx
+
+    # 2. Try sysfs /dev/video0..15 inspection
     for i in range(16):
         dev = Path(f"/dev/video{i}")
         if not dev.exists():
             continue
         name = _v4l2_device_name(i)
-        if any(kw in name for kw in _CAMERA_KEYWORDS):
-            print(f"[DISCOVERY] Camera found: /dev/video{i} ('{name}')")
+        name_lower = name.lower()
+        if any(exc in name_lower for exc in _EXCLUDE_CAMERA_KEYWORDS):
+            continue
+        if any(kw.lower() in name_lower for kw in _CAMERA_KEYWORDS):
+            print(f"[DISCOVERY] Camera found via sysfs: /dev/video{i} ('{name}')")
             return i
 
-    # No keyword match — try the first capture-capable device as a fallback
+    # 3. Fallback: try indices (excluding venus / decoder)
     for i in _CAMERA_FALLBACK_INDICES:
         if Path(f"/dev/video{i}").exists():
-            print(
-                f"[DISCOVERY] Camera keyword not matched; "
-                f"falling back to /dev/video{i}"
-            )
-            return i
+            name = _v4l2_device_name(i).lower()
+            if not any(exc in name for exc in _EXCLUDE_CAMERA_KEYWORDS):
+                print(
+                    f"[DISCOVERY] Camera keyword not matched; "
+                    f"falling back to /dev/video{i}"
+                )
+                return i
 
     print("[DISCOVERY] No camera device found.")
-    return None
+    return 0
 
 
 # ---------------------------------------------------------------------------

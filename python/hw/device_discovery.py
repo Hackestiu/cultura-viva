@@ -255,10 +255,25 @@ def _alsa_card_usb_port(card_index: int) -> str:
 
 def _probe_mic_sample_rate(alsa_device: str) -> int:
     """
-    Probes the first sample rate supported by the given ALSA device string
-    (e.g. 'hw:1,0') by querying arecord. Returns the first rate from
-    _MIC_SAMPLE_RATES that works, or 16000 as a last-resort fallback.
+    Probes the native sample rate supported by the given ALSA device string
+    (e.g. 'hw:1,0').
+
+    Strategy:
+      1. sounddevice.query_devices() — most reliable, no process spawn needed.
+      2. arecord --dump-hw-params — good fallback if sounddevice not available.
+      3. Hard fallback: 48000 Hz (Brio 105 native rate; resampled to 16kHz for Whisper).
     """
+    # 1. Try sounddevice (fastest and most reliable)
+    try:
+        import sounddevice as _sd  # type: ignore[import]
+        info = _sd.query_devices(alsa_device, "input")
+        default_rate = int(info["default_samplerate"])
+        if default_rate >= 8000:
+            return default_rate
+    except Exception:
+        pass
+
+    # 2. Try arecord --dump-hw-params
     try:
         result = subprocess.run(
             ["arecord", "-D", alsa_device, "--dump-hw-params"],
@@ -279,7 +294,10 @@ def _probe_mic_sample_rate(alsa_device: str) -> int:
                     return rates[0]
     except Exception:
         pass
-    return 16000  # conservative fallback
+
+    # 3. Safe fallback: 48000 Hz (Brio 105 native; microphone_module resamples to 16kHz)
+    print(f"[DISCOVERY] Could not probe sample rate for '{alsa_device}'; defaulting to 48000 Hz")
+    return 48000
 
 
 def discover_mic_device() -> dict | None:
@@ -344,13 +362,15 @@ _HEADPHONE_KEYWORDS = (
     "hda-intel",   # standard laptop/PC
     "realtek",
     "ac97",
+    "imola",       # Arduino UNO Q (Qualcomm QCM2290) internal audio
+    "qcm2290",     # Arduino UNO Q Qualcomm SoC audio
+    "arduino-imola",
 )
 
 # Cards listed here should NOT be used for playback (prefer the headphone jack
 # or the onboard USB Audio output over the Brio's built-in audio out).
-# NOTE: "usb audio" is intentionally NOT listed here — on boards without a
-# built-in headphone jack the generic USB Audio card IS the playback device.
-_SKIP_PLAYBACK_KEYWORDS = ("brio", "b105", "logitech", "webcam")
+# Also skip cheap USB audio dongles like JieLi.
+_SKIP_PLAYBACK_KEYWORDS = ("brio", "b105", "logitech", "webcam", "jieli")
 
 
 def discover_playback_device() -> str | None:

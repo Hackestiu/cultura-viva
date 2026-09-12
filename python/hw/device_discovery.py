@@ -37,6 +37,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from logging_setup import logger
+
 
 # ---------------------------------------------------------------------------
 # Camera (V4L2)
@@ -149,9 +151,12 @@ def discover_camera_index() -> int | None:
     if _CAMERA_KNOWN_PORT:
         for idx, name, port in devices_with_port:
             if port.endswith(_CAMERA_KNOWN_PORT):
-                print(
-                    f"[DISCOVERY] Camera found via fixed USB port: "
-                    f"/dev/video{idx} (port '{port}', name '{name}')"
+                logger.info(
+                    "Camera found via fixed USB port: /dev/video{} "
+                    "(port {!r}, name {!r})",
+                    idx,
+                    port,
+                    name,
                 )
                 return idx
 
@@ -162,7 +167,9 @@ def discover_camera_index() -> int | None:
         if any(exc in name_lower for exc in _EXCLUDE_CAMERA_KEYWORDS):
             continue
         if any(kw.lower() in name_lower for kw in _CAMERA_KEYWORDS):
-            print(f"[DISCOVERY] Camera found via v4l2-ctl: /dev/video{idx} ('{name}')")
+            logger.info(
+                "Camera found via v4l2-ctl: /dev/video{} ({!r})", idx, name
+            )
             return idx
 
     # 2. Try sysfs /dev/video0..15 inspection
@@ -175,7 +182,7 @@ def discover_camera_index() -> int | None:
         if any(exc in name_lower for exc in _EXCLUDE_CAMERA_KEYWORDS):
             continue
         if any(kw.lower() in name_lower for kw in _CAMERA_KEYWORDS):
-            print(f"[DISCOVERY] Camera found via sysfs: /dev/video{i} ('{name}')")
+            logger.info("Camera found via sysfs: /dev/video{} ({!r})", i, name)
             return i
 
     # 3. Fallback: try indices (excluding venus / decoder)
@@ -183,13 +190,12 @@ def discover_camera_index() -> int | None:
         if Path(f"/dev/video{i}").exists():
             name = _v4l2_device_name(i).lower()
             if not any(exc in name for exc in _EXCLUDE_CAMERA_KEYWORDS):
-                print(
-                    f"[DISCOVERY] Camera keyword not matched; "
-                    f"falling back to /dev/video{i}"
+                logger.warning(
+                    "Camera keyword not matched; falling back to /dev/video{}", i
                 )
                 return i
 
-    print("[DISCOVERY] No camera device found. Falling back to index 2.")
+    logger.warning("No camera device found. Falling back to index 2.")
     return 2
 
 
@@ -296,7 +302,9 @@ def _probe_mic_sample_rate(alsa_device: str) -> int:
         pass
 
     # 3. Safe fallback: 48000 Hz (Brio 105 native; microphone_module resamples to 16kHz)
-    print(f"[DISCOVERY] Could not probe sample rate for '{alsa_device}'; defaulting to 48000 Hz")
+    logger.warning(
+        "Could not probe sample rate for {!r}; defaulting to 48000 Hz", alsa_device
+    )
     return 48000
 
 
@@ -323,10 +331,14 @@ def discover_mic_device() -> dict | None:
             if port and port.endswith(_MIC_KNOWN_PORT):
                 alsa_device = f"hw:{card_idx},0"
                 rate = _probe_mic_sample_rate(alsa_device)
-                print(
-                    f"[DISCOVERY] Microphone found via fixed USB port: "
-                    f"ALSA card {card_idx} ('{card_name}', port '{port}'), "
-                    f"device '{alsa_device}', native rate {rate} Hz"
+                logger.info(
+                    "Microphone found via fixed USB port: ALSA card {} "
+                    "({!r}, port {!r}), device {!r}, native rate {} Hz",
+                    card_idx,
+                    card_name,
+                    port,
+                    alsa_device,
+                    rate,
                 )
                 return {"alsa_device": alsa_device, "card_index": card_idx, "sample_rate": rate}
 
@@ -335,13 +347,17 @@ def discover_mic_device() -> dict | None:
         if any(kw in card_name for kw in _MIC_KEYWORDS):
             alsa_device = f"hw:{card_idx},0"
             rate = _probe_mic_sample_rate(alsa_device)
-            print(
-                f"[DISCOVERY] Microphone found: ALSA card {card_idx} ('{card_name}'), "
-                f"device '{alsa_device}', native rate {rate} Hz"
+            logger.info(
+                "Microphone found: ALSA card {} ({!r}), device {!r}, "
+                "native rate {} Hz",
+                card_idx,
+                card_name,
+                alsa_device,
+                rate,
             )
             return {"alsa_device": alsa_device, "card_index": card_idx, "sample_rate": rate}
 
-    print("[DISCOVERY] No USB microphone found in ALSA card list.")
+    logger.warning("No USB microphone found in ALSA card list.")
     return None
 
 
@@ -387,7 +403,9 @@ def discover_playback_device() -> str | None:
             continue
         if any(kw in card_name for kw in _HEADPHONE_KEYWORDS):
             device = f"plughw:{card_idx},0"
-            print(f"[DISCOVERY] Playback device found: {device} ('{card_name}')")
+            logger.info(
+                "Playback device found: {} ({!r})", device, card_name
+            )
             return device
 
     # Second pass: take the first non-USB-mic card available
@@ -395,13 +413,14 @@ def discover_playback_device() -> str | None:
         if any(skip in card_name for skip in _SKIP_PLAYBACK_KEYWORDS):
             continue
         device = f"plughw:{card_idx},0"
-        print(
-            f"[DISCOVERY] No headphone keyword match; "
-            f"falling back to {device} ('{card_name}')"
+        logger.warning(
+            "No headphone keyword match; falling back to {} ({!r})",
+            device,
+            card_name,
         )
         return device
 
-    print("[DISCOVERY] No playback device found.")
+    logger.warning("No playback device found.")
     return None
 
 

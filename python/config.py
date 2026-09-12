@@ -61,11 +61,20 @@ for _dir in (
 
 import os as _os
 
+# Logging is configured here, before device discovery runs, so the discovery
+# decisions (which camera/mic/playback device was picked, and whether it came
+# from a real match or a fallback) land in this run's log file too.
+from logging_setup import logger, setup_logging
+
+setup_logging()
+
 try:
     from hw.device_discovery import discover_all as _discover_all
     _discovered = _discover_all()
 except Exception as _exc:
-    print(f"[WARN] Device discovery failed: {_exc}. Using hardcoded fallbacks.")
+    logger.exception(
+        "Device discovery failed: {}. Using hardcoded fallbacks.", _exc
+    )
     _discovered = {}
 
 def _env_int(var: str, default) -> int:

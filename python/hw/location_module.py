@@ -15,6 +15,7 @@ import json
 import math
 
 from config import DEFAULT_LOCATION, LOCATIONS_CONFIG_FILE
+from logging_setup import logger
 
 try:
     from arduino.app_utils import Bridge  # type: ignore[import]
@@ -58,7 +59,7 @@ class LocationRegistry:
                 if isinstance(info, dict) and "lat" in info and "lon" in info:
                     self._locations[name] = info
         except (OSError, ValueError) as exc:
-            print(f"[WARN] Could not read {LOCATIONS_CONFIG_FILE}: {exc}")
+            logger.warning("Could not read {}: {}", LOCATIONS_CONFIG_FILE, exc)
 
     def nearest_to(self, lat: float, lon: float) -> str:
         """Finds the registered site closest to the given coordinates using Haversine distance. Returns that site's identifier (e.g. 'park_guell'), or DEFAULT_LOCATION if no sites are registered."""

@@ -12,6 +12,7 @@ import re
 import numpy as np
 
 from config import MIC_DEVICE, MIC_SAMPLE_RATE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
+from logging_setup import logger
 
 try:
     import sounddevice as sd  # type: ignore[import]
@@ -168,7 +169,7 @@ class MicrophoneManager:
                             min(block_size, max_frames - frames_read)
                         )
                         if overflowed:
-                            print("[WARN] ALSA input overflow while recording")
+                            logger.warning("ALSA input overflow while recording")
                         samples = np.asarray(chunk, dtype=np.int16).reshape(-1)
                         if len(samples) > 0:
                             chunks.append(samples.copy())
@@ -176,7 +177,7 @@ class MicrophoneManager:
                         if not is_recording():
                             break
             except Exception as exc:
-                print(f"[ERROR] Continuous microphone capture failed: {exc}")
+                logger.exception("Continuous microphone capture failed: {}", exc)
                 return None
 
             if not chunks:
@@ -191,7 +192,11 @@ class MicrophoneManager:
                     audio_f = audio.astype(np.float32) / 32768.0
                     resampled_f = soxr.resample(audio_f, capture_rate, TARGET_RATE)
                     audio = (resampled_f * 32768.0).astype(np.int16)
-                    print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (soxr)")
+                    logger.success(
+                        "Resampled mic audio {} Hz -> {} Hz (soxr)",
+                        capture_rate,
+                        TARGET_RATE,
+                    )
                 except ImportError:
                     # soxr not available — try scipy
                     try:
@@ -201,7 +206,11 @@ class MicrophoneManager:
                         audio_f = audio.astype(np.float32)
                         audio_f = resample_poly(audio_f, TARGET_RATE // g, capture_rate // g)
                         audio = np.clip(audio_f, -32768, 32767).astype(np.int16)
-                        print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (scipy)")
+                        logger.success(
+                            "Resampled mic audio {} Hz -> {} Hz (scipy)",
+                            capture_rate,
+                            TARGET_RATE,
+                        )
                     except ImportError:
                         # Last resort: integer decimation with a simple anti-alias FIR
                         # Works correctly when capture_rate is an exact integer multiple of TARGET_RATE
@@ -222,7 +231,11 @@ class MicrophoneManager:
                             x_old = np.arange(old_len)
                             x_new = np.linspace(0, old_len - 1, new_len)
                             audio = np.interp(x_new, x_old, audio.astype(np.float32)).astype(np.int16)
-                        print(f"[OK] Resampled mic audio {capture_rate} Hz -> {TARGET_RATE} Hz (numpy fallback)")
+                        logger.success(
+                            "Resampled mic audio {} Hz -> {} Hz (numpy fallback)",
+                            capture_rate,
+                            TARGET_RATE,
+                        )
             return audio
 
         elif self._mic is not None:
@@ -253,8 +266,13 @@ class MicrophoneManager:
         min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
         max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
         mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
-        print(
-            f"[DEBUG MIC] dtype={audio.dtype}, length={len(audio)}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}"
+        logger.debug(
+            "Mic buffer: dtype={}, length={}, min={:.2f}, max={:.2f}, mean={:.2f}",
+            audio.dtype,
+            len(audio),
+            min_v,
+            max_v,
+            mean_v,
         )
 
         # Handle various audio formats
@@ -274,8 +292,14 @@ class MicrophoneManager:
             wf.setsampwidth(2)  # 16-bit = 2 bytes
             wf.setframerate(16000)  # Microphone.RATE_16K
             wf.writeframes(samples.tobytes())
-        print(
-            f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767, duration: {len(samples)/16000:.1f}s)"
+        logger.success(
+            "Audio saved to: {} (button {}, model {!r}, max amplitude: {}/32767, "
+            "duration: {:.1f}s)",
+            out_file,
+            button_id,
+            model_name,
+            max_sample,
+            len(samples) / 16000,
         )
         return out_file
 
@@ -289,9 +313,10 @@ class MicrophoneManager:
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
-            print(
-                f"[WARN] faster-whisper model not found at {STT_MODEL_PATH}. "
-                "Download it following the instructions in models/stt/README.md."
+            logger.warning(
+                "faster-whisper model not found at {}. Download it following the "
+                "instructions in models/stt/README.md.",
+                STT_MODEL_PATH,
             )
             self._whisper = None
             return None
@@ -306,16 +331,17 @@ class MicrophoneManager:
                 compute_type="int8",
                 cpu_threads=4,
             )
-            print(f"[OK] faster-whisper model loaded: {STT_MODEL_PATH.name}")
+            logger.success(
+                "faster-whisper model loaded: {}", STT_MODEL_PATH.name
+            )
         except ImportError:
-            print(
-                "[WARN] faster-whisper is not installed. "
-                "Add 'faster-whisper>=1.0.0' to requirements.txt and reinstall. "
-                "Returning empty transcription string."
+            logger.warning(
+                "faster-whisper is not installed. Add 'faster-whisper>=1.0.0' to "
+                "requirements.txt and reinstall. Returning empty transcription string."
             )
             self._whisper = None
         except Exception as exc:
-            print(f"[ERROR] Could not load faster-whisper model: {exc}")
+            logger.exception("Could not load faster-whisper model: {}", exc)
             self._whisper = None
 
         return self._whisper
@@ -331,10 +357,11 @@ class MicrophoneManager:
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
-            print(
-                f"[WARN] faster-whisper model not found at {STT_MODEL_PATH}. "
-                "Download it following the instructions in models/stt/README.md. "
-                "Returning empty transcription string."
+            logger.warning(
+                "faster-whisper model not found at {}. Download it following the "
+                "instructions in models/stt/README.md. Returning empty "
+                "transcription string.",
+                STT_MODEL_PATH,
             )
             return ""
 
@@ -355,8 +382,13 @@ class MicrophoneManager:
             )
             raw_text = " ".join(s.text for s in segments).strip()
             text = canonicalize_domain_entities(raw_text)
-            print(f"[OK] Transcription: '{text[:80]}{'...' if len(text) > 80 else ''}'")
+            logger.success(
+                "Transcription: {!r}",
+                text[:80] + ("..." if len(text) > 80 else ""),
+            )
             return text
         except Exception as exc:
-            print(f"[ERROR] faster-whisper failed transcribing {audio_path}: {exc}")
+            logger.exception(
+                "faster-whisper failed transcribing {}: {}", audio_path, exc
+            )
             return ""

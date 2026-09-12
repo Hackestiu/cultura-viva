@@ -22,6 +22,9 @@ dependencies = [
 
     # Audio playback
     "sounddevice>=0.4.6",
+
+    # Structured logging (console + per-run file)
+    "loguru>=0.7.0",
 ]
 
 [dependency-groups]

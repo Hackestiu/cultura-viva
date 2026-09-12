@@ -11,6 +11,11 @@ llama-cpp-python).
 import json
 
 try:
+    from logging_setup import logger
+except ImportError:  # module used standalone, without the app root on sys.path
+    from loguru import logger
+
+try:
     from config import MODELS_CONFIG_FILE, MODELS_DIR, VISION_UNKNOWN_LABEL
 except ImportError:
     from config import MODELS_CONFIG_FILE, MODELS_DIR
@@ -67,7 +72,7 @@ class ModelRegistry:
                 if key in self._names and isinstance(name, str) and name.strip():
                     self._names[key] = name.strip()
         except (OSError, ValueError) as exc:
-            print(f"[WARN] Could not read {MODELS_CONFIG_FILE}: {exc}")
+            logger.warning("Could not read {}: {}", MODELS_CONFIG_FILE, exc)
 
     def name_for(self, button_id: str) -> str:
         """Returns the personality name assigned to a hardware button ('A', 'B', or 'C'), or the button id itself if it has no mapping."""
@@ -88,9 +93,9 @@ class ModelRegistry:
         self._kg_alias_index: dict = {}  # alias.lower() -> id
 
         if not KG_PATH.exists():
-            print(
-                f"[WARN] element_sheets.json not found at {KG_PATH}. "
-                "Returning empty KG context."
+            logger.warning(
+                "element_sheets.json not found at {}. Returning empty KG context.",
+                KG_PATH,
             )
             return
 
@@ -105,9 +110,11 @@ class ModelRegistry:
                     for alias in [sheet.get("name", "")] + sheet.get("aliases", []):
                         if alias:
                             self._kg_alias_index[alias.lower()] = sid
-            print(f"[OK] Knowledge sheets loaded: {len(self._kg_index)} elements")
+            logger.success(
+                "Knowledge sheets loaded: {} elements", len(self._kg_index)
+            )
         except (OSError, ValueError) as exc:
-            print(f"[ERROR] Could not read element_sheets.json: {exc}")
+            logger.exception("Could not read element_sheets.json: {}", exc)
 
     def _load_kg_base(self) -> dict:
         """Lazily loads and caches knowledge_base.json, which provides monument-level overview context used as a fallback when a specific element sheet is unavailable."""
@@ -121,9 +128,9 @@ class ModelRegistry:
         try:
             with open(KG_BASE_PATH, "r", encoding="utf-8") as f:
                 self._kg_base = json.load(f)
-            print(f"[OK] Knowledge base loaded.")
+            logger.success("Knowledge base loaded.")
         except (OSError, ValueError) as exc:
-            print(f"[ERROR] Could not read knowledge_base.json: {exc}")
+            logger.exception("Could not read knowledge_base.json: {}", exc)
         return self._kg_base
 
     def get_kg_context(self, element: str, personality: str = "artistic") -> str:
@@ -145,9 +152,13 @@ class ModelRegistry:
             base = self._load_kg_base()
             entry = base.get(element, {})
             if entry:
-                print(f"[INFO] KG: element '{element}' served from knowledge_base.json")
+                logger.info(
+                    "KG: element {!r} served from knowledge_base.json", element
+                )
                 return self._render_kb_entry(entry)
-            print(f"[WARN] KG: element '{element}' not found in any knowledge file.")
+            logger.warning(
+                "KG: element {!r} not found in any knowledge file.", element
+            )
             return ""
 
         return self._build_element_context(sheet, personality)
@@ -260,9 +271,10 @@ class ModelRegistry:
         from config import SLM_MODEL_PATH
 
         if not SLM_MODEL_PATH.exists():
-            print(
-                f"[WARN] SLM model not found at {SLM_MODEL_PATH}. "
-                "Download it following the instructions in models/README.md."
+            logger.warning(
+                "SLM model not found at {}. Download it following the instructions "
+                "in models/README.md.",
+                SLM_MODEL_PATH,
             )
             self._llm = None
             return None
@@ -284,16 +296,15 @@ class ModelRegistry:
                 flash_attn=True,  # reduces memory bandwidth during attention
                 verbose=False,
             )
-            print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
+            logger.success("SLM model loaded: {}", SLM_MODEL_PATH.name)
         except ImportError:
-            print(
-                "[WARN] llama-cpp-python is not installed. "
-                "Add 'llama-cpp-python' to requirements.txt and reinstall. "
-                "Response will be an error fallback."
+            logger.warning(
+                "llama-cpp-python is not installed. Add 'llama-cpp-python' to "
+                "requirements.txt and reinstall. Response will be an error fallback."
             )
             self._llm = None
         except Exception as exc:
-            print(f"[ERROR] Could not load SLM model: {exc}")
+            logger.exception("Could not load SLM model: {}", exc)
             self._llm = None
 
         return self._llm
@@ -333,10 +344,10 @@ class ModelRegistry:
         from config import SLM_MODEL_PATH
 
         if not SLM_MODEL_PATH.exists():
-            print(
-                f"[WARN] SLM model not found at {SLM_MODEL_PATH}. "
-                "Download it following the instructions in models/README.md. "
-                "Response will be an error fallback."
+            logger.warning(
+                "SLM model not found at {}. Download it following the instructions "
+                "in models/README.md. Response will be an error fallback.",
+                SLM_MODEL_PATH,
             )
             return "(model not available — download the SLM to get responses)"
 
@@ -384,8 +395,9 @@ class ModelRegistry:
             for chunk in stream:
                 # Check cancellation between every generated token
                 if is_active_fn is not None and not is_active_fn():
-                    print(
-                        f"[INFO] SLM generation cancelled by user after {len(tokens)} token(s)."
+                    logger.info(
+                        "SLM generation cancelled by user after {} token(s).",
+                        len(tokens),
                     )
                     return None
 
@@ -395,8 +407,10 @@ class ModelRegistry:
                     tokens.append(token_text)
 
             answer = "".join(tokens).strip()
-            print(f"[OK] SLM response generated ({len(answer)} characters).")
+            logger.success(
+                "SLM response generated ({} characters).", len(answer)
+            )
             return answer
         except Exception as exc:
-            print(f"[ERROR] SLM failed to generate response: {exc}")
+            logger.exception("SLM failed to generate response: {}", exc)
             return "(error generating response)"

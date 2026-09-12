@@ -17,6 +17,7 @@ import time
 import cv2  # type: ignore[import]
 import numpy as np
 
+from logging_setup import logger
 from config import (
     CAMERA_DEVICE_INDEX,
     CAMERA_FOURCC,
@@ -78,7 +79,9 @@ class CameraManager:
                 return cap
             cap.release()
 
-        print(f"[ERROR] Could not open camera at any index in candidates {candidates}")
+        logger.error(
+            "Could not open camera at any index in candidates {}", candidates
+        )
         return None
 
     @staticmethod
@@ -87,15 +90,21 @@ class CameraManager:
         actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if (actual_w, actual_h) == (CAMERA_PHOTO_WIDTH, CAMERA_PHOTO_HEIGHT):
-            print(
-                f"[OK] Camera opened at index {index} ({actual_w}x{actual_h})"
+            logger.success(
+                "Camera opened at index {} ({}x{})", index, actual_w, actual_h
             )
             return True
 
-        print(
-            f"[WARN] Camera at index {index} accepted {actual_w}x{actual_h} instead of "
-            f"{CAMERA_PHOTO_WIDTH}x{CAMERA_PHOTO_HEIGHT}. Photos will not be 1080p. "
-            f"Check supported resolutions with 'v4l2-ctl -d /dev/video{index} --list-formats-ext'."
+        logger.warning(
+            "Camera at index {} accepted {}x{} instead of {}x{}. Photos will not "
+            "be 1080p. Check supported resolutions with "
+            "'v4l2-ctl -d /dev/video{} --list-formats-ext'.",
+            index,
+            actual_w,
+            actual_h,
+            CAMERA_PHOTO_WIDTH,
+            CAMERA_PHOTO_HEIGHT,
+            index,
         )
         return False
 
@@ -107,7 +116,7 @@ class CameraManager:
             cap.grab()
         ret, frame = cap.retrieve()
         if not ret:
-            print("[ERROR] Could not capture frame from camera")
+            logger.error("Could not capture frame from camera")
             return None
         return frame
 
@@ -120,15 +129,18 @@ class CameraManager:
         height, width = frame.shape[:2]
         is_full_res = (width, height) == (CAMERA_PHOTO_WIDTH, CAMERA_PHOTO_HEIGHT)
         if not is_full_res:
-            print(
-                f"[WARN] Frame captured at {width}x{height} instead of expected "
-                f"{CAMERA_PHOTO_WIDTH}x{CAMERA_PHOTO_HEIGHT}."
+            logger.warning(
+                "Frame captured at {}x{} instead of expected {}x{}.",
+                width,
+                height,
+                CAMERA_PHOTO_WIDTH,
+                CAMERA_PHOTO_HEIGHT,
             )
 
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = PHOTOS_DIR / f"capture_{timestamp}_{width}x{height}.jpg"
         cv2.imwrite(str(filename), frame)
-        print(f"[OK] Photo saved to: {filename} ({width}x{height})")
+        logger.success("Photo saved to: {} ({}x{})", filename, width, height)
         self.last_photo_path = filename
         return filename
 
@@ -188,12 +200,12 @@ class CameraManager:
         in chunks via the 'receive_photo_chunk' Bridge RPC method."""
         path = Path(photo_path)
         if not path.exists():
-            print(f"[WARN] send_photo_preview: photo not found: {path}")
+            logger.warning("send_photo_preview: photo not found: {}", path)
             return False
 
         frame = cv2.imread(str(path))
         if frame is None:
-            print(f"[WARN] send_photo_preview: failed to read image: {path}")
+            logger.warning("send_photo_preview: failed to read image: {}", path)
             return False
 
         # Fit aspect ratio to preview_w x preview_h (160x86 is ~1.86, 16:9 is 1.78)
@@ -231,5 +243,10 @@ class CameraManager:
             chunk_b64 = base64.b64encode(raw_bytes[start:end]).decode("ascii")
             bridge.call("receive_photo_chunk", chunk_index, total_chunks, chunk_b64)
 
-        print(f"[OK] High-res photo preview streamed ({preview_w}x{preview_h} in {total_chunks} chunks).")
+        logger.success(
+            "High-res photo preview streamed ({}x{} in {} chunks).",
+            preview_w,
+            preview_h,
+            total_chunks,
+        )
         return True

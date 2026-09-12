@@ -39,6 +39,8 @@ from config import (
     RESPONSES_DIR,
     VISION_UNKNOWN_LABEL,
 )
+# Logging sinks are installed by config.py, which is imported above.
+from logging_setup import get_log_file, logger
 from core.minimap_module import MinimapManager
 from core.model_module import ModelRegistry
 from core.vision_module import VisionClassifier
@@ -96,8 +98,8 @@ def _clean_dir(directory) -> None:
                 f.unlink()
                 deleted += 1
             except Exception as exc:
-                print(f"[WARN] Could not delete {f}: {exc}")
-    print(f"[STARTUP] Cleaned {deleted} file(s) from '{directory}'.")
+                logger.warning("Could not delete {}: {}", f, exc)
+    logger.info("Cleaned {} file(s) from {!r}.", deleted, str(directory))
 
 
 def _preload_models() -> None:
@@ -119,18 +121,18 @@ def _preload_models() -> None:
         ("text-to-speech", player.preload),
     )
 
-    print("[STARTUP] Preloading AI models (first run may take a while)...")
+    logger.info("Preloading AI models (first run may take a while)...")
     total = time.time()
     for label, load in stages:
         started = time.time()
         try:
             ok = load()
         except Exception as exc:
-            print(f"[ERROR] Preload of {label} failed: {exc}")
+            logger.exception("Preload of {} failed: {}", label, exc)
             continue
-        status = "OK" if ok else "WARN"
-        print(f"[{status}] Preloaded {label} in {time.time() - started:.1f}s")
-    print(f"[STARTUP] Model preload finished in {time.time() - total:.1f}s.")
+        emit = logger.success if ok else logger.warning
+        emit("Preloaded {} in {:.1f}s", label, time.time() - started)
+    logger.info("Model preload finished in {:.1f}s.", time.time() - total)
 
 
 def run_app() -> None:
@@ -145,29 +147,40 @@ def run_app() -> None:
             "Arduino App Lab not available; can only be executed via App Lab"
         )
 
+    log_file = get_log_file()
+    if log_file is not None:
+        logger.info("Logging this run to: {}", log_file)
+
     microphone.start()
     camera.ensure_open()
 
     # Clean transient directories on every startup (disabled during testing to preserve files)
-    # print("[STARTUP] Cleaning recordings and responses directories...")
+    # logger.info("Cleaning recordings and responses directories...")
     # _clean_dir(RECORDINGS_DIR)
     # _clean_dir(RESPONSES_DIR)
 
-    print(f"Photos will be saved to: {PHOTOS_DIR}")
-    print(f"Recordings will be saved to: {RECORDINGS_DIR}")
-    print(f"Models (A/B/C) read from: {MODELS_DIR}")
-    print(f"Minimap content at: {MINIMAP_DIR}")
-    print(
-        f"Camera view: thumbnail {CAM_THUMB_W}x{CAM_THUMB_H} in {CAM_CHUNK_PIXELS}px chunks, every {CAMERA_SEND_INTERVAL:.0f}s"
+    logger.info("Photos will be saved to: {}", PHOTOS_DIR)
+    logger.info("Recordings will be saved to: {}", RECORDINGS_DIR)
+    logger.info("Models (A/B/C) read from: {}", MODELS_DIR)
+    logger.info("Minimap content at: {}", MINIMAP_DIR)
+    logger.info(
+        "Camera view: thumbnail {}x{} in {}px chunks, every {:.0f}s",
+        CAM_THUMB_W,
+        CAM_THUMB_H,
+        CAM_CHUNK_PIXELS,
+        CAMERA_SEND_INTERVAL,
     )
-    print(
-        f"Hardware devices: camera=/dev/video{CAMERA_DEVICE_INDEX}, "
-        f"mic=ALSA card {MIC_DEVICE}, playback='{PLAYBACK_DEVICE}'"
+    logger.info(
+        "Hardware devices: camera=/dev/video{}, mic=ALSA card {}, playback={!r}",
+        CAMERA_DEVICE_INDEX,
+        MIC_DEVICE,
+        PLAYBACK_DEVICE,
     )
     _preload_models()
 
-    print(
-        "Waiting for button D7 (photo/recording), buttons A/B/C (personality), Modulino Knob (volume) and switch D6..."
+    logger.info(
+        "Waiting for button D7 (photo/recording), buttons A/B/C (personality), "
+        "Modulino Knob (volume) and switch D6..."
     )
 
     last_camera_send = 0.0
@@ -214,8 +227,9 @@ def run_app() -> None:
                         Bridge.call("set_photo_validation_state", 2)
                         last_detected_element = None
                         last_detected_site = None
-                        print(
-                            f"[VISION] Photo is not a monument in '{site}' -> retake screen shown."
+                        logger.info(
+                            "Photo is not a monument in {!r} -> retake screen shown.",
+                            site,
                         )
                     else:
                         last_detected_element = element
@@ -225,8 +239,12 @@ def run_app() -> None:
                         )
                         Bridge.call("set_detected_monument", element_display)
                         Bridge.call("set_photo_validation_state", 1)
-                        print(
-                            f"[VISION] Photo validated: element='{element}' ('{element_display}') at '{site}' -> showing valid screen, then confirmation."
+                        logger.info(
+                            "Photo validated: element={!r} ({!r}) at {!r} -> showing "
+                            "valid screen, then confirmation.",
+                            element,
+                            element_display,
+                            site,
                         )
 
                         if element and element != VISION_UNKNOWN_LABEL:
@@ -243,7 +261,9 @@ def run_app() -> None:
                         )
 
         except Exception as exc:
-            print(f"[ERROR] Checking button D7 / taking photo / vision: {exc}")
+            logger.exception(
+                "Checking button D7 / taking photo / vision: {}", exc
+            )
 
         try:
             if Bridge.call("camera_live_view_active"):
@@ -258,21 +278,24 @@ def run_app() -> None:
                         CAMERA_CHUNK_DELAY_S,
                     )
         except Exception as exc:
-            print(f"[ERROR] Sending camera frame chunks: {exc}")
+            logger.exception("Sending camera frame chunks: {}", exc)
 
         try:
             if Bridge.call("is_recording_active"):
                 photo_path = camera.last_photo_path
                 if photo_path is None or not photo_path.exists():
-                    print(
-                        "[WARN] Audio recording rejected: No photo taken yet! Switch to camera mode and take a photo first."
+                    logger.warning(
+                        "Audio recording rejected: no photo taken yet. Switch to "
+                        "camera mode and take a photo first."
                     )
                 else:
                     personality_index = Bridge.call("get_personality_index")
                     button_id = "ABC"[personality_index]
                     model_name = models.name_for(button_id)
-                    print(
-                        f"[EVENT] Recording started (personality: {model_name}) -> speak now, press D7 to stop..."
+                    logger.info(
+                        "Recording started (personality: {}) -> speak now, "
+                        "press D7 to stop...",
+                        model_name,
                     )
                     audio = microphone.record_until_stopped(
                         is_recording=lambda: Bridge.call("is_recording_active")
@@ -284,7 +307,7 @@ def run_app() -> None:
 
                             question_text = microphone.transcribe(wav_path)
                             if not Bridge.call("is_processing_active"):
-                                print("[INFO] Generation cancelled by user after STT.")
+                                logger.info("Generation cancelled by user after STT.")
                                 return
 
                             element = last_detected_element
@@ -300,7 +323,7 @@ def run_app() -> None:
                                     minimap.mark_detected(site, element)
 
                             if not Bridge.call("is_processing_active"):
-                                print("[INFO] Generation cancelled by user before SLM.")
+                                logger.info("Generation cancelled by user before SLM.")
                                 return
 
                             kg_context = (
@@ -318,7 +341,9 @@ def run_app() -> None:
 
                             if answer is None:
                                 # Cancelled mid-generation via streaming — skip TTS
-                                print("[INFO] Generation cancelled by user during SLM streaming.")
+                                logger.info(
+                                    "Generation cancelled by user during SLM streaming."
+                                )
                                 return
 
                             player.synthesize_and_play(
@@ -334,9 +359,9 @@ def run_app() -> None:
                             except Exception:
                                 pass
                     else:
-                        print("[WARN] Empty recording (0 chunks captured)")
+                        logger.warning("Empty recording (0 chunks captured)")
         except Exception as exc:
-            print(f"[ERROR] Recording/processing question: {exc}")
+            logger.exception("Recording/processing question: {}", exc)
 
         time.sleep(POLL_INTERVAL)
 

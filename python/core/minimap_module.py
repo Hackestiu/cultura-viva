@@ -18,6 +18,7 @@ to a landmark code and marks it visited on the minimap.
 import json
 
 from config import MINIMAP_DIR
+from logging_setup import logger
 
 try:
     from arduino.app_utils import Bridge  # type: ignore[import]
@@ -70,7 +71,9 @@ class MinimapManager:
         """Reads and returns the landmark list for a site from its JSON file, or an empty list if the file is missing or unregistered."""
         landmarks_file = LANDMARKS_FILES.get(location)
         if landmarks_file is None or not landmarks_file.exists():
-            print(f"[WARN] Landmarks file not found for {location}: {landmarks_file}")
+            logger.warning(
+                "Landmarks file not found for {}: {}", location, landmarks_file
+            )
             return []
         with open(landmarks_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -79,7 +82,7 @@ class MinimapManager:
     def set_location(self, location: str) -> bool:
         """Activates a monument site ('park_guell' or 'sagrada_familia'), loading its landmarks and switching the firmware's active tilemap via RPC if the site actually changes. Returns True once the site is active (or already was), and False for an unrecognized location."""
         if location not in LANDMARKS_FILES:
-            print(f"[WARN] minimap: unknown location '{location}'")
+            logger.warning("Unknown location {!r}", location)
             return False
         if location == self._active_location:
             return True
@@ -88,7 +91,7 @@ class MinimapManager:
         self._active_location = location
         map_id = 1 if location == "sagrada_familia" else 0
         if Bridge is None:
-            print(f"[dry run] set_minimap_location({map_id})")
+            logger.debug("[dry run] set_minimap_location({})", map_id)
             return True
         return bool(Bridge.call("set_minimap_location", map_id))
 
@@ -131,15 +134,15 @@ class MinimapManager:
         """Marks as visited the landmark corresponding to a label recognized by the vision classifier for the given site. Returns False silently if the label is unknown or not yet mapped for that location."""
         location_map = VISION_LABEL_TO_LANDMARK.get(location)
         if location_map is None:
-            print(f"[WARN] minimap: no landmark mapping for location '{location}'")
+            logger.warning("No landmark mapping for location {!r}", location)
             return False
 
         code = location_map.get(vision_label)
         if code is None:
             return False
 
-        print(
-            f"[INFO] minimap: vision detected '{vision_label}' -> marking landmark '{code}'"
+        logger.info(
+            "Vision detected {!r} -> marking landmark {!r}", vision_label, code
         )
         return self.mark_visited(code)
 
@@ -147,7 +150,7 @@ class MinimapManager:
         """Marks a landmark as visited on the display, identified by its code or numeric id. Returns True if the landmark was resolved and the RPC dispatched, False if the identifier is unknown."""
         landmark_id = self._resolve_id(label)
         if landmark_id is None:
-            print(f"[WARN] Unknown landmark: {label!r}")
+            logger.warning("Unknown landmark: {!r}", label)
             return False
 
         if self._active_location:
@@ -157,12 +160,17 @@ class MinimapManager:
 
             if not was_completed and now_completed:
                 visited_count, total = self.get_progress(self._active_location)
-                print(
-                    f"[CELEBRATION] MAP COMPLETED! Enhorabona! Has visitat tots els {total} monuments de '{self._active_location}'! ({visited_count}/{total})"
+                logger.success(
+                    "MAP COMPLETED! Enhorabona! Has visitat tots els {} monuments "
+                    "de {!r}! ({}/{})",
+                    total,
+                    self._active_location,
+                    visited_count,
+                    total,
                 )
 
         if Bridge is None:
-            print(f"[dry run] mark_landmark_visited({landmark_id})")
+            logger.debug("[dry run] mark_landmark_visited({})", landmark_id)
             return True
         return bool(Bridge.call("mark_landmark_visited", landmark_id))
 
@@ -171,16 +179,16 @@ class MinimapManager:
         if isinstance(label_or_xy, (tuple, list)) and len(label_or_xy) == 2:
             x, y = label_or_xy
             if Bridge is None:
-                print(f"[dry run] set_location_xy({x}, {y})")
+                logger.debug("[dry run] set_location_xy({}, {})", x, y)
                 return True
             return bool(Bridge.call("set_location_xy", int(x), int(y)))
 
         landmark_id = self._resolve_id(str(label_or_xy))
         if landmark_id is None:
-            print(f"[WARN] Unknown landmark: {label_or_xy!r}")
+            logger.warning("Unknown landmark: {!r}", label_or_xy)
             return False
         if Bridge is None:
-            print(f"[dry run] set_location_by_id({landmark_id})")
+            logger.debug("[dry run] set_location_by_id({})", landmark_id)
             return True
         return bool(Bridge.call("set_location_by_id", landmark_id))
 
@@ -192,6 +200,6 @@ class MinimapManager:
             for k in self._visited:
                 self._visited[k] = set()
         if Bridge is None:
-            print("[dry run] reset_minimap()")
+            logger.debug("[dry run] reset_minimap()")
             return True
         return bool(Bridge.call("reset_minimap"))

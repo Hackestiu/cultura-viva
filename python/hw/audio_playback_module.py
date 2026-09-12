@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Optional
 
 from config import DEFAULT_VOLUME_PERCENT, MODELS_DIR, PLAYBACK_DEVICE, RESPONSES_DIR
+from logging_setup import logger
 
 
 # Voice registry — maps voice keys to (onnx_stem, speaker_id)
@@ -75,9 +76,10 @@ class AudioPlayer:
             except Exception:
                 pass
 
-        print(
-            f"[OK] Volume set to: {clamped}%"
-            + ("" if success else " (software tracked)")
+        logger.success(
+            "Volume set to: {}%{}",
+            clamped,
+            "" if success else " (software tracked)",
         )
         return True
 
@@ -89,7 +91,7 @@ class AudioPlayer:
         """Plays a WAV file through ALSA's aplay. If a bridge is supplied, polls Bridge.call('get_volume') during playback so the Modulino knob can adjust volume in real time. Returns True on successful completion, and False if the file is missing, playback exceeds a 60-second safety timeout, aplay fails or isn't installed, or another playback error occurs."""
         path = Path(audio_path)
         if not path.exists():
-            print(f"[ERROR] Audio file not found: {path}")
+            logger.error("Audio file not found: {}", path)
             return False
 
         device = self._resolve_device()
@@ -107,8 +109,8 @@ class AudioPlayer:
             while proc.poll() is None:
                 if time.time() - start_time > 60:
                     proc.kill()
-                    print(
-                        f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted"
+                    logger.error(
+                        "aplay timed out playing {} (>60s) -- interrupted", path
                     )
                     return False
                 if bridge is not None:
@@ -125,16 +127,20 @@ class AudioPlayer:
                 stderr = (
                     proc.stderr.read().decode(errors="replace") if proc.stderr else ""
                 )
-                print(f"[ERROR] aplay failed playing {path}: {stderr.strip()}")
+                logger.error(
+                    "aplay failed playing {}: {}", path, stderr.strip()
+                )
                 return False
 
-            print(f"[OK] Played: {path}" + (f" (device: {device})" if device else ""))
+            logger.success(
+                "Played: {}{}", path, f" (device: {device})" if device else ""
+            )
             return True
         except FileNotFoundError:
-            print("[ERROR] 'aplay' not found on system -- install alsa-utils")
+            logger.error("'aplay' not found on system -- install alsa-utils")
             return False
         except Exception as exc:
-            print(f"[ERROR] aplay error playing {path}: {exc}")
+            logger.exception("aplay error playing {}: {}", path, exc)
             return False
 
     @staticmethod
@@ -143,13 +149,13 @@ class AudioPlayer:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         out_file = RESPONSES_DIR / f"response_{timestamp}.wav"
         out_file.write_bytes(audio_bytes)
-        print(f"[OK] TTS response saved to: {out_file}")
+        logger.success("TTS response saved to: {}", out_file)
         return out_file
 
     def synthesize(self, text: str, personality: str | None = None) -> Optional[Path]:
         """Synthesizes text into a WAV file using the voice assigned to the given personality ('artistic', 'technical', 'child'), falling back to the default voice if no personality is given, and writes the result into RESPONSES_DIR. Returns the output path, or None if the text is empty/whitespace or synthesis fails."""
         if not text or not text.strip():
-            print("[WARN] AudioPlayer: synthesize called with empty text — skipping.")
+            logger.warning("synthesize called with empty text — skipping.")
             return None
 
         voice_key = (
@@ -174,15 +180,13 @@ class AudioPlayer:
         if bridge is not None:
             try:
                 if not bridge.call("is_processing_active"):
-                    print(
-                        "[INFO] AudioPlayer: Generation was cancelled before playback."
-                    )
+                    logger.info("Generation was cancelled before playback.")
                     return False
                 bridge.call("set_processing_active", False)
                 bridge.call("set_playback_active", True)
             except Exception as exc:
-                print(
-                    f"[WARN] AudioPlayer: failed to set playback active on bridge: {exc}"
+                logger.warning(
+                    "Failed to set playback active on bridge: {}", exc
                 )
 
         try:
@@ -225,18 +229,20 @@ class AudioPlayer:
 
             wav_bytes = buf.getvalue()
             if len(wav_bytes) <= 44:
-                print(
-                    f"[ERROR] AudioPlayer: synthesis generated empty audio ({len(wav_bytes)} bytes) for voice '{voice_key}'"
+                logger.error(
+                    "Synthesis generated empty audio ({} bytes) for voice {!r}",
+                    len(wav_bytes),
+                    voice_key,
                 )
                 return None
 
-            print(
-                f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}')."
+            logger.success(
+                "Synthesised {} bytes (voice {!r}).", len(wav_bytes), voice_key
             )
             return wav_bytes
         except Exception as exc:
-            print(
-                f"[ERROR] AudioPlayer: synthesis failed for voice '{voice_key}': {exc}"
+            logger.exception(
+                "Synthesis failed for voice {!r}: {}", voice_key, exc
             )
             return None
 
@@ -256,8 +262,10 @@ class AudioPlayer:
         """Returns the cached or newly loaded PiperVoice instance for voice_key, or None if the key is unrecognized, its model files are missing, or piper-tts is not installed."""
         entry = _VOICE_REGISTRY.get(voice_key)
         if entry is None:
-            print(
-                f"[WARN] AudioPlayer: unknown voice '{voice_key}'. Available: {', '.join(_VOICE_REGISTRY)}"
+            logger.warning(
+                "Unknown voice {!r}. Available: {}",
+                voice_key,
+                ", ".join(_VOICE_REGISTRY),
             )
             return None
 
@@ -273,14 +281,14 @@ class AudioPlayer:
         json_file = self._tts_models_dir / f"{onnx_stem}.onnx.json"
 
         if not onnx_file.is_file():
-            print(
-                f"[WARN] AudioPlayer: ONNX model not found at {onnx_file}. "
-                "Download it following the instructions in models/tts/README.md. "
-                "Returning empty audio."
+            logger.warning(
+                "ONNX model not found at {}. Download it following the "
+                "instructions in models/tts/README.md. Returning empty audio.",
+                onnx_file,
             )
             return None
         if not json_file.is_file():
-            print(f"[WARN] AudioPlayer: ONNX config not found at {json_file}.")
+            logger.warning("ONNX config not found at {}.", json_file)
             return None
 
         if not hasattr(self, "_piper_available"):
@@ -289,10 +297,9 @@ class AudioPlayer:
 
                 self._piper_available = True
             except ImportError:
-                print(
-                    "[WARN] AudioPlayer: piper-tts is not installed. "
-                    "Add 'piper-tts>=1.2.0' to requirements.txt and reinstall. "
-                    "Returning empty audio."
+                logger.warning(
+                    "piper-tts is not installed. Add 'piper-tts>=1.2.0' to "
+                    "requirements.txt and reinstall. Returning empty audio."
                 )
                 self._piper_available = False
 
@@ -302,13 +309,15 @@ class AudioPlayer:
         try:
             from piper import PiperVoice  # type: ignore[import]
 
-            print(f"[OK] AudioPlayer: loading voice '{voice_key}' ...")
+            logger.info("Loading voice {!r} ...", voice_key)
             voice_obj = PiperVoice.load(str(onnx_file), str(json_file))
             self._voices[onnx_stem] = voice_obj
-            print(
-                f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz)."
+            logger.success(
+                "Voice {!r} loaded ({} Hz).",
+                voice_key,
+                voice_obj.config.sample_rate,
             )
             return voice_obj
         except Exception as exc:
-            print(f"[ERROR] AudioPlayer: failed to load voice '{voice_key}': {exc}")
+            logger.exception("Failed to load voice {!r}: {}", voice_key, exc)
             return None

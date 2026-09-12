@@ -30,6 +30,7 @@ class CameraManager:
     def __init__(self):
         """Initializes the manager with no open capture device; the camera is opened lazily on first use via ensure_open()."""
         self._cap = None
+        self._current_index = CAMERA_DEVICE_INDEX
         self.last_photo_path = (
             None  # path of the last captured photo (for vision_module)
         )
@@ -47,35 +48,54 @@ class CameraManager:
             self._cap = None
 
     def _open(self):
-        cap = cv2.VideoCapture(CAMERA_DEVICE_INDEX, cv2.CAP_V4L2)
-        if not cap.isOpened():
-            print(f"[ERROR] Could not open camera at index {CAMERA_DEVICE_INDEX}")
-            return None
+        candidates = []
+        if self._current_index is not None and self._current_index not in candidates:
+            candidates.append(self._current_index)
+        if CAMERA_DEVICE_INDEX not in candidates:
+            candidates.append(CAMERA_DEVICE_INDEX)
+        try:
+            from hw.device_discovery import discover_camera_index
+            discovered = discover_camera_index()
+            if discovered is not None and discovered not in candidates:
+                candidates.append(discovered)
+        except Exception:
+            pass
+        for fallback in (2, 0, 1, 3):
+            if fallback not in candidates:
+                candidates.append(fallback)
 
-        # fourcc must precede resolution configuration for MJPG mode
-        fourcc = cv2.VideoWriter_fourcc(*CAMERA_FOURCC)
-        cap.set(cv2.CAP_PROP_FOURCC, fourcc)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_PHOTO_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_PHOTO_HEIGHT)
+        for idx in candidates:
+            cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+            if cap.isOpened():
+                # fourcc must precede resolution configuration for MJPG mode
+                fourcc = cv2.VideoWriter_fourcc(*CAMERA_FOURCC)
+                cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_PHOTO_WIDTH)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_PHOTO_HEIGHT)
 
-        self._verify_resolution(cap)
-        return cap
+                self._current_index = idx
+                self._verify_resolution(cap, idx)
+                return cap
+            cap.release()
+
+        print(f"[ERROR] Could not open camera at any index in candidates {candidates}")
+        return None
 
     @staticmethod
-    def _verify_resolution(cap) -> bool:
+    def _verify_resolution(cap, index: int) -> bool:
         """Checks whether an open capture device actually accepted the configured target resolution, logging a warning with a v4l2-ctl diagnostic hint if not. Returns True if the resolution matches, False otherwise."""
         actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if (actual_w, actual_h) == (CAMERA_PHOTO_WIDTH, CAMERA_PHOTO_HEIGHT):
             print(
-                f"[OK] Camera opened at index {CAMERA_DEVICE_INDEX} ({actual_w}x{actual_h})"
+                f"[OK] Camera opened at index {index} ({actual_w}x{actual_h})"
             )
             return True
 
         print(
-            f"[WARN] Camera accepted {actual_w}x{actual_h} instead of "
+            f"[WARN] Camera at index {index} accepted {actual_w}x{actual_h} instead of "
             f"{CAMERA_PHOTO_WIDTH}x{CAMERA_PHOTO_HEIGHT}. Photos will not be 1080p. "
-            f"Check supported resolutions with 'v4l2-ctl -d /dev/video{CAMERA_DEVICE_INDEX} --list-formats-ext'."
+            f"Check supported resolutions with 'v4l2-ctl -d /dev/video{index} --list-formats-ext'."
         )
         return False
 

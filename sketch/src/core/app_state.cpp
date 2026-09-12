@@ -18,6 +18,7 @@ bool volumeOverlayVisible = false;
 unsigned long lastVolumeChangeMillis = 0;
 int8_t photoValidationState = -1;
 char retakeLocationLabel[40] = "this location";
+char detectedMonumentLabel[40] = "";
 
 uint8_t get_personality_index() {
   return personalityIndex;
@@ -91,6 +92,11 @@ void set_photo_validation_state(int state) {
 void set_retake_message(String msg) {
   strncpy(retakeLocationLabel, msg.c_str(), sizeof(retakeLocationLabel) - 1);
   retakeLocationLabel[sizeof(retakeLocationLabel) - 1] = '\0';
+}
+
+void set_detected_monument(String msg) {
+  strncpy(detectedMonumentLabel, msg.c_str(), sizeof(detectedMonumentLabel) - 1);
+  detectedMonumentLabel[sizeof(detectedMonumentLabel) - 1] = '\0';
 }
 
 bool is_photo_waiting_confirmation() {

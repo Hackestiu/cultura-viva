@@ -157,6 +157,7 @@ All functions the **sketch exposes** (`Bridge.provide`) and **Python calls** (`B
 | `reset_minimap()` | `bool` | Clears all visited landmarks and the location marker |
 | `set_photo_validation_state(state)` | — | Vision validation state: -1=idle, 0=checking, 1=valid, 2=invalid |
 | `set_retake_message(msg)` | — | Sets the location label shown on the retake screen; call before `set_photo_validation_state(2)` |
+| `set_detected_monument(msg)` | — | Sets the monument name shown on the validation screen; call before `set_photo_validation_state(1)` |
 
 ### Camera live view — chunked transfer:
 

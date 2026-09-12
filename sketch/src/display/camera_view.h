@@ -62,10 +62,13 @@ void drawNoPhotoWarningOverlay();
 void drawVisionCheckingScreen(uint8_t dotCount = 0, bool fullRedraw = true);
 
 /**
- * Draws full-screen success screen: "Photo validated!" on dark green.
- * Shown for ~1.5s then transitions to photo confirmation.
+ * Draws full-screen success screen: "Photo validated!" on dark green,
+ * showing the observed monument element.
+ * Shown for ~5s then transitions to photo confirmation.
+ *
+ * @param monumentLabel Human-readable name of recognized element (e.g. "Escalinata del Drac").
  */
-void drawVisionValidScreen();
+void drawVisionValidScreen(const char* monumentLabel = nullptr);
 
 /**
  * Draws full-screen retake screen: "Not a monument in <locationLabel>" on dark red.

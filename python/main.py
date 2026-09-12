@@ -62,8 +62,28 @@ player = AudioPlayer()
 minimap = MinimapManager()
 
 _LOCATION_LABELS: dict[str, str] = {
-    "park_guell": "Parc Güell",
-    "sagrada_familia": "Sagrada Família",
+    "park_guell": "Parc Guell",
+    "sagrada_familia": "Sagrada Familia",
+}
+
+_ELEMENT_DISPLAY_NAMES: dict[str, str] = {
+    # Park Guell
+    "escalinata_drac": "Escalinata del Drac",
+    "sala_hipostila": "Sala Hipostila",
+    "placa_natura": "Placa de la Natura",
+    "casa_museu": "Casa Museu Gaudi",
+    "3_viaductes": "Els Tres Viaductes",
+    "turo_3_creus": "Turo Tres Creus",
+    "pavellons_consergeria": "Pavello Consergeria",
+    # Sagrada Familia
+    "cupula": "Cupula",
+    "facana_naixement": "Facana del Naixement",
+    "facana_passio": "Facana de la Passio",
+    "laterals": "Nau Lateral",
+    "lateral_esquerra": "Nau Lateral Esquerra",
+    "lateral_dreta": "Nau Lateral Dreta",
+    "posterior": "Absis Posterior",
+    "torres": "Torres de la Basilica",
 }
 
 
@@ -200,9 +220,13 @@ def run_app() -> None:
                     else:
                         last_detected_element = element
                         last_detected_site = site
+                        element_display = _ELEMENT_DISPLAY_NAMES.get(
+                            element, element.replace("_", " ").title()
+                        )
+                        Bridge.call("set_detected_monument", element_display)
                         Bridge.call("set_photo_validation_state", 1)
                         print(
-                            f"[VISION] Photo validated: element='{element}' at '{site}' -> showing valid screen, then confirmation."
+                            f"[VISION] Photo validated: element='{element}' ('{element_display}') at '{site}' -> showing valid screen, then confirmation."
                         )
 
                         if element and element != VISION_UNKNOWN_LABEL:

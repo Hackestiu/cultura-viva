@@ -64,6 +64,12 @@ extern int8_t photoValidationState;
 extern char retakeLocationLabel[40];
 
 /**
+ * Observed monument label for the "Photo validated!" screen.
+ * Set by Python via set_detected_monument() before state 1.
+ */
+extern char detectedMonumentLabel[40];
+
+/**
  * Returns the currently selected personality index (0=Artistic, 1=Technical, 2=Child).
  */
 uint8_t get_personality_index();
@@ -154,4 +160,12 @@ void set_photo_validation_state(int state);
  * @param msg Location name (e.g., "Park Guell").
  */
 void set_retake_message(String msg);
+
+/**
+ * Sets the detected monument label string for the "Photo validated!" screen.
+ * Called by Python before set_photo_validation_state(1).
+ *
+ * @param msg Monument element name (e.g., "Escalinata del Drac").
+ */
+void set_detected_monument(String msg);
 

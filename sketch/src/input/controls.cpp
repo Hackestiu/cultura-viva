@@ -448,13 +448,14 @@ void updateControls() {
       Monitor.println("[EVENT] Vision: Scanning photo...");
 
     } else if (photoValidationState == 1) {
-      // Valid monument: draw success screen and start hold timer
-      drawVisionValidScreen();
+      // Valid monument: draw success screen showing detected monument and start hold timer
+      drawVisionValidScreen(detectedMonumentLabel);
       buzzer.tone(1800, 80);
       delay(90);
       buzzer.tone(2200, 120);
       validationHoldStart = millis();
-      Monitor.println("[EVENT] Vision: Photo validated!");
+      Monitor.print("[EVENT] Vision: Photo validated! Element: ");
+      Monitor.println(detectedMonumentLabel);
 
     } else if (photoValidationState == 2) {
       // Invalid: draw retake screen and start hold timer

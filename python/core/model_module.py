@@ -256,8 +256,21 @@ class ModelRegistry:
         element: str | None,
         personality: str,
         kg_context: str,
-    ) -> str:
-        """Generates a spoken audio-guide reply from the on-device SLM, adopting the given personality and conditioning on the user's question, the detected element (if any), and retrieved factual context. Lazily loads and caches the Llama model on first call; returns a descriptive fallback string instead of raising if the model file or the llama-cpp-python dependency is missing, or if inference fails."""
+        is_active_fn=None,
+    ) -> str | None:
+        """Generates a spoken audio-guide reply from the on-device SLM using token streaming,
+        adopting the given personality and conditioning on the user's question, the detected
+        element (if any), and retrieved factual context. Lazily loads and caches the Llama model
+        on first call.
+
+        If is_active_fn is provided, it is called between each generated token: if it returns
+        False the generation loop is interrupted immediately and None is returned, allowing the
+        caller to skip TTS and reset the pipeline without waiting for the full response.
+
+        Returns the generated answer string, None if cancelled mid-generation, or a descriptive
+        fallback string if the model file or the llama-cpp-python dependency is missing, or if
+        inference fails.
+        """
         from config import SLM_MODEL_PATH
 
         if not SLM_MODEL_PATH.exists():
@@ -314,7 +327,10 @@ class ModelRegistry:
             )
 
         try:
-            output = self._llm.create_chat_completion(
+            # stream=True lets us check for cancellation between each token so the
+            # generation loop can be interrupted immediately when the user presses
+            # the cancel button, instead of blocking for the full synchronous call.
+            stream = self._llm.create_chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
@@ -326,8 +342,24 @@ class ModelRegistry:
                     "\n\n",
                     "<|im_end|>",
                 ],  # early-stop on double newline or chat end token
+                stream=True,
             )
-            answer = output["choices"][0]["message"]["content"].strip()
+
+            tokens: list[str] = []
+            for chunk in stream:
+                # Check cancellation between every generated token
+                if is_active_fn is not None and not is_active_fn():
+                    print(
+                        f"[INFO] SLM generation cancelled by user after {len(tokens)} token(s)."
+                    )
+                    return None
+
+                delta = chunk["choices"][0].get("delta", {})
+                token_text = delta.get("content", "")
+                if token_text:
+                    tokens.append(token_text)
+
+            answer = "".join(tokens).strip()
             print(f"[OK] SLM response generated ({len(answer)} characters).")
             return answer
         except Exception as exc:

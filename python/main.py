@@ -254,10 +254,12 @@ def run_app() -> None:
                                 element=element,
                                 personality=model_name,
                                 kg_context=kg_context,
+                                is_active_fn=lambda: Bridge.call("is_processing_active"),
                             )
 
-                            if not Bridge.call("is_processing_active"):
-                                print("[INFO] Generation cancelled by user after SLM.")
+                            if answer is None:
+                                # Cancelled mid-generation via streaming — skip TTS
+                                print("[INFO] Generation cancelled by user during SLM streaming.")
                                 return
 
                             player.synthesize_and_play(

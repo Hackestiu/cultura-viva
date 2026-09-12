@@ -25,7 +25,7 @@ from pathlib import Path
 
 # Keywords that identify the Brio 105 camera in /sys or v4l2 driver names.
 # Add extra keywords here if running on a different camera model.
-_CAMERA_KEYWORDS = ("brio", "brio 105", "logitech")
+_CAMERA_KEYWORDS = ("Brio", "Brio 105", "logitech")
 
 # Fallback: try these indices in order if keyword search yields nothing.
 _CAMERA_FALLBACK_INDICES = (0, 1, 2, 3, 4)
@@ -85,7 +85,7 @@ def discover_camera_index() -> int | None:
 # ---------------------------------------------------------------------------
 
 # Keywords that identify the Brio 105 microphone in ALSA card names.
-_MIC_KEYWORDS = ("brio", "logitech", "usb audio", "usb-audio", "webcam")
+_MIC_KEYWORDS = ("Brio", "logitech", "usb audio", "usb-audio", "webcam")
 
 
 def _list_alsa_cards() -> list[tuple[int, str]]:

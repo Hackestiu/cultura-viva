@@ -274,11 +274,14 @@ class ModelRegistry:
                 model_path=str(SLM_MODEL_PATH),
                 n_ctx=1024,  # context window
                 n_threads=4,  # Cortex-A53 has 4 cores
-                n_threads_batch=4,  # parallelise prefill on CPU layers
-                n_batch=128,  # larger prefill batches are faster on Adreno GPU path
-                n_gpu_layers=-1,  # offload ALL layers to Adreno GPU
+                n_threads_batch=4,  # parallelise prefill across the 4 cores
+                n_batch=128,  # larger prefill batches amortise per-batch overhead
+                # No n_gpu_layers: llama-cpp-python is built CPU-only here (the build in
+                # models/README.md passes no GGML_OPENCL/GGML_VULKAN backend flag), so
+                # requesting GPU offload was silently ignored. Inference runs on the
+                # Cortex-A53 cores; add a backend at build time before offloading.
                 use_mlock=True,  # lock weights in RAM
-                flash_attn=True,  # enabled: reduces memory bandwidth on GPU path
+                flash_attn=True,  # reduces memory bandwidth during attention
                 verbose=False,
             )
             print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")

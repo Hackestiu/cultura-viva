@@ -48,7 +48,7 @@ _DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
 # AudioPlayer
 class AudioPlayer:
     def __init__(self):
-        """Initializes playback state at the configured device and default volume, with an empty per-voice cache populated lazily on first synthesis."""
+        """Initializes playback state at the configured device and default volume, with an empty voice cache (keyed by ONNX model stem) populated on preload or first synthesis."""
         self._device = PLAYBACK_DEVICE or "default"
         self._current_volume = DEFAULT_VOLUME_PERCENT
         self._tts_models_dir = _DEFAULT_TTS_MODELS_DIR
@@ -240,11 +240,20 @@ class AudioPlayer:
             )
             return None
 
+    def preload(self, voice_keys=None) -> int:
+        """Eagerly loads the Piper voices so neither the first spoken response nor the first
+        press of a not-yet-used personality button stalls on a cold voice load.
+
+        Defaults to every voice in PERSONALITY_VOICE (two distinct ONNX files across the
+        three personalities). Returns the number of voices successfully loaded; synthesis
+        still falls back to loading on demand for anything that failed here.
+        """
+        if voice_keys is None:
+            voice_keys = sorted(set(PERSONALITY_VOICE.values()))
+        return sum(1 for key in voice_keys if self._load_voice(key) is not None)
+
     def _load_voice(self, voice_key: str) -> Optional[object]:
         """Returns the cached or newly loaded PiperVoice instance for voice_key, or None if the key is unrecognized, its model files are missing, or piper-tts is not installed."""
-        if voice_key in self._voices:
-            return self._voices[voice_key]
-
         entry = _VOICE_REGISTRY.get(voice_key)
         if entry is None:
             print(
@@ -253,6 +262,13 @@ class AudioPlayer:
             return None
 
         onnx_stem, _ = entry
+
+        # Cached per ONNX file, not per voice key: several personalities can share one
+        # multi-speaker model (spike and prudence are both en_GB-semaine-medium) and only
+        # differ by the speaker_id applied at synthesis time, so one load serves both.
+        if onnx_stem in self._voices:
+            return self._voices[onnx_stem]
+
         onnx_file = self._tts_models_dir / f"{onnx_stem}.onnx"
         json_file = self._tts_models_dir / f"{onnx_stem}.onnx.json"
 
@@ -288,7 +304,7 @@ class AudioPlayer:
 
             print(f"[OK] AudioPlayer: loading voice '{voice_key}' ...")
             voice_obj = PiperVoice.load(str(onnx_file), str(json_file))
-            self._voices[voice_key] = voice_obj
+            self._voices[onnx_stem] = voice_obj
             print(
                 f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz)."
             )

@@ -263,6 +263,53 @@ class MicrophoneManager:
         )
         return out_file
 
+    def _ensure_whisper(self):
+        """Loads and caches the WhisperModel on first call, returning it (or None if the
+        model directory is missing or faster-whisper is not installed). Subsequent calls
+        are a no-op, so this is safe to call from both preload() and transcribe()."""
+        if hasattr(self, "_whisper"):
+            return self._whisper
+
+        from config import STT_MODEL_PATH
+
+        if not STT_MODEL_PATH.exists():
+            print(
+                f"[WARN] faster-whisper model not found at {STT_MODEL_PATH}. "
+                "Download it following the instructions in models/stt/README.md."
+            )
+            self._whisper = None
+            return None
+
+        try:
+            from faster_whisper import WhisperModel  # type: ignore[import]
+
+            # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
+            self._whisper = WhisperModel(
+                str(STT_MODEL_PATH),
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=4,
+            )
+            print(f"[OK] faster-whisper model loaded: {STT_MODEL_PATH.name}")
+        except ImportError:
+            print(
+                "[WARN] faster-whisper is not installed. "
+                "Add 'faster-whisper>=1.0.0' to requirements.txt and reinstall. "
+                "Returning empty transcription string."
+            )
+            self._whisper = None
+        except Exception as exc:
+            print(f"[ERROR] Could not load faster-whisper model: {exc}")
+            self._whisper = None
+
+        return self._whisper
+
+    def preload(self) -> bool:
+        """Eagerly loads the STT weights so the first transcription does not pay the
+        cold-start cost. Returns True if the model is ready. Safe to call more than once;
+        transcribe() still loads on demand if this was never called or failed."""
+        return self._ensure_whisper() is not None
+
     def transcribe(self, audio_path) -> str:
         """Transcribes a WAV file to text with faster-whisper, biasing recognition toward Gaudí domain vocabulary via an initial prompt and hotwords, and canonicalizing known misspellings in the result. Lazily loads the WhisperModel on first call. Returns the transcribed text, or an empty string if the model file is missing, faster-whisper isn't installed, or transcription fails."""
         from config import STT_MODEL_PATH
@@ -275,27 +322,7 @@ class MicrophoneManager:
             )
             return ""
 
-        if not hasattr(self, "_whisper"):
-            try:
-                from faster_whisper import WhisperModel  # type: ignore[import]
-
-                # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
-                self._whisper = WhisperModel(
-                    str(STT_MODEL_PATH),
-                    device="cpu",
-                    compute_type="int8",
-                    cpu_threads=4,
-                )
-                print(f"[OK] faster-whisper model loaded: {STT_MODEL_PATH.name}")
-            except ImportError:
-                print(
-                    "[WARN] faster-whisper is not installed. "
-                    "Add 'faster-whisper>=1.0.0' to requirements.txt and reinstall. "
-                    "Returning empty transcription string."
-                )
-                self._whisper = None
-
-        if self._whisper is None:
+        if self._ensure_whisper() is None:
             return ""
 
         try:

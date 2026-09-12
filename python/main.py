@@ -80,6 +80,39 @@ def _clean_dir(directory) -> None:
     print(f"[STARTUP] Cleaned {deleted} file(s) from '{directory}'.")
 
 
+def _preload_models() -> None:
+    """Loads every AI model up front so the first user does not absorb the cold-start cost.
+
+    Without this, the vision, STT, SLM and TTS models each load on first use, stacked inside
+    a single interaction: the first question spends roughly twice the steady-state latency
+    waiting on library imports and weight reads. Nothing is ever unloaded afterwards, so
+    this moves the memory peak earlier rather than raising it.
+
+    Every stage degrades gracefully — a failure here is logged and the on-demand loading
+    path in each module still runs as before, so a missing model never blocks startup.
+    """
+    site = location.current()
+    stages = (
+        (f"vision ({site})", lambda: vision.preload(site)),
+        ("speech-to-text", microphone.preload),
+        ("language model", models.preload),
+        ("text-to-speech", player.preload),
+    )
+
+    print("[STARTUP] Preloading AI models (first run may take a while)...")
+    total = time.time()
+    for label, load in stages:
+        started = time.time()
+        try:
+            ok = load()
+        except Exception as exc:
+            print(f"[ERROR] Preload of {label} failed: {exc}")
+            continue
+        status = "OK" if ok else "WARN"
+        print(f"[{status}] Preloaded {label} in {time.time() - started:.1f}s")
+    print(f"[STARTUP] Model preload finished in {time.time() - total:.1f}s.")
+
+
 def run_app() -> None:
     """Initializes hardware connections and runs the main event polling loop.
 
@@ -111,6 +144,8 @@ def run_app() -> None:
         f"Hardware devices: camera=/dev/video{CAMERA_DEVICE_INDEX}, "
         f"mic=ALSA card {MIC_DEVICE}, playback='{PLAYBACK_DEVICE}'"
     )
+    _preload_models()
+
     print(
         "Waiting for button D7 (photo/recording), buttons A/B/C (personality), Modulino Knob (volume) and switch D6..."
     )

@@ -110,6 +110,16 @@ class VisionClassifier:
         session, meta = session_meta
         return self._run_inference(session, meta, path, location)
 
+    def preload(self, location: str) -> bool:
+        """Eagerly loads the ONNX session for one site so the first photo does not pay the
+        onnxruntime import plus session-creation cost.
+
+        Only the given site is loaded — the device is realistically at one monument per
+        session, and the other site's model still loads on demand if the location changes.
+        Returns True if the session is ready.
+        """
+        return self._load_session(location) is not None
+
     def _load_session(self, location: str):
         """Retrieves the cached ONNX InferenceSession and label metadata for a site, loading and caching them on first request. Returns None (and caches that outcome) if the location is unrecognized or its model files are missing or fail to load."""
         if location in self._sessions:

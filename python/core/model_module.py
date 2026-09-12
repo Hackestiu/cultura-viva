@@ -250,6 +250,62 @@ class ModelRegistry:
 
         return "\n".join(lines).strip()
 
+    def _ensure_llm(self):
+        """Loads and caches the Llama instance on first call, returning it (or None if the
+        model file is missing or llama-cpp-python is not installed). Subsequent calls are
+        a no-op, so this is safe to call both from preload() and from generate_response()."""
+        if hasattr(self, "_llm"):
+            return self._llm
+
+        from config import SLM_MODEL_PATH
+
+        if not SLM_MODEL_PATH.exists():
+            print(
+                f"[WARN] SLM model not found at {SLM_MODEL_PATH}. "
+                "Download it following the instructions in models/README.md."
+            )
+            self._llm = None
+            return None
+
+        try:
+            from llama_cpp import Llama  # type: ignore[import]
+
+            self._llm = Llama(
+                model_path=str(SLM_MODEL_PATH),
+                n_ctx=1024,  # context window
+                n_threads=4,  # Cortex-A53 has 4 cores
+                n_threads_batch=4,  # parallelise prefill on CPU layers
+                n_batch=128,  # larger prefill batches are faster on Adreno GPU path
+                n_gpu_layers=-1,  # offload ALL layers to Adreno GPU
+                use_mlock=True,  # lock weights in RAM
+                flash_attn=True,  # enabled: reduces memory bandwidth on GPU path
+                verbose=False,
+            )
+            print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
+        except ImportError:
+            print(
+                "[WARN] llama-cpp-python is not installed. "
+                "Add 'llama-cpp-python' to requirements.txt and reinstall. "
+                "Response will be an error fallback."
+            )
+            self._llm = None
+        except Exception as exc:
+            print(f"[ERROR] Could not load SLM model: {exc}")
+            self._llm = None
+
+        return self._llm
+
+    def preload(self) -> bool:
+        """Eagerly loads the SLM weights and the knowledge-base indices so the first user
+        question does not pay the cold-start cost. Returns True if the SLM is ready.
+
+        Safe to call more than once and safe to skip entirely: generate_response() still
+        falls back to loading on demand if this was never called or failed.
+        """
+        self._load_kg()
+        self._load_kg_base()
+        return self._ensure_llm() is not None
+
     def generate_response(
         self,
         question: str,
@@ -281,31 +337,7 @@ class ModelRegistry:
             )
             return "(model not available — download the SLM to get responses)"
 
-        if not hasattr(self, "_llm"):
-            try:
-                from llama_cpp import Llama  # type: ignore[import]
-
-                self._llm = Llama(
-                    model_path=str(SLM_MODEL_PATH),
-                    n_ctx=1024,  # context window
-                    n_threads=4,  # Cortex-A53 has 4 cores
-                    n_threads_batch=4,  # parallelise prefill on CPU layers
-                    n_batch=128,  # larger prefill batches are faster on Adreno GPU path
-                    n_gpu_layers=-1,  # offload ALL layers to Adreno GPU
-                    use_mlock=True,  # lock weights in RAM
-                    flash_attn=True,  # enabled: reduces memory bandwidth on GPU path
-                    verbose=False,
-                )
-                print(f"[OK] SLM model loaded: {SLM_MODEL_PATH.name}")
-            except ImportError:
-                print(
-                    "[WARN] llama-cpp-python is not installed. "
-                    "Add 'llama-cpp-python' to requirements.txt and reinstall. "
-                    "Response will be an error fallback."
-                )
-                self._llm = None
-
-        if self._llm is None:
+        if self._ensure_llm() is None:
             return "(llama-cpp-python not installed — install it to get responses)"
 
         system_prompt = PERSONALITY_PROMPTS.get(

@@ -28,53 +28,26 @@ except ModuleNotFoundError:
 # Encoder window, in seconds. See transcribe().
 STT_CHUNK_LENGTH_S = 15
 
-# Gaudí domain vocabulary — used by faster-whisper to recognize terms that appear frequently in the audioguide context.
-
-DOMAIN_PROMPT = (
-    "Cultura Viva audio guide in Barcelona about Antoni Gaudí, Sagrada Família basilica, "
-    "Nativity, Passion, and Glory facades, Catalan modernisme architecture, Casa Batlló, "
-    "Casa Milà, Park Güell, dragon and salamander sculptures, trencadís mosaics, "
-    "viaductes, Casa Museu Gaudí, escalinata del drac, pavellons de consergeria, "
-    "Plaça de la Natura, Sala Hipòstila, Turó de les Tres Creus, cúpula, and torres."
-)
-
+# Gaudí domain vocabulary — hotwords biasing faster-whisper toward terms that
+# appear frequently in the audioguide context.
+#
+# Deliberately short. Every hotword is prepended to the decoder context on each
+# window and costs prefill time before a single word is transcribed, so a term
+# only earns its place here if _CORRECTIONS below cannot already recover it.
+# Terms whose misspelling is predictable (gaudi, park guell, trencadis, cupula,
+# facana ...) are fixed for free by canonicalize_domain_entities() instead, and
+# terms base.en already gets right (Barcelona, basilica, facade, dragon) need no
+# help at all. Note this is an English-only model with an English-only
+# vocabulary: accented Catalan has no clean token representation, so it is weak
+# bias at full price.
 DOMAIN_KEYWORD_ALIASES = [
-    "Antoni Gaudí",
-    "Gaudí",
-    "Barcelona",
-    "Passeig de Gràcia",
-    "Temple Expiatori",
     "Sagrada Família",
-    "basilica",
-    "facade",
-    "Nativity facade",
-    "Passion facade",
-    "Glory facade",
-    "modernisme",
-    "Catalan",
-    "Casa Batlló",
-    "Casa Milà",
-    "La Pedrera",
-    "Park Güell",
+    "Temple Expiatori",
+    "Passeig de Gràcia",
     "Eixample",
-    "trencadís",
-    "salamander",
-    "dragon",
+    "La Pedrera",
     "catenary arch",
     "Viaductes",
-    "Casa Museu",
-    "Escalinata del drac",
-    "Pavellons de consergeria",
-    "Plaça de la Natura",
-    "Placa de la Natura",
-    "Sala Hipòstila",
-    "Sala Hipostila",
-    "Turó de les Tres Creus",
-    "Turó de les 3 Creus",
-    "Cúpula",
-    "Façana del Naixement",
-    "Façana de la Passió",
-    "Torres",
 ]
 
 # Post-transcription corrections: ASR commonly misspells these nouns.
@@ -380,7 +353,10 @@ class MicrophoneManager:
                 vad_filter=True,
                 vad_parameters=dict(min_silence_duration_ms=500),
                 condition_on_previous_text=False,
-                initial_prompt=DOMAIN_PROMPT,
+                # hotwords only: initial_prompt fed the same vocabulary through
+                # the same decoder prefix a second time. It was also the weaker
+                # of the two here -- condition_on_previous_text=False resets the
+                # prompt after every window, so it conditioned only the first.
                 hotwords=build_hotwords(),
                 # Whisper pads every window to chunk_length seconds before the
                 # encoder runs, so a 4 s question otherwise costs the same as a

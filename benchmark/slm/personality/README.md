@@ -44,6 +44,19 @@ the headline but the side-by-side answers are what actually convince anyone.
 
 ## Design notes
 
+**Each guide is given a format requirement, not a tone.** The prompts used to
+describe how a guide should sound — "speak with passion and use evocative
+metaphors", "be precise and rigorous", "use an animated tone". A 0.5B model acted
+on none of it (see `results/baseline_tone_prompts/`). They now demand one concrete,
+checkable thing each, and the three requirements are orthogonal — a comparison, a
+number, a closing question — so a guide that obeys is distinguishable from one that
+does not, by ear and by `arms.py:follows_format`.
+
+**Compliance is reported next to identification,** because they answer different
+questions. Low compliance means the model ignored the instruction; high compliance
+with chance-level identification would mean it obeyed and the voices still sound
+alike. The remedies are not the same.
+
 **The prompts are imported, not copied.** `arms.py` pulls them from
 `arduino/python/core/model_module.py` through `core/device_prompt.py`, so this
 measures what ships and cannot drift from it.

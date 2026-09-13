@@ -75,3 +75,31 @@ def assert_arms_distinct(arms: list[str], element: str | None, kg_context: str) 
                     f"Arms {a!r} and {b!r} render an identical system prompt. "
                     "The study would be comparing a personality against itself."
                 )
+
+
+# Each guide's prompt demands one concrete, mechanically checkable thing. These
+# check whether it actually did it. Compliance is what separates "the model
+# ignored the instruction" from "the model obeyed and the voices are still
+# indistinguishable" -- two findings with entirely different remedies.
+#
+# The three requirements are orthogonal on purpose: a comparison, a number and a
+# closing question cannot be satisfied by the same sentence, so a guide that obeys
+# is distinguishable from one that does not.
+FORMAT_REQUIREMENT: dict[str, str] = {
+    "artistic": 'one comparison to nature, written as "like ..."',
+    "technical": "one number, measurement or date",
+    "child": "a closing question inviting the child to look",
+}
+
+
+def follows_format(arm: str, answer: str) -> bool:
+    """Did this answer satisfy the format its personality prompt demands?"""
+    text = answer.strip()
+    low = text.lower()
+    if arm == "artistic":
+        return " like " in low or low.startswith("like ")
+    if arm == "technical":
+        return any(c.isdigit() for c in text)
+    if arm == "child":
+        return text.endswith("?")
+    raise ValueError(f"No format requirement defined for {arm!r}")

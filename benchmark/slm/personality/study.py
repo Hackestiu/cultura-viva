@@ -37,7 +37,13 @@ from pathlib import Path
 from core.config import cfg
 from core.device_prompt import PERSONALITY_PROMPTS
 from personality import report
-from personality.arms import assert_arms_distinct, messages_for, resolve_arms
+from personality.arms import (
+    FORMAT_REQUIREMENT,
+    assert_arms_distinct,
+    follows_format,
+    messages_for,
+    resolve_arms,
+)
 from scripts.benchmark import GaudiKnowledgeStore, ollama_chat
 
 HERE = Path(__file__).resolve().parent
@@ -111,6 +117,7 @@ def generate(model_tag: str, arms: list[str], probes: list[dict], store: GaudiKn
                 "elapsed_s": result["elapsed_s"],
                 "done_reason": result["done_reason"],
                 "eval_count": result["eval_count"],
+                "follows_format": follows_format(arm, result["answer"]),
             })
     return rows
 
@@ -339,6 +346,7 @@ def main() -> None:
         rows = saved["answers"]
         for r in rows:
             r.setdefault("context", saved["contexts"][r["probe_id"]])
+            r["follows_format"] = follows_format(r["arm"], r["answer"])
         print(f"Reusing {len(rows)} saved answers from {raw_path.name}\n")
     else:
         print(f"\nGenerating {len(probes) * len(arms)} answers...")

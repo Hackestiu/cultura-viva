@@ -554,94 +554,129 @@ Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \label{sec:slm-personalities}
 
 The guide personality is the one setting a visitor chooses for themselves, so it
-is worth asking whether it changes anything. It is implemented as a system-prompt
-tail: the retrieved facts are identical for all three guides by construction
-(\texttt{get\_kg\_context} is personality-independent), and only a short block of
-instructions differs.
+is worth asking whether it changes anything. It is implemented purely as a
+system-prompt tail: \texttt{get\_kg\_context} is personality-independent, so all
+three guides receive byte-identical facts and differ only in a short block of
+instructions.
 
-\paragraph{Protocol.} 24 open questions, one per element sheet
-(\texttt{personality/probes.json}) --- open rather than factual because a closed
-question collapses to one correct sentence whatever the guide. Each carries an
-\texttt{element\_id}, so retrieval takes the direct-lookup path the device uses
-when vision names an element. Every question is answered by all three guides on
-\texttt{qwen2.5:0.5b} at the shipped sampling settings, giving 72 answers. A judge
-from a \emph{different} model family, \texttt{llama3.1:8b}, then reads each answer
-blind and names the guide that wrote it, choosing from paraphrased descriptions
-rather than the prompt text, with the options shuffled per item.
+\paragraph{Protocol.} 24 open questions, one per element sheet, each carrying an
+\texttt{element\_id} so retrieval takes the direct-lookup path the device uses
+when vision names an element. Every question is answered by all three guides at
+the shipped sampling settings. A judge from a \emph{different} model family,
+\texttt{llama3.1:8b}, then reads each answer blind and names the guide that wrote
+it, choosing between paraphrased descriptions rather than the prompt text, with
+the options shuffled per item. Chance is therefore \SI{33.3}{\percent}. The same
+judge is given three hand-written, deliberately distinct texts as a self-test on
+every run; it scored 3/3 throughout, so a null result is a statement about the
+guides and not about the instrument.
 
-\paragraph{The guides are not distinguishable.}
+\paragraph{Tone instructions did not work.} The original prompts described how
+each guide should sound --- ``you speak with passion and use evocative
+metaphors'', ``you are precise, rigorous'', ``you use simple analogies and an
+animated tone''. On \texttt{qwen2.5:0.5b} the judge recovered the intended guide
+in \textbf{28 of 72} answers, \SI{38.9}{\percent} against a \SI{33.3}{\percent}
+baseline (exact binomial $p = 0.19$): indistinguishable from guessing. The child
+guide was identified in \SI{4}{\percent} of its own answers. Asked why Casa
+Batll\'o's facade resembles bones, it replied that this ``gives it a sense of
+solidity and strength''.
+
+\paragraph{Format requirements replaced them.} Each guide now demands one
+concrete, mechanically checkable thing, and the three are deliberately orthogonal
+so that a guide which obeys is distinguishable from one which does not:
+
+\begin{itemize}
+  \item \textbf{artistic} --- one comparison to nature, written as ``like \ldots'';
+  \item \textbf{technical} --- at least one number written in digits, taken from
+        the facts supplied;
+  \item \textbf{child} --- a closing question, ending in a question mark.
+\end{itemize}
+
+\paragraph{The result depends almost entirely on model size.}
 
 \begin{table}[h]
 \centering
-\caption{Blind identification of the guide from its answer. Rows are the guide
-that wrote the answer, columns the judge's choice; the diagonal is correct.}
-\begin{tabular}{lrrr}
+\caption{Blind identification and format compliance under the format-requirement
+prompts. Chance is \SI{33.3}{\percent}. Compliance is the share of answers
+satisfying that guide's stated requirement.}
+\begin{tabular}{lrrrrr}
 \toprule
-\textbf{true \textbackslash\ predicted} & \textbf{artistic} & \textbf{technical} & \textbf{child} \\
+& \multicolumn{2}{c}{\textbf{Identification}} & \multicolumn{3}{c}{\textbf{Compliance}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-6}
+\textbf{Model} & \textbf{Correct} & \textbf{Accuracy} & \textbf{art.} & \textbf{tech.} & \textbf{child} \\
 \midrule
-artistic  & \textbf{14} & 10 & 0 \\
-technical & 8  & \textbf{13} & 3 \\
-child     & 12 & 11 & \textbf{1} \\
+Qwen 2.5 0.5B (shipped) & 31/72 & \SI{43.1}{\percent} & \SI{38}{\percent} & \SI{17}{\percent} & \SI{0}{\percent} \\
+Qwen 2.5 1.5B           & 55/72 & \SI{76.4}{\percent} & \SI{96}{\percent} & \SI{29}{\percent} & \SI{42}{\percent} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-28 of 72 correct, \SI{38.9}{\percent}, against a \SI{33.3}{\percent} chance
-baseline --- an exact binomial $p = 0.19$, indistinguishable from guessing. The
-matrix shows where it breaks down: the judge chose \emph{child} four times in 72,
-so the child guide is recovered in \SI{4}{\percent} of its own answers. Reading
-the output agrees with the number. Asked why Casa Batll\'o's facade resembles
-bones, the child guide replies that it ``gives it a sense of solidity and
-strength'', which is not a sentence written for an eight-year-old.
+On the \textbf{0.5B model the change is not significant}: \SI{43.1}{\percent}
+against \SI{33.3}{\percent} chance, $p = 0.05$, and the child guide still never
+once ended with a question across 24 answers. Three further wordings were tried
+--- dropping the competing ``answer only what the user asks'' sentence, adding a
+worked example, and moving the requirement to the front of the prompt --- and
+compliance stayed at \SIrange{0}{8}{\percent}. The 0.5B model does not act on the
+personality tail.
 
-\paragraph{This is not an artefact of the judge.} Given three hand-written,
-deliberately distinct texts, the same judge scores 3/3 and picks \emph{child}
-correctly --- the label it almost never chose on real output. The instrument
-discriminates; the guides simply sound alike. This self-test runs on every
-invocation so the null always ships with evidence the measurement works.
+On the \textbf{1.5B model the same prompts work}: \SI{76.4}{\percent}
+identification, $p < 0.001$, with per-guide recall of \SI{83}{\percent},
+\SI{71}{\percent} and \SI{75}{\percent} --- the child guide rising from
+\SI{4}{\percent} under tone instructions to \SI{75}{\percent}. Median text
+similarity between two guides answering the same question falls from $0.51$ to
+$0.20$.
 
-\paragraph{What it cannot say.} Without a positive control arm --- a deliberately
-loud persona run under the same constraints --- this result cannot separate two
-causes with opposite remedies: that the three prompts are too similar to each
-other, or that the regime suppresses any persona at all. Both are plausible. Each
-prompt is roughly 58 words of which about 28 are verbatim-identical across all
-three, so only some 30 words distinguish a guide; and one of the shared sentences
-(``answer ONLY what the user asks --- do not give unsolicited background'')
-forbids precisely the elaboration in which register lives, under a 50-word
-instruction and a 60-token cap that truncated \SIrange{29}{38}{\percent} of
-answers mid-sentence.
+\begin{table}[h]
+\centering
+\caption{Blind identification on \texttt{qwen2.5:1.5b}. Rows are the guide that
+wrote the answer, columns the judge's choice.}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{true \textbackslash\ predicted} & \textbf{artistic} & \textbf{technical} & \textbf{child} \\
+\midrule
+artistic  & \textbf{20} & 4  & 0  \\
+technical & 7  & \textbf{17} & 0  \\
+child     & 5  & 1  & \textbf{18} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\paragraph{A larger finding: grounding.} The same judge was asked, for each
+\paragraph{Consequence for the selection.} The 0.5B model was chosen for RAM
+headroom, and this is the measured cost of that
+choice: the guide personality is a feature the shipped configuration does not
+deliver. It is not a prompt-wording problem --- the identical prompts produce
+\SI{76}{\percent} identification one model size up. Either the personality is
+presented as cosmetic, or the 1.5B model is reinstated and the
+\SI{1.45}{\giga\byte} working set budgeted for.
+
+\paragraph{Grounding is the larger problem.} The same judge was asked, for each
 answer, whether every claim was supported by the facts the model had been given
---- reference-free, so that style is not scored as inaccuracy.
+--- reference-free, so that style is never scored as inaccuracy.
 
 \begin{table}[h]
 \centering
 \caption{Answers containing at least one claim unsupported by the retrieved facts.}
 \begin{tabular}{lrr}
 \toprule
-\textbf{Guide} & \textbf{Unsupported} & \textbf{Rate} \\
+\textbf{Guide} & \textbf{0.5B} & \textbf{1.5B} \\
 \midrule
-artistic  & 11/24 & \SI{46}{\percent} \\
-technical & 13/24 & \SI{54}{\percent} \\
-child     & 15/24 & \SI{62}{\percent} \\
+artistic  & 16/24 (\SI{67}{\percent}) & 9/24 (\SI{38}{\percent}) \\
+technical & 10/24 (\SI{42}{\percent}) & 8/24 (\SI{33}{\percent}) \\
+child     & 10/24 (\SI{42}{\percent}) & 17/24 (\SI{71}{\percent}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Between a half and two thirds of answers contain something the sheets do not
-support. Spot-checks confirm the judge is not being harsh: the model states that
-the Hypostyle Room was built ``to house a collection of stone columns'' when the
-sheet describes a covered market. On the evidence here this matters considerably
-more than which of the three voices delivers it, and it is the open item this
-benchmark would pursue next.
+Between a third and seven tenths of answers contain something the sheets do not
+support, at either size. Spot-checks confirm the judge is not being harsh: the
+model states that the Hypostyle Room was built ``to house a collection of stone
+columns'' where the sheet describes a covered market. Note also that the guide
+asked to speak to a child hallucinates most at 1.5B --- simplifying and staying
+grounded pull against each other. On the evidence here this matters more than
+which voice delivers the answer, and it is the next item this benchmark should
+pursue.
 
-\paragraph{Recommendation.} Small models follow format constraints far more
-reliably than tone instructions. Replacing ``you speak with passion and use
-evocative metaphors'' with a concrete output requirement per guide --- name one
-visual image; cite one number when the facts provide one; include one everyday
-comparison --- is the cheapest change likely to move this result, and it can be
-re-measured with \texttt{uv run python main.py personality}.
+Regenerate any figure in this section with
+\texttt{uv run python main.py personality --model <tag>}.
 
 \paragraph{Selected.} \textbf{Qwen 2.5 0.5B Instruct}, \texttt{Q4\_K\_M}
 (\texttt{qwen2.5-0.5b-instruct-q4\_k\_m.gguf}).

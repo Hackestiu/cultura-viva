@@ -44,6 +44,7 @@ def build_summary(*, model, judge_model, arms, rows, similarity, ident, ident_ma
             "max_words": max(lengths, default=0),
             "truncated": sum(1 for r in arm_rows if r.get("done_reason") == "length"),
             "echoed": sum(1 for r in arm_rows if r.get("echo_span")),
+            "follows_format": sum(1 for r in arm_rows if r.get("follows_format")),
         }
 
     summary = {
@@ -106,13 +107,13 @@ def print_summary(s: dict) -> None:
     print("=" * w)
     print(f"  {s['n_probes']} probes x {len(arms)} guides = {s['n_answers']} answers\n")
 
-    print(f"  {'Guide':<12} {'words (med)':>12} {'range':>12} {'truncated':>11} {'echoed':>8}")
+    print(f"  {'Guide':<12} {'words (med)':>12} {'range':>12} {'truncated':>11} {'format ok':>10}")
     print("  " + "-" * (w - 4))
     for a in arms:
         p = s["per_arm"][a]
         rng = f"{p['min_words']}-{p['max_words']}"
         print(f"  {a:<12} {p['median_words']:>12.0f} {rng:>12} "
-              f"{_pct(p['truncated'], p['n']):>11} {_pct(p['echoed'], p['n']):>8}")
+              f"{_pct(p['truncated'], p['n']):>11} {_pct(p['follows_format'], p['n']):>10}")
 
     sim = s["similarity"]
     print(f"\n  Probes where two guides gave an identical answer: "
@@ -208,7 +209,7 @@ def render_html(s: dict, rows: list[dict], path: Path) -> None:
         arm_rows += (f"<tr><th class='rowh'>{esc(a)}</th><td>{p['median_words']:.0f}</td>"
                      f"<td>{p['min_words']}&ndash;{p['max_words']}</td>"
                      f"<td>{_pct(p['truncated'], p['n'])}</td>"
-                     f"<td>{_pct(p['echoed'], p['n'])}</td></tr>")
+                     f"<td>{_pct(p['follows_format'], p['n'])}</td></tr>")
 
     panels = ""
     for probe_id, per_arm in by_probe.items():
@@ -280,7 +281,7 @@ def render_html(s: dict, rows: list[dict], path: Path) -> None:
    Median highest text similarity between two guides:
    <strong>{s['similarity']['median_max_similarity']}</strong>.</p>
 <table class="matrix">
-  <tr><th class="rowh">guide</th><th>median words</th><th>range</th><th>cut off</th><th>echoes prompt</th></tr>
+  <tr><th class="rowh">guide</th><th>median words</th><th>range</th><th>cut off</th><th>format obeyed</th></tr>
   {arm_rows}
 </table>
 

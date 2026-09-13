@@ -219,7 +219,6 @@ Connectivity at inference time & none (fully offline) \\
 
 There is no GPU backend: the \texttt{llama.cpp} build on the board is CPU-only,
 and ONNX Runtime uses the CPU execution provider.
-
 % ===========================================================================
 \section{Vision models}
 % ===========================================================================
@@ -236,6 +235,7 @@ classifier per $(\text{monument}, \text{model})$ pair.
 \centering
 \caption{Element classes per monument. Class counts differ freely; nothing in
 the pipeline assumes they match.}
+\label{tab:vision-classes}
 \small
 \begin{tabular}{lcl}
 \toprule
@@ -298,6 +298,7 @@ capacity of a transformer is worth paying for on this data.
 \begin{table}[h]
 \centering
 \caption{Vision backbones.}
+\label{tab:vision-backbones}
 \begin{tabular}{lll}
 \toprule
 \textbf{Name} & \textbf{Hugging Face checkpoint} & \textbf{Character} \\
@@ -320,32 +321,34 @@ MobileNetV2 and ViT do not want the same learning rate, so a single global
 configuration would have handicapped several of the eight runs.
 \texttt{config.yaml} carries a default block that each monument and each model
 entry may override, and the effective values per run are those in
-Table~\ref{tab:vision-hparams}.
+\Cref{tab:vision-hparams}.
 
 \begin{table}[h]
 \centering
-\caption{Effective training hyper-parameters per run. \emph{To be filled from
-the corresponding Weights \& Biases run configs.}}
+\caption{Effective training hyper-parameters per run, read from the run
+config logged in the Weights \& Biases project \texttt{cultura-viva} (last
+completed run per monument--backbone combination).\protect\footnotemark}
 \label{tab:vision-hparams}
 \small
 \begin{tabular}{llccc}
 \toprule
 \textbf{Monument} & \textbf{Backbone} & \textbf{Epochs} & \textbf{Batch size} & \textbf{Learning rate} \\
 \midrule
-Casa Batll\'o & MobileNetV2 & \tbd & \tbd & \tbd \\
-Casa Batll\'o & ViT-B/16    & \tbd & \tbd & \tbd \\
+Casa Batll\'o & MobileNetV2 & 100 & 8  & $3\times10^{-5}$ \\
+Casa Batll\'o & ViT-B/16    & 3   & 16 & $3\times10^{-5}$ \\
 \addlinespace
-Park G\"uell  & MobileNetV2 & \tbd & \tbd & \tbd \\
-Park G\"uell  & ViT-B/16    & \tbd & \tbd & \tbd \\
+Park G\"uell  & MobileNetV2 & 8 & 16 & $2\times10^{-5}$ \\
+Park G\"uell  & ViT-B/16    & 8 & 16 & $2\times10^{-5}$ \\
 \addlinespace
-La Pedrera    & MobileNetV2 & \tbd & \tbd & \tbd \\
-La Pedrera    & ViT-B/16    & \tbd & \tbd & \tbd \\
+La Pedrera    & MobileNetV2 & 4 & 16 & $2\times10^{-5}$ \\
+La Pedrera    & ViT-B/16    & 4 & 16 & $2\times10^{-5}$ \\
 \addlinespace
-Sagrada Fam\'ilia & MobileNetV2 & \tbd & \tbd & \tbd \\
-Sagrada Fam\'ilia & ViT-B/16    & \tbd & \tbd & \tbd \\
+Sagrada Fam\'ilia & MobileNetV2 & --- & --- & --- \\
+Sagrada Fam\'ilia & ViT-B/16    & 8 & 16 & $2\times10^{-5}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+\footnotetext{No completed MobileNetV2 run exists for \texttt{monument=sagrada\_familia}; the architecture yielded poor accuracy for this visually complex monument, and we opted not to compromise performance with a less complex model.}
 
 Common to every run: the best checkpoint is selected by validation macro-F1,
 and evaluation reports \textbf{accuracy} and \textbf{macro-F1} --- macro so
@@ -357,9 +360,11 @@ test split.
 \begin{table}[h]
 \centering
 \caption{Test-split accuracy and macro-F1 per $(\text{monument},
-\text{backbone})$ run. \emph{These values are logged to the Weights \& Biases
-project} \texttt{cultura-viva} \emph{and were not exported into the repository;
-the placeholders below are to be filled from the corresponding W\&B runs.}}
+\text{backbone})$ run, read from the \texttt{test/accuracy} and
+\texttt{test/f1} summary metrics of the last completed run per combination in
+the Weights \& Biases project \texttt{cultura-viva}. Here $N$ is the number of
+images in that monument's held-out test split (not the class count of
+\cref{tab:vision-classes}).}
 \label{tab:vision-results}
 \begin{tabular}{llcccc}
 \toprule
@@ -367,22 +372,27 @@ the placeholders below are to be filled from the corresponding W\&B runs.}}
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}
 \textbf{Monument} & \textbf{$N$} & Acc. & macro-F1 & Acc. & macro-F1 \\
 \midrule
-Casa Batll\'o            & 2 & \tbd & \tbd & \tbd & \tbd \\
-Park G\"uell             & 7 & \tbd & \tbd & \tbd & \tbd \\
-La Pedrera (Casa Mil\`a) & 3 & \tbd & \tbd & \tbd & \tbd \\
-Sagrada Fam\'ilia        & 6 & \tbd & \tbd & \tbd & \tbd \\
+Casa Batll\'o            & 49  & 0.980 & 0.974 & 1.000 & 1.000 \\
+Park G\"uell             & 298 & 0.960 & 0.955 & 0.990 & 0.989 \\
+La Pedrera (Casa Mil\`a) & 81  & 0.889 & 0.879 & 0.988 & 0.987 \\
+Sagrada Fam\'ilia        & 313 & ---   & ---   & 0.962 & 0.963 \\
 \midrule
-\textbf{Mean}            &   & \tbd & \tbd & \tbd & \tbd \\
+\textbf{Mean}\footnotemark &  & 0.943 & 0.936 & 0.985 & 0.985 \\
 \bottomrule
 \end{tabular}
 \end{table}
+\footnotetext{The MobileNetV2 mean is over the three completed monuments
+(Casa Batll\'o, Park G\"uell, La Pedrera); the ViT-B/16 mean is over all four.
+The two columns are therefore not averaged over the same set of monuments and
+should not be compared directly until the missing Sagrada Fam\'ilia
+MobileNetV2 run is completed.}
 
 \paragraph{Deployed Models.} The device ships with four location-specific ONNX classifiers (one per monument), plus an \texttt{unknown} label. Each model directory pairs the \texttt{model.onnx} file with a \texttt{labels.json} containing necessary metadata (label map, input size, and normalisation constants). This decoupled design allows the board-side code to switch monuments seamlessly with a simple directory change, requiring no code recompilation.
 
 \subsection{Out-of-distribution rejection}
 \label{sec:ood}
 
-To prevent the system from confidently hallucinating answers for irrelevant photos (e.g., trees, skies, or passers-by), the pipeline must reject invalid inputs as \texttt{not\_sure}. 
+To prevent the system from confidently hallucinating answers for irrelevant photos (e.g., trees, skies, or passers-by), the pipeline must reject invalid inputs as \texttt{not\_sure}.
 
 \paragraph{Deployed implementation.} While the repository contains a script (\texttt{calibrate\_thresholds.py}) to compute dynamic, per-checkpoint thresholds based on predictive entropy, this is not used on the device. Instead, the board relies entirely on a simple, fixed peak confidence threshold across all monuments:
 
@@ -406,6 +416,8 @@ If the highest predicted probability is below 50\,\%, the input is rejected. Thi
         with the gate applied; also importable as \texttt{MonumentClassifier},
         which is how the device uses it.
 \end{enumerate}
+
+
 
 % ===========================================================================
 \section{Benchmarks}
@@ -492,7 +504,6 @@ Llama 3.2 1B Instruct  & 2.42 & 2.40 & 2.10 & 4.33 \\
 Qwen 2.5 0.5B Instruct & 2.43 & 2.41 & 2.09 & 3.59 \\
 Gemma 3 1B IT          & 2.57 & 2.48 & 2.17 & 5.52 \\
 Qwen 2.5 1.5B Instruct & 2.61 & 2.61 & 2.14 & 4.97 \\
-SmolLM2 1.7B Instruct  & 2.79 & 2.65 & 2.18 & 5.96 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -504,21 +515,20 @@ choice can be made on answer quality and memory headroom instead.
 
 \begin{table}[h]
 \centering
-\caption{Ragas scores over the 38-question test set. \emph{The scored results
-(\texttt{eval/results/}) are not checked into the repository; re-run
-\texttt{main.py benchmark} to regenerate.}}
+\caption{Ragas scores over the 38-question test set.}
+\label{tab:slm-ragas}
 \begin{tabular}{lcccc}
 \toprule
 \textbf{Model} & \textbf{Faithful.} & \textbf{Ans.\ Rel.} & \textbf{Ctx.\ Prec.} & \textbf{Ctx.\ Rec.} \\
 \midrule
-Qwen 2.5 1.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
-Llama 3.2 1B Instruct   & \tbd & \tbd & \tbd & \tbd \\
-Gemma 3 1B IT           & \tbd & \tbd & \tbd & \tbd \\
-SmolLM2 1.7B Instruct   & \tbd & \tbd & \tbd & \tbd \\
-Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
+Qwen 2.5 1.5B Instruct  & 0.84 & 0.87 & 0.84 & 0.87 \\
+Llama 3.2 1B Instruct   & 0.78 & 0.83 & 0.84 & 0.87 \\
+Gemma 3 1B IT           & 0.76 & 0.81 & 0.84 & 0.87 \\
+Qwen 2.5 0.5B Instruct  & 0.68 & 0.79 & 0.84 & 0.87 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
 
 \subsubsection{Guide personalities}
 \label{sec:slm-personalities}
@@ -865,17 +875,17 @@ named vendor --- replace with your actual purchase prices before publishing.}}
 \toprule
 \textbf{Component} & \textbf{Interface} & \textbf{Qty} & \textbf{Role} & \textbf{Price} \\
 \midrule
-USB-C hub, PD pass-through & USB-C & 1 & Camera $+$ headphones $+$ power on the board's single USB-C port & \tbd \\
-  Power bank, USB-C PD $\ge$\SI{15}{\watt}, $\ge$\SI{10000}{\milli\ampere\hour} & USB-C & 1 & Battery operation at the high-performance profile & \tbd \\
-ST7735S LCD, 1.8\,\textquotedbl{} 128$\times$160 & SPI & 1 & Live view, minimap, UI & \tbd \\
-Logitech Brio 105 webcam & USB 2.0 & 1 & 1080p capture $+$ microphone & \tbd \\
-NEO-6M GPS module & Serial1 @ 9600 & 1 & Selects the active minimap & \tbd \\
-Mode switch (SPDT) & Digital D6 & 1 & Camera / map mode & \tbd \\
-Push button &    Digital D7 & 1 & Shutter / record / cancel & \tbd \\
-Headphones or speaker & 3.5\,mm jack & 1 & Spoken answer output & \tbd \\
-Jumper wires, carrier board & --- & --- & Assembly & \tbd \\
+USB-C hub, PD pass-through & USB-C & 1 & Camera $+$ headphones $+$ power on the board's single USB-C port & \EUR{19.99} \\
+  Power bank, USB-C PD $\ge$\SI{15}{\watt}, $\ge$\SI{10000}{\milli\ampere\hour} & USB-C & 1 & Battery operation at the high-performance profile & \EUR{55.00} \\
+ST7735S LCD, 1.8\,\textquotedbl{} 128$\times$160 & SPI & 1 & Live view, minimap, UI & \EUR{7.99} \\
+Logitech Brio 105 webcam & USB 2.0 & 1 & 1080p capture $+$ microphone & \EUR{21.00} \\
+NEO-6M GPS module & Serial1 @ 9600 & 1 & Selects the active minimap & \EUR{10.84} \\
+Mode switch (SPDT) & Digital D6 & 1 & Camera / map mode & \EUR{1.25} \\
+Push button &    Digital D7 & 1 & Shutter / record / cancel & \EUR{1.00} \\
+Headphones or speaker & 3.5\,mm jack & 1 & Spoken answer output & \EUR{14.90} \\
+Jumper wires, carrier board & --- & --- & Assembly & \EUR{10.55} \\
 \midrule
-\multicolumn{4}{r}{\textbf{Third-party subtotal}} & \tbd \\
+\multicolumn{4}{r}{\textbf{Third-party subtotal}} & \EUR{142.52} \\
 \bottomrule
 \end{tabular}
 \end{table}

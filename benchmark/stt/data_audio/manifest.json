@@ -1,0 +1,497 @@
+[
+  {
+    "filename": "query_01_neutral_materials.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "materials",
+    "lead_in": "We have arrived at this part of the tour.",
+    "question": "What is this amazing Gaudí wall made of, and why does its trencadís surface look like it is moving?",
+    "text": "We have arrived at this part of the tour. What is this amazing Gaudí wall made of, and why does its trencadís surface look like it is moving?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí",
+      "trencadís"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0.012
+    },
+    "speaker": "child_like",
+    "voice": "en-US-AnaNeural",
+    "duration_seconds": 9.43
+  },
+  {
+    "filename": "query_02_polite_materials.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "materials",
+    "lead_in": "Before we move on, consider the materials here.",
+    "question": "Could you explain which materials were used on this building and how the architect combined stone, iron, and colorful ceramic details?",
+    "text": "Before we move on, consider the materials here. Could you explain which materials were used on this building and how the architect combined stone, iron, and colorful ceramic details?",
+    "pronunciation_hints": {},
+    "keywords": [],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United Kingdom",
+    "voice": "en-GB-SoniaNeural",
+    "duration_seconds": 12.53
+  },
+  {
+    "filename": "query_03_analytical_materials.wav",
+    "language": "en",
+    "register": "analytical",
+    "intent": "materials",
+    "lead_in": "From this viewpoint, the modernist structure is striking.",
+    "question": "I would like to understand how structural stone and cast iron work together in Catalan modernisme with decorative mosaic elements.",
+    "text": "From this viewpoint, the modernist structure is striking. I would like to understand how structural stone and cast iron work together in Catalan modernisme with decorative mosaic elements.",
+    "pronunciation_hints": {},
+    "keywords": [
+      "modernisme"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United Kingdom",
+    "voice": "en-GB-RyanNeural",
+    "duration_seconds": 12.02
+  },
+  {
+    "filename": "query_04_neutral_architect.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "architect",
+    "lead_in": "At first glance, this building seems almost alive.",
+    "question": "Who was Gaudí, the architect behind Casa Batlló, and what made his style so different from other buildings in Barcelona?",
+    "text": "At first glance, this building seems almost alive. Who was Gaudí, the architect behind Casa Batlló, and what made his style so different from other buildings in Barcelona?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí",
+      "Casa Batlló"
+    ],
+    "audio_effects": {
+      "pause_ms": 650,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United States",
+    "voice": "en-US-GuyNeural",
+    "duration_seconds": 11.26
+  },
+  {
+    "filename": "query_05_polite_architect.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "architect",
+    "lead_in": "One important question concerns the architect's legacy.",
+    "question": "Excuse me, could you tell me which architect designed this monument and why the project is considered important?",
+    "text": "One important question concerns the architect's legacy. Excuse me, could you tell me which architect designed this monument and why the project is considered important?",
+    "pronunciation_hints": {},
+    "keywords": [],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-JennyNeural",
+    "duration_seconds": 11.3
+  },
+  {
+    "filename": "query_06_analytical_date.wav",
+    "language": "en",
+    "register": "analytical",
+    "intent": "date",
+    "lead_in": "To place this monument in context, start with its timeline.",
+    "question": "I am interested in the construction timeline: when did the project begin, what delayed it, and which parts were completed later?",
+    "text": "To place this monument in context, start with its timeline. I am interested in the construction timeline: when did the project begin, what delayed it, and which parts were completed later?",
+    "pronunciation_hints": {},
+    "keywords": [],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United Kingdom",
+    "voice": "en-GB-RyanNeural",
+    "duration_seconds": 12.41
+  },
+  {
+    "filename": "query_07_neutral_date.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "date",
+    "lead_in": "Looking toward the unfinished structure raises a historical question.",
+    "question": "When was this building started, and how many years did it take before visitors could see the finished parts?",
+    "text": "Looking toward the unfinished structure raises a historical question. When was this building started, and how many years did it take before visitors could see the finished parts?",
+    "pronunciation_hints": {},
+    "keywords": [],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-AriaNeural",
+    "duration_seconds": 11.06
+  },
+  {
+    "filename": "query_08_polite_dragon_roof.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "dragon_roof",
+    "lead_in": "Along this facade, myth and architecture meet.",
+    "question": "Would you explain what the dragon-shaped roof of Casa Batlló represents and how it connects this building with Catalan legend?",
+    "text": "Along this facade, myth and architecture meet. Would you explain what the dragon-shaped roof of Casa Batlló represents and how it connects this building with Catalan legend?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Casa Batlló",
+      "dragon"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United Kingdom",
+    "voice": "en-GB-SoniaNeural",
+    "duration_seconds": 11.95
+  },
+  {
+    "filename": "query_09_neutral_dragon_roof.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "dragon_roof",
+    "lead_in": "Here the roof turns a legend into a visible form.",
+    "question": "Why why does the Casa Batlló roof look like a dragon, and what story is this colorful design telling?",
+    "text": "Here the roof turns a legend into a visible form. Why why does the Casa Batlló roof look like a dragon, and what story is this colorful design telling?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "dragon",
+      "Casa Batlló"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United States",
+    "voice": "en-US-GuyNeural",
+    "duration_seconds": 9.82
+  },
+  {
+    "filename": "query_10_neutral_columns.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "columns",
+    "lead_in": "Notice how the dragon imagery changes the building's character.",
+    "question": "Why do the big pillars look like tree branches, and how do they keep the roof from falling down?",
+    "text": "Notice how the dragon imagery changes the building's character. Why do the big pillars look like tree branches, and how do they keep the roof from falling down?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "dragon"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "child_like",
+    "voice": "en-US-AnaNeural",
+    "duration_seconds": 10.3
+  },
+  {
+    "filename": "query_11_polite_columns.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "columns",
+    "lead_in": "Inside this space, the columns resemble a living forest.",
+    "question": "Could you describe why the interior pillars branch out like trees and explain the purpose of that design?",
+    "text": "Inside this space, the columns resemble a living forest. Could you describe why the interior pillars branch out like trees and explain the purpose of that design?",
+    "pronunciation_hints": {},
+    "keywords": [],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-JennyNeural",
+    "duration_seconds": 10.82
+  },
+  {
+    "filename": "query_12_neutral_mosaic.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "mosaic",
+    "lead_in": "Across the mosaic surface, broken pieces become a design.",
+    "question": "What is this bright broken-tile trencadís called, and where else can we see it around Park Güell?",
+    "text": "Across the mosaic surface, broken pieces become a design. What is this bright broken-tile trencadís called, and where else can we see it around Park Güell?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "trencadís",
+      "Park Güell"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-AriaNeural",
+    "duration_seconds": 10.37
+  },
+  {
+    "filename": "query_13_analytical_mosaic.wav",
+    "language": "en",
+    "register": "analytical",
+    "intent": "mosaic",
+    "lead_in": "Among the colorful details, one Catalan technique stands out.",
+    "question": "How does trencadis transform broken ceramic fragments into a deliberate artistic surface, and what purpose does it serve?",
+    "text": "Among the colorful details, one Catalan technique stands out. How does trencadis transform broken ceramic fragments into a deliberate artistic surface, and what purpose does it serve?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí",
+      "facade",
+      "Catalan",
+      "trencadís"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United Kingdom",
+    "voice": "en-GB-RyanNeural",
+    "duration_seconds": 13.51
+  },
+  {
+    "filename": "query_14_neutral_salamander.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "salamander",
+    "lead_in": "Near the staircase, the famous salamander attracts visitors.",
+    "question": "What is the shiny salamander by the stairs in Park Güell, and why does everybody take a picture of it?",
+    "text": "Near the staircase, the famous salamander attracts visitors. What is the shiny salamander by the stairs in Park Güell, and why does everybody take a picture of it?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "salamander",
+      "Park Güell"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0.018
+    },
+    "speaker": "child_like",
+    "voice": "en-US-AnaNeural",
+    "duration_seconds": 11.45
+  },
+  {
+    "filename": "query_15_polite_salamander.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "salamander",
+    "lead_in": "During this stop, the park's signature creature deserves attention.",
+    "question": "Would you tell me what the salamander represents and how its ceramic surface fits into the park's design?",
+    "text": "During this stop, the park's signature creature deserves attention. Would you tell me what the salamander represents and how its ceramic surface fits into the park's design?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "facade",
+      "salamander"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-JennyNeural",
+    "duration_seconds": 10.87
+  },
+  {
+    "filename": "query_16_neutral_construction.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "construction",
+    "lead_in": "While visiting the basilica, its long construction history is unavoidable.",
+    "question": "Why did Gaudí's Sagrada Família take so long to build, and what is still unfinished today?",
+    "text": "While visiting the basilica, its long construction history is unavoidable. Why did Gaudí's Sagrada Família take so long to build, and what is still unfinished today?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Sagrada Família",
+      "Gaudí"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United States",
+    "voice": "en-US-GuyNeural",
+    "duration_seconds": 11.06
+  },
+  {
+    "filename": "query_17_polite_construction.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "construction",
+    "lead_in": "Beyond the present-day view, several architects shaped the project.",
+    "question": "Could you explain why construction continued for so many years, including changes of architect, funding, and interruptions?",
+    "text": "Beyond the present-day view, several architects shaped the project. Could you explain why construction continued for so many years, including changes of architect, funding, and interruptions?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United Kingdom",
+    "voice": "en-GB-SoniaNeural",
+    "duration_seconds": 13.94
+  },
+  {
+    "filename": "query_18_analytical_construction.wav",
+    "language": "en",
+    "register": "analytical",
+    "intent": "construction",
+    "lead_in": "Historically, Gaudi's original plans faced major challenges.",
+    "question": "I would like to understand the historical reasons for the long construction period of Gaudí's Sagrada Família, from his original plans through later technical and financial challenges.",
+    "text": "Historically, Gaudi's original plans faced major challenges. I would like to understand the historical reasons for the long construction period of Gaudí's Sagrada Família, from his original plans through later technical and financial challenges.",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí",
+      "Sagrada Família"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United Kingdom",
+    "voice": "en-GB-RyanNeural",
+    "duration_seconds": 16.58
+  },
+  {
+    "filename": "query_19_neutral_unesco.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "unesco",
+    "lead_in": "Regarding heritage protection, UNESCO recognition is significant.",
+    "question": "Which of Gaudí's buildings, including Casa Milà, have UNESCO status, and what makes them important enough to protect?",
+    "text": "Regarding heritage protection, UNESCO recognition is significant. Which of Gaudí's buildings, including Casa Milà, have UNESCO status, and what makes them important enough to protect?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Gaudí",
+      "Casa Milà"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-AriaNeural",
+    "duration_seconds": 12.74
+  },
+  {
+    "filename": "query_20_polite_unesco.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "unesco",
+    "lead_in": "For Casa Mila, the nickname La Pedrera hints at its stone facade.",
+    "question": "Could you tell me which Gaudi works are recognized by UNESCO and what their heritage designation means?",
+    "text": "For Casa Mila, the nickname La Pedrera hints at its stone facade. Could you tell me which Gaudi works are recognized by UNESCO and what their heritage designation means?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Antoni Gaudí",
+      "Gaudí",
+      "facade",
+      "Passion facade",
+      "Casa Milà",
+      "La Pedrera"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United Kingdom",
+    "voice": "en-GB-SoniaNeural",
+    "duration_seconds": 12.0
+  },
+  {
+    "filename": "query_21_neutral_park_history.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "park_history",
+    "lead_in": "Around Park Guell, the landscape and architecture work together.",
+    "question": "How did Gaudí's Park Güell change from a planned housing project into the public park we see today?",
+    "text": "Around Park Guell, the landscape and architecture work together. How did Gaudí's Park Güell change from a planned housing project into the public park we see today?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Park Güell",
+      "Gaudí"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United States",
+    "voice": "en-US-GuyNeural",
+    "duration_seconds": 10.46
+  },
+  {
+    "filename": "query_22_analytical_park_history.wav",
+    "language": "en",
+    "register": "analytical",
+    "intent": "park_history",
+    "lead_in": "Comparing these buildings reveals the language of modernisme.",
+    "question": "What economic, social, and design factors explain why the original Park Guell housing plan was not completed?",
+    "text": "Comparing these buildings reveals the language of modernisme. What economic, social, and design factors explain why the original Park Guell housing plan was not completed?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "modernisme",
+      "Catalan",
+      "Park Güell"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult male voice, United Kingdom",
+    "voice": "en-GB-RyanNeural",
+    "duration_seconds": 12.46
+  },
+  {
+    "filename": "query_23_neutral_facades.wav",
+    "language": "en",
+    "register": "neutral",
+    "intent": "facades",
+    "lead_in": "Turning to the basilica facades shows three different narratives.",
+    "question": "What do the different facades of Gaudí's Sagrada Família represent, and how can I tell them apart?",
+    "text": "Turning to the basilica facades shows three different narratives. What do the different facades of Gaudí's Sagrada Família represent, and how can I tell them apart?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "Sagrada Família",
+      "Gaudí"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United States",
+    "voice": "en-US-JennyNeural",
+    "duration_seconds": 10.01
+  },
+  {
+    "filename": "query_24_polite_facades.wav",
+    "language": "en",
+    "register": "polite",
+    "intent": "facades",
+    "lead_in": "Finally, the Nativity, Passion, and Glory facades complete the comparison.",
+    "question": "Would you please compare the Nativity, Passion, and Glory facades and explain the story represented by each one?",
+    "text": "Finally, the Nativity, Passion, and Glory facades complete the comparison. Would you please compare the Nativity, Passion, and Glory facades and explain the story represented by each one?",
+    "pronunciation_hints": {},
+    "keywords": [
+      "facade",
+      "Nativity facade",
+      "Passion facade",
+      "Glory facade"
+    ],
+    "audio_effects": {
+      "pause_ms": 0,
+      "background_noise_level": 0
+    },
+    "speaker": "adult female voice, United Kingdom",
+    "voice": "en-GB-SoniaNeural",
+    "duration_seconds": 14.09
+  }
+]

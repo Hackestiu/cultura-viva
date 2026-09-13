@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STT Models Benchmark Evaluation - Cultura Viva</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #F8FAFC; color: #334155; margin: 0; padding: 24px; line-height: 1.5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 24px 32px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 24px; border-left: 6px solid #2563EB; }
+        .card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { background: #F1F5F9; color: #475569; padding: 12px 14px; text-align: left; font-weight: 600; }
+        .recommendation { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin:0 0 8px 0; color:#0F172A; font-size:24px;">STT Benchmark Model Evaluation Report</h1>
+            <p style="margin:0; color:#64748B; font-size:14px;">Source: <strong>/home/arduino/stt-benchmark/results_computer</strong> | Platform: <strong>Linux-7.0.0-g122c2c22d838-aarch64-with-glibc2.41</strong> | Tested Models: <strong>5</strong></p>
+        </div>
+
+        
+        <div class="recommendation">
+            <h3 style="margin:0 0 6px 0; color:#1D4ED8; font-size:16px;">Recommendation for Arduino UNO Q Deployment</h3>
+            <p style="margin:0; color:#1E40AF; font-size:14px;">
+                <strong>faster-whisper:tiny.en</strong> achieves the most balanced edge profile: 
+                <strong>32.5% WER</strong>, 
+                <strong>7870 ms latency</strong> 
+                (0.58x RTF), 
+                and <strong>330 MB peak RAM</strong>.
+            </p>
+        </div>
+        
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px; color:#0F172A;">Performance Scorecard & Metrics</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align:center;">Rank</th>
+                            <th>Model / Engine</th>
+                            <th style="text-align:right;">Avg WER</th>
+                            <th style="text-align:right;">Avg CER</th>
+                            <th style="text-align:right;">Keyword Acc</th>
+                            <th style="text-align:right;">Latency (ms)</th>
+                            <th style="text-align:center;">RTF / Real-Time</th>
+                            <th style="text-align:right;">Peak RAM</th>
+                            <th style="text-align:right;">Model Size</th>
+                            <th style="text-align:center;">Domain Bias</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+        <tr style="border-bottom:1px solid #E2E8F0; background:#F0FDF4;">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#1</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:tiny.en</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">32.5%</td>
+            <td style="padding:10px 14px; text-align:right;">18.9%</td>
+            <td style="padding:10px 14px; text-align:right;">78.9%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">7870 ms</td>
+            <td style="padding:10px 14px; text-align:center;">0.581x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">330.4 MB</td>
+            <td style="padding:10px 14px; text-align:right;">74.5 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#2</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">whisper.cpp:base.en-q5_1</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#16A34A;">21.1%</td>
+            <td style="padding:10px 14px; text-align:right;">12.5%</td>
+            <td style="padding:10px 14px; text-align:right;">94.7%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">14828 ms</td>
+            <td style="padding:10px 14px; text-align:center;">1.078x (<span style="color:#DC2626;font-weight:bold;">Lagging</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">258.2 MB</td>
+            <td style="padding:10px 14px; text-align:right;">57.0 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#3</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">faster-whisper:base.en</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#16A34A;">16.4%</td>
+            <td style="padding:10px 14px; text-align:right;">9.3%</td>
+            <td style="padding:10px 14px; text-align:right;">96.1%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">14132 ms</td>
+            <td style="padding:10px 14px; text-align:center;">1.047x (<span style="color:#DC2626;font-weight:bold;">Lagging</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">397.1 MB</td>
+            <td style="padding:10px 14px; text-align:right;">140.9 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#2563EB;font-weight:600;">Yes</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#4</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">sherpa-onnx</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">35.9%</td>
+            <td style="padding:10px 14px; text-align:right;">19.5%</td>
+            <td style="padding:10px 14px; text-align:right;">50.0%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">912 ms</td>
+            <td style="padding:10px 14px; text-align:center;">0.065x (<span style="color:#059669;font-weight:bold;">Real-Time</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">464.0 MB</td>
+            <td style="padding:10px 14px; text-align:right;">206.9 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#64748B;">No</span></td>
+        </tr>
+        
+        <tr style="border-bottom:1px solid #E2E8F0; ">
+            <td style="padding:10px 14px; text-align:center; font-weight:bold;">#5</td>
+            <td style="padding:10px 14px; font-weight:bold; color:#1E293B;">vosk</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold; color:#DC2626;">69.8%</td>
+            <td style="padding:10px 14px; text-align:right;">41.0%</td>
+            <td style="padding:10px 14px; text-align:right;">21.1%</td>
+            <td style="padding:10px 14px; text-align:right; font-weight:bold;">15764 ms</td>
+            <td style="padding:10px 14px; text-align:center;">1.158x (<span style="color:#DC2626;font-weight:bold;">Lagging</span>)</td>
+            <td style="padding:10px 14px; text-align:right;">395.1 MB</td>
+            <td style="padding:10px 14px; text-align:right;">67.6 MB</td>
+            <td style="padding:10px 14px; text-align:center;"><span style="color:#64748B;">No</span></td>
+        </tr>
+        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px; color:#0F172A;">Visual Performance Representations</h2>
+            
+            <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px; border:1px solid #E2E8F0;">
+                <h3 style="margin-top:0; color:#1E293B; font-size:16px; border-bottom:1px solid #F1F5F9; padding-bottom:8px;">Comprehensive Performance Dashboard</h3>
+                <img src="dashboard_summary.png" alt="Comprehensive Performance Dashboard" style="width:100%; height:auto; border-radius:6px; display:block;" />
+            </div>
+            
+            <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px; border:1px solid #E2E8F0;">
+                <h3 style="margin-top:0; color:#1E293B; font-size:16px; border-bottom:1px solid #F1F5F9; padding-bottom:8px;">Accuracy vs. Latency Pareto Frontier</h3>
+                <img src="accuracy_vs_latency_pareto.png" alt="Accuracy vs. Latency Pareto Frontier" style="width:100%; height:auto; border-radius:6px; display:block;" />
+            </div>
+            
+            <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px; border:1px solid #E2E8F0;">
+                <h3 style="margin-top:0; color:#1E293B; font-size:16px; border-bottom:1px solid #F1F5F9; padding-bottom:8px;">Real-Time Factor (RTF) Edge Feasibility</h3>
+                <img src="rtf_realtime_factor.png" alt="Real-Time Factor (RTF) Edge Feasibility" style="width:100%; height:auto; border-radius:6px; display:block;" />
+            </div>
+            
+            <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:24px; border:1px solid #E2E8F0;">
+                <h3 style="margin-top:0; color:#1E293B; font-size:16px; border-bottom:1px solid #F1F5F9; padding-bottom:8px;">Per-Utterance Error & Latency Distributions</h3>
+                <img src="error_distribution_boxplots.png" alt="Per-Utterance Error & Latency Distributions" style="width:100%; height:auto; border-radius:6px; display:block;" />
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>

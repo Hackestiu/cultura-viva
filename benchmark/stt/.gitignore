@@ -1,0 +1,37 @@
+# Python and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Downloaded model weights and native model caches
+models/*
+!models/README.md
+!models/.gitkeep
+model-cache/
+*.bin
+*.ggml
+*.gguf
+*.onnx
+*.ct2/
+.cache/
+~/.cache/
+cache/
+
+# Generated audio, reports, plots, and deployment archives
+data_audio/*.wav
+data_audio/**/*.wav
+results/edge/
+results_computer/*.csv
+*.zip
+*.tar.gz
+
+# Local logs and OS/editor files
+*.log
+.DS_Store
+.vscode/
+
+# Weights & Biases
+wandb/
+*.wandb

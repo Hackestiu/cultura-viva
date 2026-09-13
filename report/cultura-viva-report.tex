@@ -550,6 +550,99 @@ Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \end{tabular}
 \end{table}
 
+\subsubsection{Guide personalities}
+\label{sec:slm-personalities}
+
+The guide personality is the one setting a visitor chooses for themselves, so it
+is worth asking whether it changes anything. It is implemented as a system-prompt
+tail: the retrieved facts are identical for all three guides by construction
+(\texttt{get\_kg\_context} is personality-independent), and only a short block of
+instructions differs.
+
+\paragraph{Protocol.} 24 open questions, one per element sheet
+(\texttt{personality/probes.json}) --- open rather than factual because a closed
+question collapses to one correct sentence whatever the guide. Each carries an
+\texttt{element\_id}, so retrieval takes the direct-lookup path the device uses
+when vision names an element. Every question is answered by all three guides on
+\texttt{qwen2.5:0.5b} at the shipped sampling settings, giving 72 answers. A judge
+from a \emph{different} model family, \texttt{llama3.1:8b}, then reads each answer
+blind and names the guide that wrote it, choosing from paraphrased descriptions
+rather than the prompt text, with the options shuffled per item.
+
+\paragraph{The guides are not distinguishable.}
+
+\begin{table}[h]
+\centering
+\caption{Blind identification of the guide from its answer. Rows are the guide
+that wrote the answer, columns the judge's choice; the diagonal is correct.}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{true \textbackslash\ predicted} & \textbf{artistic} & \textbf{technical} & \textbf{child} \\
+\midrule
+artistic  & \textbf{14} & 10 & 0 \\
+technical & 8  & \textbf{13} & 3 \\
+child     & 12 & 11 & \textbf{1} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+28 of 72 correct, \SI{38.9}{\percent}, against a \SI{33.3}{\percent} chance
+baseline --- an exact binomial $p = 0.19$, indistinguishable from guessing. The
+matrix shows where it breaks down: the judge chose \emph{child} four times in 72,
+so the child guide is recovered in \SI{4}{\percent} of its own answers. Reading
+the output agrees with the number. Asked why Casa Batll\'o's facade resembles
+bones, the child guide replies that it ``gives it a sense of solidity and
+strength'', which is not a sentence written for an eight-year-old.
+
+\paragraph{This is not an artefact of the judge.} Given three hand-written,
+deliberately distinct texts, the same judge scores 3/3 and picks \emph{child}
+correctly --- the label it almost never chose on real output. The instrument
+discriminates; the guides simply sound alike. This self-test runs on every
+invocation so the null always ships with evidence the measurement works.
+
+\paragraph{What it cannot say.} Without a positive control arm --- a deliberately
+loud persona run under the same constraints --- this result cannot separate two
+causes with opposite remedies: that the three prompts are too similar to each
+other, or that the regime suppresses any persona at all. Both are plausible. Each
+prompt is roughly 58 words of which about 28 are verbatim-identical across all
+three, so only some 30 words distinguish a guide; and one of the shared sentences
+(``answer ONLY what the user asks --- do not give unsolicited background'')
+forbids precisely the elaboration in which register lives, under a 50-word
+instruction and a 60-token cap that truncated \SIrange{29}{38}{\percent} of
+answers mid-sentence.
+
+\paragraph{A larger finding: grounding.} The same judge was asked, for each
+answer, whether every claim was supported by the facts the model had been given
+--- reference-free, so that style is not scored as inaccuracy.
+
+\begin{table}[h]
+\centering
+\caption{Answers containing at least one claim unsupported by the retrieved facts.}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Guide} & \textbf{Unsupported} & \textbf{Rate} \\
+\midrule
+artistic  & 11/24 & \SI{46}{\percent} \\
+technical & 13/24 & \SI{54}{\percent} \\
+child     & 15/24 & \SI{62}{\percent} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Between a half and two thirds of answers contain something the sheets do not
+support. Spot-checks confirm the judge is not being harsh: the model states that
+the Hypostyle Room was built ``to house a collection of stone columns'' when the
+sheet describes a covered market. On the evidence here this matters considerably
+more than which of the three voices delivers it, and it is the open item this
+benchmark would pursue next.
+
+\paragraph{Recommendation.} Small models follow format constraints far more
+reliably than tone instructions. Replacing ``you speak with passion and use
+evocative metaphors'' with a concrete output requirement per guide --- name one
+visual image; cite one number when the facts provide one; include one everyday
+comparison --- is the cheapest change likely to move this result, and it can be
+re-measured with \texttt{uv run python main.py personality}.
+
 \paragraph{Selected.} \textbf{Qwen 2.5 0.5B Instruct}, \texttt{Q4\_K\_M}
 (\texttt{qwen2.5-0.5b-instruct-q4\_k\_m.gguf}).
 

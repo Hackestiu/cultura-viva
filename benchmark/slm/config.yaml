@@ -70,6 +70,7 @@ inference:
   stop:                     # device: stop=["\n\n", "<|im_end|>"]
     - "\n\n"
     - "<|im_end|>"
+  seed: 0                   # fixed so a rerun reproduces; Ollama randomises otherwise
   context_window: 2048
   threads: 4
   batch_size: 256

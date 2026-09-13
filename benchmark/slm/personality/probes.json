@@ -1,0 +1,29 @@
+{
+  "_about": "Open probe questions for the personality study, one per element sheet in data/element_sheets.json. Deliberately open rather than factual: a closed question ('in which district is the Sagrada Familia') collapses to one correct sentence whatever the guide personality, which would measure nothing. Each carries an element_id so retrieval goes through the same direct-lookup path the device uses when vision names an element. There are no reference answers on purpose -- grounding is judged against the retrieved context, and plain-register references would penalise the artistic and child voices for doing their job. 'kind' is what the question invites: describe (what am I seeing) or explain (why/how is it like that).",
+  "probes": [
+    {"id": "park_guell",                "element_id": "park_guell",                "kind": "describe", "question": "What should I know about this place?"},
+    {"id": "drac_park_guell",           "element_id": "drac_park_guell",           "kind": "describe", "question": "What is this creature on the steps?"},
+    {"id": "porxada_bugaderia",         "element_id": "porxada_bugaderia",         "kind": "explain",  "question": "Why do these columns lean over like that?"},
+    {"id": "porters_lodge_park_guell",  "element_id": "porters_lodge_park_guell",  "kind": "describe", "question": "What are these two little buildings at the entrance?"},
+    {"id": "banc_serpentejant",         "element_id": "banc_serpentejant",         "kind": "describe", "question": "Tell me about this long curving bench."},
+    {"id": "sala_hipostila",            "element_id": "sala_hipostila",            "kind": "explain",  "question": "Why did Gaudi build this room full of columns?"},
+    {"id": "viaductes_park_guell",      "element_id": "viaductes_park_guell",      "kind": "explain",  "question": "How were these raised walkways built?"},
+    {"id": "casa_museu_park_guell",     "element_id": "casa_museu_park_guell",     "kind": "describe", "question": "What is this house and who lived here?"},
+    {"id": "turo_3_creus",              "element_id": "turo_3_creus",              "kind": "describe", "question": "What am I looking at up on this hill?"},
+    {"id": "la_pedrera",                "element_id": "la_pedrera",                "kind": "explain",  "question": "Why does this building look so unusual?"},
+    {"id": "catenaria_pedrera",         "element_id": "catenaria_pedrera",         "kind": "explain",  "question": "How do these brick arches hold the roof up?"},
+    {"id": "caps_pedrera",              "element_id": "caps_pedrera",              "kind": "describe", "question": "What are these strange shapes on the roof?"},
+    {"id": "facana_pedrera",            "element_id": "facana_pedrera",            "kind": "explain",  "question": "How does this stone front stay up without pillars inside the wall?"},
+    {"id": "patis_pedrera",             "element_id": "patis_pedrera",             "kind": "explain",  "question": "Why are these courtyards shaped the way they are?"},
+    {"id": "sagrada_familia",           "element_id": "sagrada_familia",           "kind": "describe", "question": "What should I know about this church?"},
+    {"id": "cupula_sagrada_familia",    "element_id": "cupula_sagrada_familia",    "kind": "explain",  "question": "Why does the ceiling look like that when I look up?"},
+    {"id": "facana_naixement",          "element_id": "facana_naixement",          "kind": "describe", "question": "What is carved on this front of the church?"},
+    {"id": "facana_passio",             "element_id": "facana_passio",             "kind": "explain",  "question": "Why is this side so bare compared to the other one?"},
+    {"id": "laterals_sagrada_familia",  "element_id": "laterals_sagrada_familia",  "kind": "describe", "question": "What am I seeing along the side of the building?"},
+    {"id": "posterior_sagrada_familia", "element_id": "posterior_sagrada_familia", "kind": "describe", "question": "What is this part at the back of the church?"},
+    {"id": "torres_sagrada_familia",    "element_id": "torres_sagrada_familia",    "kind": "explain",  "question": "Why are the tops of the towers decorated like this?"},
+    {"id": "casa_batllo",               "element_id": "casa_batllo",               "kind": "describe", "question": "Tell me about this house."},
+    {"id": "pla_frontal_casa_batllo",   "element_id": "pla_frontal_casa_batllo",   "kind": "explain",  "question": "Why does the front of this house look like it is made of bones and scales?"},
+    {"id": "pla_inferior_casa_batllo",  "element_id": "pla_inferior_casa_batllo",  "kind": "describe", "question": "What is special about these lower floors?"}
+  ]
+}

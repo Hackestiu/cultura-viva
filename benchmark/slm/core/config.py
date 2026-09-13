@@ -62,6 +62,7 @@ class Config:
     inference_max_tokens: int = 60
     inference_repeat_penalty: float = 1.1
     inference_stop: tuple[str, ...] = ("\n\n", "<|im_end|>")
+    inference_seed: int = 0
     inference_context_window: int = 2048
     inference_threads: int = 4
     inference_batch_size: int = 256
@@ -126,6 +127,7 @@ def _build_config() -> Config:
         inference_max_tokens=inference.get("max_tokens", 60),
         inference_repeat_penalty=inference.get("repeat_penalty", 1.1),
         inference_stop=tuple(inference.get("stop", ["\n\n", "<|im_end|>"])),
+        inference_seed=int(inference.get("seed", 0)),
         inference_context_window=inference.get("context_window", 2048),
         inference_threads=inference.get("threads", 4),
         inference_batch_size=inference.get("batch_size", 256),

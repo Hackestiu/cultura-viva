@@ -5,11 +5,13 @@ Usage:
     uv run python main.py benchmark                  # Benchmark all SLMs over testset.json
     uv run python main.py benchmark --model qwen2.5:1.5b
     uv run python main.py eval --predictions <path>  # Score predictions with Ragas
+    uv run python main.py personality                # Do the guide voices differ?
 """
 
 import sys
 from scripts import prepare, benchmark
 from eval.evaluate import main as run_evaluation
+from personality.study import main as run_personality
 
 
 def main():
@@ -26,8 +28,10 @@ def main():
         benchmark.main()
     elif command in ("eval", "evaluate"):
         run_evaluation()
+    elif command == "personality":
+        run_personality()
     else:
-        print(f"Unknown command: '{command}'. Available commands: prepare, benchmark, eval")
+        print(f"Unknown command: '{command}'. Available commands: prepare, benchmark, eval, personality")
         sys.exit(1)
 
 

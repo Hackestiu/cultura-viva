@@ -1,0 +1,260 @@
+{
+  "model": "qwen2.5:0.5b",
+  "judge_model": "llama3.1:8b",
+  "arms": [
+    "artistic",
+    "technical",
+    "child"
+  ],
+  "n_probes": 24,
+  "n_answers": 72,
+  "generated_utc": "2026-09-13T13:13:38+00:00",
+  "per_arm": {
+    "artistic": {
+      "n": 24,
+      "median_words": 32.5,
+      "min_words": 11,
+      "max_words": 50,
+      "truncated": 8,
+      "echoed": 0
+    },
+    "technical": {
+      "n": 24,
+      "median_words": 28.0,
+      "min_words": 8,
+      "max_words": 48,
+      "truncated": 9,
+      "echoed": 0
+    },
+    "child": {
+      "n": 24,
+      "median_words": 25.0,
+      "min_words": 11,
+      "max_words": 48,
+      "truncated": 7,
+      "echoed": 0
+    }
+  },
+  "similarity": {
+    "probes_with_an_identical_pair": 1,
+    "median_max_similarity": 0.536,
+    "per_probe": [
+      {
+        "probe_id": "park_guell",
+        "max_similarity": 0.2,
+        "mean_similarity": 0.127,
+        "any_identical": false
+      },
+      {
+        "probe_id": "drac_park_guell",
+        "max_similarity": 0.673,
+        "mean_similarity": 0.617,
+        "any_identical": false
+      },
+      {
+        "probe_id": "porxada_bugaderia",
+        "max_similarity": 0.699,
+        "mean_similarity": 0.46,
+        "any_identical": false
+      },
+      {
+        "probe_id": "porters_lodge_park_guell",
+        "max_similarity": 0.501,
+        "mean_similarity": 0.333,
+        "any_identical": false
+      },
+      {
+        "probe_id": "banc_serpentejant",
+        "max_similarity": 0.255,
+        "mean_similarity": 0.166,
+        "any_identical": false
+      },
+      {
+        "probe_id": "sala_hipostila",
+        "max_similarity": 0.593,
+        "mean_similarity": 0.52,
+        "any_identical": false
+      },
+      {
+        "probe_id": "viaductes_park_guell",
+        "max_similarity": 0.521,
+        "mean_similarity": 0.238,
+        "any_identical": false
+      },
+      {
+        "probe_id": "casa_museu_park_guell",
+        "max_similarity": 0.348,
+        "mean_similarity": 0.232,
+        "any_identical": false
+      },
+      {
+        "probe_id": "turo_3_creus",
+        "max_similarity": 0.804,
+        "mean_similarity": 0.674,
+        "any_identical": false
+      },
+      {
+        "probe_id": "la_pedrera",
+        "max_similarity": 0.635,
+        "mean_similarity": 0.6,
+        "any_identical": false
+      },
+      {
+        "probe_id": "catenaria_pedrera",
+        "max_similarity": 0.548,
+        "mean_similarity": 0.347,
+        "any_identical": false
+      },
+      {
+        "probe_id": "caps_pedrera",
+        "max_similarity": 0.427,
+        "mean_similarity": 0.382,
+        "any_identical": false
+      },
+      {
+        "probe_id": "facana_pedrera",
+        "max_similarity": 0.924,
+        "mean_similarity": 0.9,
+        "any_identical": false
+      },
+      {
+        "probe_id": "patis_pedrera",
+        "max_similarity": 0.949,
+        "mean_similarity": 0.608,
+        "any_identical": false
+      },
+      {
+        "probe_id": "sagrada_familia",
+        "max_similarity": 0.589,
+        "mean_similarity": 0.245,
+        "any_identical": false
+      },
+      {
+        "probe_id": "cupula_sagrada_familia",
+        "max_similarity": 0.523,
+        "mean_similarity": 0.357,
+        "any_identical": false
+      },
+      {
+        "probe_id": "facana_naixement",
+        "max_similarity": 0.329,
+        "mean_similarity": 0.227,
+        "any_identical": false
+      },
+      {
+        "probe_id": "facana_passio",
+        "max_similarity": 0.451,
+        "mean_similarity": 0.42,
+        "any_identical": false
+      },
+      {
+        "probe_id": "laterals_sagrada_familia",
+        "max_similarity": 1.0,
+        "mean_similarity": 0.944,
+        "any_identical": true
+      },
+      {
+        "probe_id": "posterior_sagrada_familia",
+        "max_similarity": 0.528,
+        "mean_similarity": 0.334,
+        "any_identical": false
+      },
+      {
+        "probe_id": "torres_sagrada_familia",
+        "max_similarity": 0.962,
+        "mean_similarity": 0.639,
+        "any_identical": false
+      },
+      {
+        "probe_id": "casa_batllo",
+        "max_similarity": 0.219,
+        "mean_similarity": 0.115,
+        "any_identical": false
+      },
+      {
+        "probe_id": "pla_frontal_casa_batllo",
+        "max_similarity": 0.27,
+        "mean_similarity": 0.123,
+        "any_identical": false
+      },
+      {
+        "probe_id": "pla_inferior_casa_batllo",
+        "max_similarity": 0.544,
+        "mean_similarity": 0.46,
+        "any_identical": false
+      }
+    ]
+  },
+  "judge_self_test": {
+    "correct": 3,
+    "total": 3,
+    "passed": true,
+    "detail": [
+      {
+        "true": "child",
+        "predicted": "child"
+      },
+      {
+        "true": "technical",
+        "predicted": "technical"
+      },
+      {
+        "true": "artistic",
+        "predicted": "artistic"
+      }
+    ]
+  },
+  "identification": {
+    "matrix": {
+      "artistic": {
+        "artistic": 14,
+        "technical": 10,
+        "child": 0,
+        "unparsed": 0
+      },
+      "technical": {
+        "artistic": 8,
+        "technical": 13,
+        "child": 3,
+        "unparsed": 0
+      },
+      "child": {
+        "artistic": 12,
+        "technical": 11,
+        "child": 1,
+        "unparsed": 0
+      }
+    },
+    "correct": 28,
+    "total": 72,
+    "accuracy": 0.389,
+    "chance": 0.333,
+    "per_arm_recall": {
+      "artistic": 0.583,
+      "technical": 0.542,
+      "child": 0.042
+    },
+    "prediction_spread": {
+      "technical": 34,
+      "artistic": 34,
+      "child": 4
+    }
+  },
+  "grounding": {
+    "artistic": {
+      "n": 24,
+      "unsupported": 11,
+      "unjudged": 0
+    },
+    "technical": {
+      "n": 24,
+      "unsupported": 13,
+      "unjudged": 0
+    },
+    "child": {
+      "n": 24,
+      "unsupported": 15,
+      "unjudged": 0
+    }
+  }
+}

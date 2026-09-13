@@ -52,6 +52,7 @@ DOMAIN_KEYWORD_ALIASES = [
 
 # Post-transcription corrections: ASR commonly misspells these nouns.
 _CORRECTIONS = {
+    r"\bsagrada familia\b": "Sagrada Família",
     r"\bgaudi\b": "Gaudí",
     r"\bgaudy\b": "Gaudí",
     r"\bcasa batl[óo]\b": "Casa Batlló",

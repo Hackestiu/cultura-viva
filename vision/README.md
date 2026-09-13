@@ -46,8 +46,7 @@ the board, under `models/vision/<location>/`.
 
 ## config.yaml
 
-Currently 4 monuments x 2 active models = **8 runs** per full pass (a third
-model, `resnet50`, is commented out).
+Currently 4 monuments x 2 models = **8 runs** per full pass.
 
 ```yaml
 dataset:

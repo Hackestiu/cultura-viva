@@ -69,6 +69,3 @@ models:
   - name: vit
     vision_model_name: google/vit-base-patch16-224
     learning_rate: 2e-5
-
-  # - name: resnet50
-  #   vision_model_name: microsoft/resnet-50

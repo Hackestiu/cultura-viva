@@ -12,6 +12,8 @@
 \usepackage{siunitx}
 \usepackage{eurosym}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
 \usepackage{xcolor}
 \usepackage{caption}
 \usepackage[hidelinks]{hyperref}
@@ -78,28 +80,122 @@ model.
 
 \subsection{The pipeline}
 
+Figure~\ref{fig:pipeline} shows the full interaction. Two things about its
+shape are worth stating up front, because they are easy to get wrong from a
+prose description.
+
+\begin{itemize}
+  \item \textbf{The guide personality is chosen before any photo is taken.}
+        It is a setup step, not a step in the answering loop: the visitor picks
+        Artistic, Technical or Child on the Modulino buttons, and that choice
+        then governs both the system prompt handed to the SLM and the Piper
+        voice used for playback. Because the personality is already fixed when
+        a photo is confirmed, the whole stable prompt prefix --- personality
+        instructions plus the recognised element's fact sheet --- is known
+        before the visitor has said a word, which is exactly what makes the
+        prefill overlap in \S\ref{sec:latency} possible.
+  \item \textbf{The GPS does one job only: it picks which minimap is shown.}
+        The NEO-6M feeds a coordinate to a Haversine site resolver that decides
+        whether the visitor is at Park G\"uell, the Sagrada Fam\'ilia, Casa
+        Mil\`a or Casa Batll\'o, and the LCD switches to that monument's
+        tilemap and landmark set. It takes no part in recognition and no part
+        in the answer: the element is identified from the photograph alone, and
+        the knowledge lookup is keyed on the classifier's element ID. With no
+        GPS fix the guide still works end to end --- only the map defaults to
+        the configured location instead of following the visitor.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\hyphenpenalty=10000 \exhyphenpenalty=10000 \tolerance=3000
+\begin{tikzpicture}[
+  font=\small,
+  stage/.style={draw, rounded corners=2pt, text width=5.9cm, align=center,
+                minimum height=10mm, fill=black!5, inner ysep=4pt},
+  setup/.style={stage, fill=black!12},
+  side/.style={draw, dashed, rounded corners=2pt, text width=3.6cm,
+               align=center, inner ysep=4pt, font=\footnotesize},
+  ar/.style={-{Stealth[length=2mm]}, thick},
+  lite/.style={-{Stealth[length=1.7mm]}, dashed, gray!70}
+]
+\def\dy{1.78}
+\node[setup] (p1) at (0,0)      {\textbf{1.\ Choose guide personality}\\[1pt]
+                                 Modulino Buttons A / B / C};
+\node[stage] (p2) at (0,-\dy)   {\textbf{2.\ Frame the shot} --- camera mode\\[1pt]
+                                 live view streamed to the LCD};
+\node[stage] (p3) at (0,-2*\dy) {\textbf{3.\ Shutter} --- button D7\\[1pt]
+                                 1080p capture};
+\node[stage] (p4) at (0,-3*\dy) {\textbf{4.\ Vision classifier} --- ONNX\\[1pt]
+                                 element ID, or off-distribution reject};
+\node[stage] (p5) at (0,-4*\dy) {\textbf{5.\ Ask} --- map mode, button D7\\[1pt]
+                                 recording auto-stops on silence};
+\node[stage] (p6) at (0,-5*\dy) {\textbf{6.\ Speech-to-text}\\[1pt]
+                                 faster-whisper, domain-biased};
+\node[stage] (p7) at (0,-6*\dy) {\textbf{7.\ Knowledge retrieval}\\[1pt]
+                                 element ID $\rightarrow$ fact sheet};
+\node[stage] (p8) at (0,-7*\dy) {\textbf{8.\ Small language model}\\[1pt]
+                                 answer decoded sentence by sentence};
+\node[stage] (p9) at (0,-8*\dy) {\textbf{9.\ Speech synthesis}\\[1pt]
+                                 Piper $\rightarrow$ headphones; minimap updated};
+
+\foreach \a/\b in {p1/p2,p2/p3,p3/p4,p4/p5,p5/p6,p6/p7,p7/p8,p8/p9}
+  \draw[ar] (\a) -- (\b);
+
+% ---- retake loop (left, upper half) ----
+\draw[ar] (p4.west) -- ++(-0.5,0) |- (p2.west);
+\node[font=\footnotesize\itshape, anchor=east, align=right]
+  at (-3.55,-2.5*\dy) {rejected:\\retake};
+
+% ---- GPS side path (left, lower half) ----
+\node[side, anchor=east] (gps) at (-3.55,-6.4*\dy)
+  {\textbf{NEO-6M GPS}\\Haversine site resolver};
+\node[side, anchor=east] (map) at (-3.55,-7.8*\dy)
+  {picks which monument's minimap is shown\\--- \emph{nothing else}};
+\draw[lite] (gps) -- (map);
+\draw[lite] (map.east) -- (p9.west);
+
+% ---- right-hand annotations ----
+\node[side, anchor=west] (nper) at (3.4,-0.35*\dy)
+  {fixes the SLM prompt prefix \emph{and} the Piper voice, before any photo};
+\draw[lite] (p1.east) -- (nper.west);
+\node[side, anchor=west] (npre) at (3.4,-4*\dy)
+  {prefix prefilled into the KV-cache \emph{while the visitor speaks}};
+\draw[lite] (p5.east) -- (npre.west);
+\node[side, anchor=west] (nstr) at (3.4,-7.6*\dy)
+  {sentence $N$ is spoken while $N{+}1$ still decodes};
+\draw[lite] (p8.east) -- (nstr.west);
+\end{tikzpicture}
+\caption{The Cultura Viva interaction. Solid arrows are the visitor-facing
+sequence; dashed arrows are influences and overlaps rather than steps. The
+personality is chosen once, up front (step 1), and the GPS only ever selects
+which minimap is displayed.}
+\label{fig:pipeline}
+\end{figure}
+
+\noindent The nine steps in detail:
+
 \begin{enumerate}
-  \item \textbf{Capture \& validate.} The visitor frames a shot in camera mode
-        (live view streamed to the LCD as Base64 RGB565 chunks over Bridge RPC)
-        and presses the shutter. A per-monument ONNX classifier decides
+  \item \textbf{Choose a personality.} Artistic, Technical or Child, on the
+        Modulino buttons. Sets the SLM system prompt and the TTS voice.
+  \item \textbf{Frame.} In camera mode (switch D6 high), the live view is
+        streamed to the LCD as Base64 RGB565 chunks over Bridge RPC.
+  \item \textbf{Capture.} Button D7 takes a 1080p photo.
+  \item \textbf{Validate.} The per-monument ONNX classifier decides
         \emph{which architectural element} is in frame, or rejects the photo as
-        off-distribution and asks for a retake.
-  \item \textbf{Ask.} The visitor flips to map mode, picks a guide personality
-        on the Modulino buttons (Artistic / Technical / Child), and records a
-        spoken question. Recording ends by itself on silence.
-  \item \textbf{Understand.} faster-whisper transcribes the question, biased
-        towards the domain vocabulary (``Gaud\'i'', ``trencad\'is'',
-        ``Sagrada Fam\'ilia'', \ldots) through an \texttt{initial\_prompt}.
-  \item \textbf{Ground \& answer.} The recognised element ID indexes directly
-        into a curated knowledge base (\texttt{knowledge\_base.json},
-        \texttt{element\_sheets.json}), with keyword search as fallback. The
-        retrieved facts plus the personality prompt plus the question go to the
-        SLM.
-  \item \textbf{Speak.} Piper synthesises the answer sentence by sentence,
-        streamed to ALSA while the SLM is still decoding the next sentence.
-        Volume tracks the Modulino knob live.
-  \item \textbf{Map.} The visited landmark is marked on the LCD minimap, with
-        position from the NEO-6M GPS.
+        off-distribution and asks for a retake (\S\ref{sec:ood}).
+  \item \textbf{Ask.} The visitor flips to map mode and records a spoken
+        question. Recording ends by itself on silence.
+  \item \textbf{Transcribe.} faster-whisper, biased towards the domain
+        vocabulary (``Gaud\'i'', ``trencad\'is'', ``Sagrada Fam\'ilia'',
+        \ldots) through an \texttt{initial\_prompt}.
+  \item \textbf{Ground.} The recognised element ID indexes directly into a
+        curated knowledge base (\texttt{knowledge\_base.json},
+        \texttt{element\_sheets.json}), with keyword search as fallback.
+  \item \textbf{Answer.} The retrieved facts, the personality prompt and the
+        question go to the SLM, which decodes sentence by sentence.
+  \item \textbf{Speak.} Piper synthesises each sentence and streams it to ALSA
+        while the SLM decodes the next. Volume tracks the Modulino knob live,
+        and the visited landmark is marked on the minimap.
 \end{enumerate}
 
 \subsection{Design constraints}
@@ -139,19 +235,32 @@ classifier per $(\text{monument}, \text{model})$ pair.
 \centering
 \caption{Element classes per monument. Class counts differ freely; nothing in
 the pipeline assumes they match.}
-\begin{tabular}{llp{7.6cm}}
+\small
+\begin{tabular}{lcl}
 \toprule
-\textbf{Monument} & \textbf{$N$} & \textbf{Classes} \\
+\textbf{Monument} & \textbf{$N$} & \textbf{Element classes} \\
 \midrule
-Casa Batll\'o & 2 & \texttt{pla\_frontal}, \texttt{pla\_inferior} \\
-Park G\"uell & 7 & \texttt{3\_viaductes}, \texttt{casa\_museu},
-  \texttt{escalinata\_drac}, \texttt{pavellons\_consergeria},
-  \texttt{placa\_natura}, \texttt{sala\_hipostila}, \texttt{turo\_3\_creus} \\
-La Pedrera (Casa Mil\`a) & 3 & \texttt{facana\_1}, \texttt{facana\_2},
-  \texttt{facana\_3} \\
-Sagrada Fam\'ilia & 6 & \texttt{cupula}, \texttt{facana\_naixement},
-  \texttt{facana\_passio}, \texttt{laterals}, \texttt{posterior},
-  \texttt{torres} \\
+Casa Batll\'o & 2 & \texttt{pla\_frontal} \\
+              &   & \texttt{pla\_inferior} \\
+\addlinespace
+Park G\"uell & 7 & \texttt{escalinata\_drac} \\
+             &   & \texttt{sala\_hipostila} \\
+             &   & \texttt{placa\_natura} \\
+             &   & \texttt{pavellons\_consergeria} \\
+             &   & \texttt{3\_viaductes} \\
+             &   & \texttt{turo\_3\_creus} \\
+             &   & \texttt{casa\_museu} \\
+\addlinespace
+La Pedrera (Casa Mil\`a) & 3 & \texttt{facana\_1} \\
+                         &   & \texttt{facana\_2} \\
+                         &   & \texttt{facana\_3} \\
+\addlinespace
+Sagrada Fam\'ilia & 6 & \texttt{facana\_naixement} \\
+                  &   & \texttt{facana\_passio} \\
+                  &   & \texttt{laterals} \\
+                  &   & \texttt{posterior} \\
+                  &   & \texttt{torres} \\
+                  &   & \texttt{cupula} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -182,44 +291,65 @@ to.
 
 \subsection{Backbones tried}
 
+Two backbones were trained, one light and one heavy, to see whether the extra
+capacity of a transformer is worth paying for on this data.
+
 \begin{table}[h]
 \centering
-\caption{Vision backbones. A third backbone, ResNet-50
-(\texttt{microsoft/resnet-50}), is present in the configuration but currently
-commented out and was not part of the reported runs.}
+\caption{Vision backbones.}
 \begin{tabular}{lll}
 \toprule
-\textbf{Name} & \textbf{Hugging Face checkpoint} & \textbf{Status} \\
+\textbf{Name} & \textbf{Hugging Face checkpoint} & \textbf{Character} \\
 \midrule
-\texttt{mobilenetv2} & \texttt{google/mobilenet\_v2\_1.0\_224} & active \\
-\texttt{vit}         & \texttt{google/vit-base-patch16-224}    & active \\
-\texttt{resnet50}    & \texttt{microsoft/resnet-50}            & configured, disabled \\
+\texttt{mobilenetv2} & \texttt{google/mobilenet\_v2\_1.0\_224} & lightweight CNN \\
+\texttt{vit}         & \texttt{google/vit-base-patch16-224}    & ViT-B/16 transformer \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-With 4 monuments $\times$ 2 active backbones, a full pass is \textbf{8 training
-runs}. Each run gets its own dataset split instance, model instance, output
-directory and Weights \& Biases run, named
-\texttt{<monument>-<model>}, so runs never overwrite each other.
+With 4 monuments $\times$ 2 backbones, a full pass is \textbf{8 training runs}.
+Each run gets its own dataset split instance, model instance, output directory
+and Weights \& Biases run, named \texttt{<monument>-<model>}, so runs never
+overwrite each other.
 
-\paragraph{Training hyper-parameters.} Applied to every run unless a model
-entry overrides them:
+\paragraph{Training hyper-parameters.} These are \emph{not} shared across runs.
+Each $(\text{monument}, \text{backbone})$ pair was tuned on its own: the
+monuments differ in class count and in how many images per class they have, and
+MobileNetV2 and ViT do not want the same learning rate, so a single global
+configuration would have handicapped several of the eight runs.
+\texttt{config.yaml} carries a default block that each monument and each model
+entry may override, and the effective values per run are those in
+Table~\ref{tab:vision-hparams}.
 
-\begin{center}
-\begin{tabular}{ll}
+\begin{table}[h]
+\centering
+\caption{Effective training hyper-parameters per run. \emph{To be filled from
+the corresponding Weights \& Biases run configs.}}
+\label{tab:vision-hparams}
+\small
+\begin{tabular}{llccc}
 \toprule
-Epochs & 8 \\
-Batch size & 16 \\
-Learning rate & $2\times10^{-5}$ \\
-Model selection & best checkpoint by validation macro-F1 \\
+\textbf{Monument} & \textbf{Backbone} & \textbf{Epochs} & \textbf{Batch size} & \textbf{Learning rate} \\
+\midrule
+Casa Batll\'o & MobileNetV2 & \tbd & \tbd & \tbd \\
+Casa Batll\'o & ViT-B/16    & \tbd & \tbd & \tbd \\
+\addlinespace
+Park G\"uell  & MobileNetV2 & \tbd & \tbd & \tbd \\
+Park G\"uell  & ViT-B/16    & \tbd & \tbd & \tbd \\
+\addlinespace
+La Pedrera    & MobileNetV2 & \tbd & \tbd & \tbd \\
+La Pedrera    & ViT-B/16    & \tbd & \tbd & \tbd \\
+\addlinespace
+Sagrada Fam\'ilia & MobileNetV2 & \tbd & \tbd & \tbd \\
+Sagrada Fam\'ilia & ViT-B/16    & \tbd & \tbd & \tbd \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-Evaluation reports \textbf{accuracy} and \textbf{macro-F1} (macro so that rare
-elements are not drowned out by the frequent ones), computed on the held-out
-test split at the end of each run.
+Common to every run: the best checkpoint is selected by validation macro-F1,
+and evaluation reports \textbf{accuracy} and \textbf{macro-F1} --- macro so
+that rare elements are not drowned out by frequent ones --- on the held-out
+test split.
 
 \subsection{Results}
 
@@ -246,14 +376,18 @@ Sagrada Fam\'ilia        & 6 & \tbd & \tbd & \tbd & \tbd \\
 \end{tabular}
 \end{table}
 
-\paragraph{What ships.} Two exported classifiers are currently deployed on the
-device, under \texttt{models/\discretionary{}{}{}vision/\discretionary{}{}{}<location>/}: Park G\"uell (7 element
-classes $+$ \texttt{unknown}) and Sagrada Fam\'ilia (6 element classes $+$
-\texttt{unknown}). Each is a \texttt{model.onnx} plus a \texttt{labels.json}
-carrying the label map, input size and normalisation constants, so the
-board-side code needs no per-model configuration.
+\paragraph{What ships.} \textbf{Four} exported classifiers ship with the
+device, one per monument, under
+\texttt{models/\discretionary{}{}{}vision/\discretionary{}{}{}<location>/}:
+Casa Batll\'o (2 element classes), Park G\"uell (7), La Pedrera (3) and the
+Sagrada Fam\'ilia (6), each plus an \texttt{unknown} label for rejected inputs.
+Each is a \texttt{model.onnx} plus a \texttt{labels.json} carrying the label
+map, input size and normalisation constants, so the board-side code needs no
+per-model configuration --- switching monument is a directory change, nothing
+more.
 
 \subsection{Out-of-distribution rejection}
+\label{sec:ood}
 
 A real visitor will point the camera at a tree, another tourist, or the sky. A
 plain \texttt{argmax} classifier is obliged to name an architectural element
@@ -268,20 +402,25 @@ H(p) = -\sum_{i=1}^{N} p_i \ln p_i \;&>\; \tau_{H}
   &&\text{(peak confidence too low)}
 \end{align}
 
-Defaults are $\tau_{H} = 0.5 \ln N$ --- auto-scaled to each monument's class
-count, so a 2-class and a 7-class head are held to comparable standards --- and
-$\tau_{\text{conf}} = 0.50$.
+with $\tau_{H} = 0.5 \ln N$, auto-scaled to each monument's class count so that
+a 2-class and a 7-class head are held to comparable standards.
 
-Thresholds merge across three levels, \emph{global $\rightarrow$ monument
-$\rightarrow$ model}, with an optional CLI override on top; the most specific
-setting wins. This matters because the backbones do not calibrate alike:
-MobileNetV2 tends to run less confident than ViT, and can be loosened on its own
-without touching the other heads.
+\paragraph{What actually runs on the board.} A fixed
+$\tau_{\text{conf}} = 0.50$, the same value for all four monuments and both
+backbones. Per-checkpoint calibration was deliberately not deployed.
 
-\texttt{calibrate\_thresholds.py} sweeps the validation split and suggests
-$(\tau_{H}, \tau_{\text{conf}})$ for a given checkpoint, subject to a
-\emph{recall target} --- how much in-distribution recall must be preserved,
-default 95\,\%. It prints a ready-to-paste YAML snippet.
+\texttt{calibrate\_thresholds.py} exists and does the fuller job --- it sweeps
+the validation split and suggests a $(\tau_{H}, \tau_{\text{conf}})$ pair for a
+given checkpoint subject to a recall target (default: preserve 95\,\% of
+in-distribution recall), printing a ready-to-paste YAML snippet, and
+\texttt{inference.py} will merge overrides across three levels
+(\emph{global $\rightarrow$ monument $\rightarrow$ model}, most specific
+winning). None of that is in use on the device. A flat 50\,\% confidence cut
+proved good enough in practice: the failure it has to catch is a photo of
+foliage or a passer-by, which lands nowhere near 50\,\% confidence on any of
+the heads, so the extra precision bought by per-checkpoint tuning would not
+have changed which photos get rejected. Calibration remains available if a
+future monument turns out to need it.
 
 \subsection{Export path}
 
@@ -290,7 +429,9 @@ default 95\,\%. It prints a ready-to-paste YAML snippet.
         $(\text{monument}, \text{model})$ combination in \texttt{config.yaml}.
   \item \texttt{export\_to\_onnx.py} --- converts one fine-tuned checkpoint
         into \texttt{model.onnx} $+$ \texttt{labels.json}.
-  \item \texttt{calibrate\_thresholds.py} --- suggests the OOD thresholds.
+  \item \texttt{calibrate\_thresholds.py} --- suggests per-checkpoint OOD
+        thresholds. Available, but not used by the shipped configuration
+        (\S\ref{sec:ood}).
   \item \texttt{inference.py} --- runs an exported checkpoint on a single image
         with the gate applied; also importable as \texttt{MonumentClassifier},
         which is how the device uses it.
@@ -336,8 +477,20 @@ Qwen 2.5 0.5B Instruct  & \texttt{qwen2.5:0.5b} & \SI{0.39}{\giga\byte} & \SI{0.
   \item \textbf{Test set.} 38 curated Gaud\'i questions with reference answers
         and retrieved contexts (\texttt{eval/testset.json}).
   \item \textbf{Generation.} \texttt{temperature} $=0.1$,
-        \texttt{max\_tokens} $=128$, context window 2048, 4 threads,
-        batch size 256.
+        \texttt{max\_tokens} $=60$, \texttt{repeat\_penalty} $=1.1$,
+        stop sequences \texttt{"\textbackslash n\textbackslash n"} and
+        \texttt{<|im\_end|>}, context window 2048, 4 threads, batch size 256.
+        These deliberately mirror what the device passes to
+        \texttt{create\_chat\_completion}: a benchmark run with a different
+        token budget or stop condition stops describing what actually ships.
+  \item \textbf{Retrieval.} Top-3 passages from the knowledge base, scored
+        semantically. This differs from the device, which looks an element up
+        directly by the ID the vision stage gives it --- the test set carries no
+        element IDs and includes architect-level and cross-monument questions,
+        so semantic retrieval is the only option here.
+  \item \textbf{Personalities.} Each candidate is run under all three guide
+        voices (Artistic, Technical, Child), producing a separate predictions
+        file per personality.
   \item \textbf{Judge.} Ragas, scoring \emph{Faithfulness},
         \emph{AnswerRelevancy}, \emph{ContextPrecision} and
         \emph{ContextRecall}, driven by a \emph{local} Ollama judge
@@ -397,44 +550,42 @@ Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \end{tabular}
 \end{table}
 
-\paragraph{Selected.} \textbf{Qwen 2.5 1.5B Instruct}, \texttt{Q4\_K\_M}
-(\texttt{qwen2.5-1.5b-instruct-q4\_k\_m.gguf}), is the configured default for
-Arduino deployment. Qwen 2.5 0.5B remains a supported fallback for the 2\,GB
-board variant, where the 1.5B model's \SI{1.45}{\giga\byte} working set is
-uncomfortably tight.
+\paragraph{Selected.} \textbf{Qwen 2.5 0.5B Instruct}, \texttt{Q4\_K\_M}
+(\texttt{qwen2.5-0.5b-instruct-q4\_k\_m.gguf}).
+
+Given that generation latency did not separate the candidates, the decision
+came down to what the model costs the rest of the system. At
+\SI{0.65}{\giga\byte} for weights plus a 2k context, the 0.5B model is less
+than half the working set of the 1.5B one (\SI{1.45}{\giga\byte}) and under
+half of SmolLM2 (\SI{1.50}{\giga\byte}). That difference is not academic: the
+SLM is not alone on the board. The vision classifier, faster-whisper
+(\SI{397}{\mega\byte} peak, \S\ref{sec:stt}), Piper and the persisted prefix
+caches all have to be resident at the same time, on a device that is also
+driving a camera, a display and audio. Choosing the smallest candidate that
+answers the questions acceptably is what keeps the pipeline from contending for
+memory mid-interaction --- and it shortens the cold prefill that
+\texttt{prewarm\_cache.py} has to precompute for all 24 elements.
+
+The answer quality that ``acceptably'' refers to is the Ragas comparison above,
+which still has to be regenerated and filled in.
 
 % ---------------------------------------------------------------------------
 \subsection{Speech-to-text}
+\label{sec:stt}
 % ---------------------------------------------------------------------------
 
-\subsubsection{Engines compared}
+\subsubsection{Engine}
 
-\begin{table}[h]
-\centering
-\caption{STT engines evaluated, all on the Whisper Base model family.}
-\begin{tabular}{lll}
-\toprule
-\textbf{Engine} & \textbf{Runtime} & \textbf{Status} \\
-\midrule
-\texttt{faster-whisper} & CTranslate2, INT8 quantisation & primary \\
-\texttt{whisper.cpp}    & native C++ / GGML, ARM NEON SIMD & primary \\
-\texttt{vosk}           & Kaldi-derived & optional \\
-\texttt{sherpa-onnx}    & ONNX Runtime & optional \\
-\bottomrule
-\end{tabular}
-\end{table}
+One engine was benchmarked and shipped: \textbf{faster-whisper} on the Whisper
+\texttt{base.en} model, running under CTranslate2 with INT8 quantisation.
 
-For \texttt{whisper.cpp}, \texttt{pywhispercpp}'s bundled backend is rebuilt
-against the target core:
-
-\begin{quote}\ttfamily\small
-export CFLAGS="-O3 -mcpu=cortex-a53"\\
-export CXXFLAGS="-O3 -mcpu=cortex-a53"\\
-uv pip install --force-reinstall pywhispercpp>=1.2.0
-\end{quote}
-
-On 64-bit aarch64 NEON is on by default; \texttt{-mcpu=cortex-a53} is about
-instruction scheduling for this specific core.
+\texttt{base.en} is the smallest Whisper tier that holds up on full sentences,
+and CTranslate2's INT8 path is what makes it viable on four Cortex-A53 cores:
+it keeps the \SI{141}{\mega\byte} model and its activations well inside LPDDR4
+and maximises memory bandwidth, which is the binding constraint here rather
+than arithmetic. The English-only (\texttt{.en}) variant is deliberate --- the
+guide answers in English, and the monolingual weights are both smaller and more
+accurate on English than the multilingual ones at the same size.
 
 \subsubsection{Metrics and optimisations}
 
@@ -477,19 +628,14 @@ keywords.
 
 \begin{table}[h]
 \centering
-\caption{STT results over the 24-utterance set, domain bias applied. Timings
-are from the \texttt{results\_computer/} run. \emph{Only
-\texttt{faster-whisper:base.en} results are checked into the repository; the
-remaining engines' rows are to be filled from a re-run.}}
+\caption{STT results over the 24-utterance set, domain bias applied, from the
+\texttt{results\_computer/} run.}
 \small
 \begin{tabular}{lrrrrr}
 \toprule
 \textbf{Engine} & \textbf{WER} & \textbf{CER} & \textbf{Keyword acc.} & \textbf{Peak RAM} & \textbf{Model} \\
 \midrule
 \texttt{faster-whisper:base.en} & 0.164 & 0.093 & 96.1\,\% & \SI{397}{\mega\byte} & \SI{141}{\mega\byte} \\
-\texttt{whisper.cpp:base.en-q5\_1} & \tbd & \tbd & \tbd & \tbd & \tbd \\
-\texttt{vosk} & \tbd & \tbd & \tbd & \tbd & \tbd \\
-\texttt{sherpa-onnx} & \tbd & \tbd & \tbd & \tbd & \tbd \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -511,13 +657,25 @@ at INT8, which is what the device ships
 
 18 ONNX voices are registered in \texttt{models\_config.json}: three VITS
 models exported from Hugging Face (MMS-TTS English, VITS LJSpeech, VITS VCTK)
-and 15 Piper voices (Lessac, Ryan, Amy, Alan, Cori, each in low / medium / high
-quality). 15 of the 18 were actually timed; \texttt{piper-amy-high},
-\texttt{piper-alan-high} and \texttt{piper-cori-low} were not run.
+and 15 Piper voices --- Lessac, Ryan, Amy, Alan and Cori, each in low, medium
+and high quality. 15 of the 18 were actually timed;
+\texttt{piper-amy-high}, \texttt{piper-alan-high} and \texttt{piper-cori-low}
+were not run.
 
-Audio quality is explicitly out of scope for this benchmark --- it measures
-\emph{inference time and footprint only}. Voice character was chosen separately,
-by ear, per guide personality.
+\textbf{The field narrowed to Piper, on the inference-time / quality
+trade-off.} The VITS exports were included as the obvious general-purpose
+baseline and were eliminated by the numbers below: at RTF $\approx 3.8$ they
+are far too slow for a device that has to answer while the visitor is standing
+in front of the building, and the naturalness they return for that cost is not
+better than a Piper medium voice. Piper, built for exactly this class of
+hardware, reaches acceptable voice quality at RTF well under 1 --- and,
+crucially, is tiered, so quality can be traded against compute by swapping a
+voice file rather than changing the runtime. That tiering is what the rest of
+this section measures.
+
+Audio quality is not scored here --- the benchmark measures \emph{inference
+time and footprint only}. Which specific Piper voice suits which guide
+personality was decided separately, by ear.
 
 \subsubsection{Protocol}
 
@@ -612,73 +770,61 @@ C --- Child     & Simple, fun, story-led  & \texttt{en\_GB-semaine-medium} (Prud
 % ---------------------------------------------------------------------------
 \subsection{End-to-end latency}
 \label{sec:latency}
-% ---------------------------------------------------------------------------
 
-\texttt{python/benchmark.py} on the device measures the stages in isolation and
-then reports the figure that actually matters.
+\texttt{python/benchmark.py} measures the stages on the device. Its headline
+number is deliberately \emph{not} the sum of them.
 
-\paragraph{Why the serial sum is the wrong number.} Adding up every stage
-measured in isolation gives an upper bound, not a latency, because the pipeline
-deliberately does not run them in sequence: vision happens at photo time,
-prefill overlaps with recording, and Piper synthesises while
-\texttt{llama.cpp} is still decoding.
+Adding up every stage measured in isolation gives an upper bound, not a
+latency, because the pipeline does not run them in sequence: vision happens at
+photo time, prefill overlaps with recording, and Piper synthesises while
+\texttt{llama.cpp} is still decoding. The benchmark therefore reports
+\textbf{time to first audio} --- from the moment the visitor stops speaking to
+the first word they hear --- counting only the stages still on that path, each
+with the figure that applies there: STT in full, the \emph{warm} prefill rather
+than the cold one, decode only as far as the first complete sentence, and one
+sentence of Piper rather than the whole answer. It excludes the \texttt{aplay}
+spawn and Bridge RPC round-trips, so the board is somewhat slower than the
+printed figure.
 
-The benchmark therefore reports \textbf{time to first audio} --- from the
-moment the visitor stops speaking to the first word they hear. It counts only
-the stages still on that path, each with the figure that applies there: STT in
-full, the \emph{warm} prefill rather than the cold one, decode only as far as
-the first complete sentence, and one sentence of Piper rather than the whole
-answer. Any stage that could not be measured is named and the total flagged as
-an underestimate, rather than being silently dropped. It excludes the
-\texttt{aplay} spawn and Bridge RPC round-trips, which the harness does not
-exercise, so the board is somewhat slower than the printed figure.
-
-\paragraph{The three optimisations.}
+Three mechanisms create that overlap:
 
 \begin{enumerate}
-  \item \textbf{Asynchronous prefill overlap.} Once a photo is confirmed, the
-        static prompt prefix --- system instructions plus the monument's fact
-        sheet --- is prefilled into the SLM KV-cache on a background thread
-        while the visitor is still speaking. When recording ends, only the new
-        user question needs prefilling. The prefix cache is additionally
-        persisted to disk: \texttt{prewarm\_cache.py} computes it once per
-        element ($\approx$\SI{30}{\second} each, $\approx$12 minutes for all
-        24), so no visitor ever sits through a cold $\approx$\SI{30}{\second}
-        prefill.
-  \item \textbf{RMS silence detection with cropping.} Recording ends by itself
-        once the visitor stops talking ($\approx$\SI{1.5}{\second} of silence),
-        and the trailing and leading silence is cropped before the samples
-        reach Whisper. This is not cosmetic: Whisper's encoder pads every
-        window to a fixed length, so room tone between the last word and the
-        stop is encoded at exactly the same price as speech. Cropping removes
-        that cost from the critical path entirely. Thresholds adapt to the
-        noise floor measured at the start of each recording; in a room too loud
-        to judge, detection backs off and the physical button stops the
-        recording as before.
-  \item \textbf{Sentence-level streaming to TTS.} Rather than waiting for the
-        full generation (60$+$ tokens), tokens are emitted sentence by
-        sentence. Piper synthesises sentence $N$ while the SLM decodes sentence
-        $N+1$. Given the Piper medium RTF of $\approx 0.8$ measured above, the
-        synthesis pipeline stays comfortably ahead of playback.
+  \item \textbf{Asynchronous prefill.} Once a photo is confirmed, the static
+        prefix --- personality instructions plus the element's fact sheet ---
+        is prefilled into the KV-cache on a background thread while the visitor
+        is still speaking, so only the question needs prefilling at the end.
+        The prefix cache is also persisted to disk:
+        \texttt{prewarm\_cache.py} computes it once per element
+        ($\approx$12 minutes for all 24), so no visitor ever waits through a
+        cold prefill.
+  \item \textbf{Silence detection with cropping.} Recording stops by itself
+        after $\approx$\SI{1.5}{\second} of silence, and the silence is cropped
+        from both ends before Whisper sees it. This is not cosmetic: the
+        encoder pads every window to a fixed length, so room tone costs exactly
+        as much to encode as speech. Thresholds adapt to the noise floor
+        measured at the start of each recording.
+  \item \textbf{Sentence-level streaming.} Tokens are emitted sentence by
+        sentence rather than after the full 60$+$-token generation, so Piper
+        synthesises sentence $N$ while the SLM decodes sentence $N+1$. At the
+        Piper medium RTF of $\approx 0.8$ measured above, synthesis stays ahead
+        of playback and the audio never stalls.
 \end{enumerate}
 
-Together these move the perceived latency from ``sum of all four stages'' to
+Together these turn the perceived latency from ``sum of four stages'' into
 ``STT $+$ warm prefill $+$ one sentence of decode $+$ one sentence of Piper''.
 
 % ===========================================================================
 \section{Bill of materials}
-% ===========================================================================
 
 \subsection{Arduino components}
 
 Prices are Arduino Store (EU) list prices, VAT included, retrieved
-13 September 2026 from \url{https://store.arduino.cc}. Product codes are given
-where available.
+13 September 2026 from \url{https://store.arduino.cc}.
 
 \begin{table}[h]
 \centering
 \caption{Arduino components. The three Modulino modules are the ones this
-project actually requires.}
+project requires.}
 \small\begin{tabular}{llrp{5.1cm}r}
 \toprule
 \textbf{Component} & \textbf{Code} & \textbf{Qty} & \textbf{Role in Cultura Viva} & \textbf{Price} \\
@@ -690,38 +836,50 @@ Modulino Buttons & ABX00110 & 1 & Guide personality select A/B/C $+$ LEDs & \EUR
 Modulino Knob    & ABX00107 & 1 & Live headphone volume 0--100\,\% & \EUR{9.00} \\
 Modulino Buzzer  & ABX00108 & 1 & Shutter click, confirmations, alerts & \EUR{7.30} \\
 \midrule
-Qwiic Cables Bundle & --- & 1 & Chains the Modulinos to the Wire1 port & \EUR{10.60} \\
-\midrule
 \multicolumn{4}{r}{\textbf{Modulino subtotal}} & \textbf{\EUR{24.80}} \\
-\multicolumn{4}{r}{\textbf{Arduino subtotal}} & \textbf{\EUR{118.30}} \\
+\multicolumn{4}{r}{\textbf{Arduino subtotal}} & \textbf{\EUR{107.70}} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Note on availability.} At the time of retrieval the Modulino Knob
-(ABX00107) was listed as \emph{sold out} on the Arduino EU store. Its price is
-as listed.
-
-\paragraph{Note on the board variant.} The UNO Q also exists in a 2\,GB /
-16\,GB variant at a lower price. All measurements in this report were taken on
-the 4\,GB board (\SI{3667}{\mega\byte} detected). The 2\,GB variant would run
-the pipeline only with the Qwen 2.5 0.5B fallback SLM, since the 1.5B model's
-$\approx$\SI{1.45}{\giga\byte} working set leaves no room.
-
 \subsection{Third-party components}
+
+Two of these are not optional extras but consequences of the board's form
+factor, and are easy to forget when budgeting:
+
+\begin{itemize}
+  \item \textbf{USB-C hub.} The UNO Q exposes a single USB-C port on the Linux
+        side, and the guide needs three things on it at once --- the camera,
+        the headphones and power. A powered USB-C hub with pass-through power
+        delivery is therefore required, not a convenience. It must carry
+        USB-C PD pass-through (so the board keeps drawing full power while the
+        hub is populated), at least one USB-A port for the webcam, and a
+        \SI{3.5}{\milli\meter} audio output or a USB audio path for the
+        headphones.
+  \item \textbf{Power bank.} The guide is carried around a monument, so it runs
+        on battery, and it must run at the board's \emph{high-performance}
+        profile --- four Cortex-A53 cores saturated by STT, SLM decode and
+        Piper, with a USB camera streaming at the same time. The power bank
+        therefore needs USB-C Power Delivery at \SI{5}{\volt}/\SI{3}{\ampere}
+        ($\ge$\SI{15}{\watt}) sustained, not a \SI{5}{\watt} phone charger
+        which will brown the board out mid-answer. Capacity
+        $\ge$\SI{10000}{\milli\ampere\hour} covers a full visit with the
+        display and radios on.
+\end{itemize}
 
 \begin{table}[h]
 \centering
-\caption{Non-Arduino components. \emph{These prices are indicative street
-prices and were not verified against a single named vendor at the time of
-writing --- replace with your actual purchase prices before publishing.}}
-\small\begin{tabular}{llrp{5.1cm}r}
+\caption{Non-Arduino components. \emph{These prices were not verified against a
+named vendor --- replace with your actual purchase prices before publishing.}}
+\small\begin{tabular}{p{4.3cm}lrp{4.3cm}r}
 \toprule
 \textbf{Component} & \textbf{Interface} & \textbf{Qty} & \textbf{Role} & \textbf{Price} \\
 \midrule
+USB-C hub, PD pass-through & USB-C & 1 & Camera $+$ headphones $+$ power on the board's single USB-C port & \tbd \\
+Power bank, USB-C PD $\ge$\SI{15}{\watt}, $\ge$\SI{10000}{\milli\ampere\hour} & USB-C & 1 & Battery operation at the high-performance profile & \tbd \\
 ST7735S LCD, 1.8\,\textquotedbl{} 128$\times$160 & SPI & 1 & Live view, minimap, UI & \tbd \\
 Logitech Brio 105 webcam & USB 2.0 & 1 & 1080p capture $+$ microphone & \tbd \\
-NEO-6M GPS module & Serial1 @ 9600 & 1 & Monument proximity detection & \tbd \\
+NEO-6M GPS module & Serial1 @ 9600 & 1 & Selects the active minimap & \tbd \\
 Mode switch (SPDT) & Digital D6 & 1 & Camera / map mode & \tbd \\
 Push button & Digital D7 & 1 & Shutter / record / cancel & \tbd \\
 Headphones or speaker & 3.5\,mm jack & 1 & Spoken answer output & \tbd \\
@@ -734,14 +892,10 @@ Jumper wires, carrier board & --- & --- & Assembly & \tbd \\
 
 \subsection{Software cost}
 
-Zero. Every model in the pipeline is open-weights and runs locally: the vision
-backbones (\texttt{google/mobilenet\_v2\_1.0\_224},
-\texttt{google/vit-base-patch16-224}), Whisper Base via faster-whisper,
-Qwen 2.5 1.5B Instruct at \texttt{Q4\_K\_M}, and the Piper voices from
-\texttt{rhasspy/piper-voices}. There are no inference API calls and no
-per-visitor marginal cost. The Ragas judge used during evaluation
-(\texttt{qwen2.5:7b} through Ollama) also runs locally and is a development-time
-dependency only --- it never ships to the device.
+Zero. Every model in the pipeline is open-weights and runs locally, so there
+are no inference API calls and no per-visitor marginal cost. The Ragas judge
+used during evaluation (\texttt{qwen2.5:7b} via Ollama) is also local, and is a
+development-time dependency that never ships to the device.
 
 % ===========================================================================
 \section{Summary of selections}
@@ -759,9 +913,9 @@ Vision & Per-monument ONNX classifiers, $224\times224$, with entropy $+$
   hard requirement, not a nicety \\
 STT & faster-whisper \texttt{base.en}, INT8, 4 threads, greedy & 16.4\,\% WER
   but 96.1\,\% keyword accuracy --- proper nouns drive retrieval \\
-SLM & Qwen 2.5 1.5B Instruct \texttt{Q4\_K\_M}
-  (0.5B fallback for the 2\,GB board) & Answer quality and memory headroom;
-  latency did not discriminate between candidates \\
+SLM & Qwen 2.5 0.5B Instruct \texttt{Q4\_K\_M} & Smallest working set
+  (\SI{0.65}{\giga\byte}) that answers acceptably; latency did not
+  discriminate between candidates, so memory headroom decided it \\
 TTS & Piper medium voices, per personality & RTF $\approx 0.8$ on the board,
   which is what makes sentence-level streaming viable \\
 \bottomrule
@@ -770,23 +924,22 @@ TTS & Piper medium voices, per personality & RTF $\approx 0.8$ on the board,
 
 % ===========================================================================
 \section{Open items}
-% ===========================================================================
 
-The following numbers are referenced in this report but are not currently
-exported into the repository, and appear above as \tbd:
+The following are referenced above but not currently exported into the
+repository, and appear as \tbd:
 
 \begin{enumerate}
   \item \textbf{Vision accuracy / macro-F1} for the 8
         $(\text{monument}, \text{backbone})$ runs
-        (Table~\ref{tab:vision-results}). Logged to the Weights \& Biases
-        project \texttt{cultura-viva}; \texttt{vision/outputs/} is gitignored.
+        (Table~\ref{tab:vision-results}), and the \textbf{per-run
+        hyper-parameters} (Table~\ref{tab:vision-hparams}). Both are in the
+        Weights \& Biases project \texttt{cultura-viva};
+        \texttt{vision/outputs/} is gitignored.
   \item \textbf{Ragas scores} for the 5 SLM candidates.
         \texttt{eval/results/} is not checked in; regenerate with
         \texttt{uv run python main.py benchmark}.
-  \item \textbf{STT results for whisper.cpp, Vosk and sherpa-onnx.} Only
-        \texttt{faster-whisper:base.en} is present in
-        \texttt{results\_computer/summary.json}.
-  \item \textbf{Third-party component prices.}
+  \item \textbf{Third-party component prices}, including the USB-C hub and
+        power bank.
   \item \textbf{Measured time-to-first-audio} from a board run of
         \texttt{python/benchmark.py --json}.
 \end{enumerate}

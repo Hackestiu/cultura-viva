@@ -60,9 +60,11 @@ CMAKE_ARGS="-DGGML_NATIVE=OFF -march=armv8-a -mtune=cortex-a53" \
  
 Factual data for each Gaudí element the vision module can recognise. Two complementary files:
  
-- **`element_sheets.json`** — Detailed fact sheets per element (Park Güell, individual elements such as the Dragon Stairway, the Serpentine Bench, etc.). Indexed by `id` and `aliases`.
+- **`element_sheets.json`** — Detailed fact sheets per element (Park Güell, individual elements such as the Dragon Stairway, the Serpentine Bench, etc.). Indexed by `id` and `aliases`; the `aliases` list carries the vision classifier's label for the element, which is how a photograph resolves to a sheet.
 - **`knowledge_base.json`** — General Gaudí, monument, and artistic context. Used as a fallback when the vision classifier does not identify a specific element.
-`ModelRegistry.get_kg_context(element, personality)` selects relevant fields per personality automatically (A=Artistic, B=Technical, C=Child).
+`ModelRegistry.get_kg_context(element)` renders one factual block that serves all three personalities — the guides differ in how they speak, not in what is true, which is what lets a single cached KV state per element serve every button.
+
+**Every string in these files is English.** They are read by a 1.5B model and spoken through an English Piper voice, so a sheet written in Catalan or Spanish makes the model translate on the fly, which costs faithfulness. Proper nouns keep their original spelling (Park Güell, trencadís, Francisco de Paula del Villar); everything else — including `technical_figures` keys, which are rendered verbatim into the prompt — is English prose. Refer to other elements by name, never by `id`: ids reach the prompt through `similarities`, which is rendered as `Related:` lines. Anything not meant for the model belongs in `_notes`, which nothing renders.
  
 ---
  

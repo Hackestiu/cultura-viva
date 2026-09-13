@@ -503,7 +503,7 @@ void drawParkMap() {
 void markVisited(uint8_t id) {
   if (id >= activeLandmarkCount()) return;
   visited[id] = true;
-  if (sagradaMap && (id == LINKED_LATERALS[0] || id == LINKED_LATERALS[1])) {
+  if (activeMapId == 1 && (id == LINKED_LATERALS[0] || id == LINKED_LATERALS[1])) {
     visited[LINKED_LATERALS[0]] = true;
     visited[LINKED_LATERALS[1]] = true;
   }

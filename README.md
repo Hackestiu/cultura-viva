@@ -17,7 +17,6 @@ picked each model in its pipeline.
 | [`benchmark/slm/`](benchmark/slm) | Evaluation of small language models (Qwen2.5, Llama 3.2, Gemma 3, SmolLM2) on a Gaudí Q&A test set, under the board's memory and latency budget. |
 | [`benchmark/stt/`](benchmark/stt) | Speech-to-text comparison — whisper.cpp, faster-whisper, Vosk, sherpa-onnx — measuring WER, latency, and real-time factor on the board. |
 | [`benchmark/tts/`](benchmark/tts) | Text-to-speech comparison across 18 ONNX voices (Piper and VITS), measuring inference time and model footprint. |
-| [`prototype/`](prototype) | The early end-to-end pipeline sketch that preceded the device app. Kept for reference. |
 
 Each folder is self-contained, with its own `README.md`, `pyproject.toml`, and
 lockfile — run `uv sync` inside the one you're working on.

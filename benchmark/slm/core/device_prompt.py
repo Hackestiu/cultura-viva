@@ -83,8 +83,22 @@ build_system_prompt = _device.build_system_prompt
 
 PERSONALITIES: tuple[str, ...] = tuple(PERSONALITY_PROMPTS)
 
+# display_name lives on ModelRegistry because it needs the loaded knowledge index.
+# The registry is constructed lazily and never loads the LLM (that is _ensure_llm,
+# called only on generate), so this is cheap here.
+_registry = None
+
+
+def display_name(element: str | None) -> str | None:
+    """The element's English name, resolved exactly as the device resolves it."""
+    global _registry
+    if _registry is None:
+        _registry = _device.ModelRegistry()
+    return _registry.display_name(element)
+
 __all__ = [
     "PERSONALITIES",
+    "display_name",
     "PERSONALITY_PROMPTS",
     "build_facts_block",
     "build_messages",

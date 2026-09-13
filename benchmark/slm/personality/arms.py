@@ -21,6 +21,7 @@ from core.device_prompt import (
     PERSONALITY_PROMPTS,
     build_messages,
     build_system_prompt,
+    display_name,
 )
 
 __all__ = ["ARMS", "resolve_arms", "messages_for", "system_prompt_for", "assert_arms_distinct"]
@@ -50,14 +51,14 @@ def system_prompt_for(arm: str, element: str | None, kg_context: str) -> str:
     """The exact system turn the device would send for this arm."""
     if arm not in PERSONALITY_PROMPTS:
         raise ValueError(f"Unknown personality {arm!r}")
-    return build_system_prompt(element, arm, kg_context)
+    return build_system_prompt(element, arm, kg_context, display_name(element))
 
 
 def messages_for(question: str, arm: str, element: str | None, kg_context: str) -> list[dict]:
     """The exact chat messages the device would send for this arm."""
     if arm not in PERSONALITY_PROMPTS:
         raise ValueError(f"Unknown personality {arm!r}")
-    return build_messages(question, element, arm, kg_context)
+    return build_messages(question, element, arm, kg_context, display_name(element))
 
 
 def assert_arms_distinct(arms: list[str], element: str | None, kg_context: str) -> None:

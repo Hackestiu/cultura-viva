@@ -697,11 +697,34 @@ simplifying and staying grounded pull against each other. On the evidence here
 this matters more than which voice delivers the answer, and it is the next item
 this benchmark should pursue.
 
-\paragraph{A separate defect found during the audit.} Three answers return the
-internal element identifier to the visitor verbatim --- ``You are seeing
-laterals\_sagrada\_familia in the photos.'' Nothing in them is factually false,
-so both the judge and the manual pass scored them supported, but they would be
-spoken aloud by Piper exactly as written.
+\paragraph{A defect found during the audit, and fixed.} Three answers returned
+the internal element identifier to the visitor verbatim --- ``You are seeing
+laterals\_sagrada\_familia in the photos.'' Vision emits Catalan snake\_case class
+labels, and \texttt{build\_facts\_block} put the label straight into the prompt, so
+the model read it as a proper name. In the worst case it invented around one:
+all three guides answered that ``Gaud\'i built the Sala Hipostila to house a
+collection of columns'', a name absent from the sheet, which calls it the
+Hypostyle Room.
+
+The sheets already carry English names and list the vision labels among their
+aliases, so the mapping existed and was simply never used.
+\texttt{ModelRegistry.display\_name} now resolves it and the prompt reads
+``[Detected element in photo: Side Aisles and Lateral Naves]''. All 18 vision
+classes across the four monuments resolve; an element with no sheet falls back to
+the de-underscored identifier.
+
+\paragraph{It is a correctness fix, not a grounding fix.} Re-running the 0.5B
+study afterwards, the judge scored 20/72 unsupported against 26/72 before. That
+looks like an improvement and is not one: paired over the same 72 questions, 16
+answers moved to supported and 10 moved the other way, an exact McNemar
+$p = 1.00$. The identifier no longer reaches the visitor, which is worth having on
+its own, but hallucination did not measurably fall.
+
+The churn is the more useful number. Sixteen verdicts flipping in each direction
+on a re-run, with $\kappa = 0.48$ between judge and hand audit, puts the noise
+floor of this measurement near $\pm 6$ answers. At $n = 72$ only effects larger
+than roughly eight percentage points are detectable at all, which is the bar any
+future grounding work has to clear before its result means anything.
 
 Regenerate any figure in this section with
 \texttt{uv run python main.py personality --model <tag>}.

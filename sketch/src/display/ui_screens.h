@@ -5,7 +5,9 @@
 #include <Adafruit_ST7735.h>
 #include "ui_assets.h"
 
-// Forward declaration of global TFT instance
+// Single global declaration of the display instance.
+// Defined once in a .cpp file (e.g. ui_manager.cpp) as:
+//   Adafruit_ST7735 tft(TFT_CS, TFT_DC, TFT_RST);
 extern Adafruit_ST7735 tft;
 
 // Color palette structure for UI rendering
@@ -86,4 +88,3 @@ void drawScreenTutorial1();
 void drawScreenTutorial2();
 void drawScreenTutorial3();
 void drawScreenPersonalitySelect();
-

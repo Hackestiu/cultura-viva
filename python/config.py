@@ -53,18 +53,64 @@ for _dir in (
 ):
     _dir.mkdir(parents=True, exist_ok=True)
 
-# Logitech Brio 105 USB microphone ALSA identifier
-MIC_DEVICE = "hw:0,0"
+# ---------------------------------------------------------------------------
+# Hardware device discovery (auto-detects camera, mic, headphone output).
+# Override any value below by setting environment variables before launching:
+#   CULTURA_CAMERA_INDEX, CULTURA_MIC_DEVICE, CULTURA_PLAYBACK_DEVICE
+# ---------------------------------------------------------------------------
 
-# Standard 3.5mm jack audio output ALSA device
-PLAYBACK_DEVICE = "plughw:0,0"
+import os as _os
+
+# Logging is configured here, before device discovery runs, so the discovery
+# decisions (which camera/mic/playback device was picked, and whether it came
+# from a real match or a fallback) land in this run's log file too.
+from logging_setup import logger, setup_logging
+
+setup_logging()
+
+try:
+    from hw.device_discovery import discover_all as _discover_all
+    _discovered = _discover_all()
+except Exception as _exc:
+    logger.exception(
+        "Device discovery failed: {}. Using hardcoded fallbacks.", _exc
+    )
+    _discovered = {}
+
+def _env_int(var: str, default) -> int:
+    v = _os.environ.get(var)
+    return int(v) if v is not None else default
+
+def _env_str(var: str, default):
+    v = _os.environ.get(var)
+    return v if v is not None else default
+
+# V4L2 camera index for /dev/videoN  (env override: CULTURA_CAMERA_INDEX)
+CAMERA_DEVICE_INDEX: int = _env_int(
+    "CULTURA_CAMERA_INDEX",
+    _discovered.get("camera") if _discovered.get("camera") is not None else 2,
+)
+
+# Microphone settings  (env override: CULTURA_MIC_DEVICE, CULTURA_MIC_RATE)
+# discover_mic_device() now returns a dict: {alsa_device, card_index, sample_rate}
+_mic_info = _discovered.get("mic") or {}
+MIC_DEVICE: str = _os.environ.get("CULTURA_MIC_DEVICE") or _mic_info.get("alsa_device", "hw:1,0")
+MIC_SAMPLE_RATE: int = _env_int("CULTURA_MIC_RATE", _mic_info.get("sample_rate", 48000))
+
+# ALSA plughw string for headphone output  (env override: CULTURA_PLAYBACK_DEVICE)
+PLAYBACK_DEVICE: str = _env_str(
+    "CULTURA_PLAYBACK_DEVICE",
+    # `or` (not .get's default): now that discovery actually runs, it returns an
+    # explicit None for "nothing found", which .get would have passed through.
+    _discovered.get("playback") or "plughw:0,0",  # fallback to card 0
+)
+
 DEFAULT_VOLUME_PERCENT = 70
 
 RECORD_CHUNK_SECONDS = 0.5
 RECORD_MAX_SECONDS = 60.0
 
-# V4L2 device index for capture on Arduino UNO Q
-CAMERA_DEVICE_INDEX = 2
+# Camera capture resolution / codec settings
 CAMERA_PHOTO_WIDTH = 1920
 CAMERA_PHOTO_HEIGHT = 1080
 CAMERA_FOURCC = "MJPG"
@@ -75,6 +121,11 @@ CAM_CHUNK_PIXELS = 72
 CAMERA_CHUNK_DELAY_S = 0.00
 CAMERA_SEND_INTERVAL = 0.01
 
+PHOTO_PREVIEW_W = 160
+PHOTO_PREVIEW_H = 86
+PHOTO_CHUNK_PIXELS = 80
+
+
 POLL_INTERVAL = 0.1
 
 STT_MODEL_PATH = (
@@ -83,7 +134,7 @@ STT_MODEL_PATH = (
     else MODELS_DIR / "stt" / "faster-whisper-base.en"
 )
 
-SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-0.5b-instruct-q4_k_m.gguf"
 KG_PATH = MODELS_DIR / "knowledge" / "element_sheets.json"
 KG_BASE_PATH = MODELS_DIR / "knowledge" / "knowledge_base.json"
 TTS_MODEL_DIR = MODELS_DIR / "tts"

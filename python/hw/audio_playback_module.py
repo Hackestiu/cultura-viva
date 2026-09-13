@@ -17,7 +17,9 @@ Uses 'aplay' (alsa-utils) and 'amixer' via subprocess for playback and volume.
 """
 
 import os
+import queue
 import subprocess
+import threading
 import time
 import wave
 from io import BytesIO
@@ -25,6 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 from config import DEFAULT_VOLUME_PERCENT, MODELS_DIR, PLAYBACK_DEVICE, RESPONSES_DIR
+from logging_setup import logger
 
 
 # Voice registry — maps voice keys to (onnx_stem, speaker_id)
@@ -48,7 +51,7 @@ _DEFAULT_TTS_MODELS_DIR = MODELS_DIR / "tts"
 # AudioPlayer
 class AudioPlayer:
     def __init__(self):
-        """Initializes playback state at the configured device and default volume, with an empty per-voice cache populated lazily on first synthesis."""
+        """Initializes playback state at the configured device and default volume, with an empty voice cache (keyed by ONNX model stem) populated on preload or first synthesis."""
         self._device = PLAYBACK_DEVICE or "default"
         self._current_volume = DEFAULT_VOLUME_PERCENT
         self._tts_models_dir = _DEFAULT_TTS_MODELS_DIR
@@ -75,9 +78,10 @@ class AudioPlayer:
             except Exception:
                 pass
 
-        print(
-            f"[OK] Volume set to: {clamped}%"
-            + ("" if success else " (software tracked)")
+        logger.success(
+            "Volume set to: {}%{}",
+            clamped,
+            "" if success else " (software tracked)",
         )
         return True
 
@@ -89,7 +93,7 @@ class AudioPlayer:
         """Plays a WAV file through ALSA's aplay. If a bridge is supplied, polls Bridge.call('get_volume') during playback so the Modulino knob can adjust volume in real time. Returns True on successful completion, and False if the file is missing, playback exceeds a 60-second safety timeout, aplay fails or isn't installed, or another playback error occurs."""
         path = Path(audio_path)
         if not path.exists():
-            print(f"[ERROR] Audio file not found: {path}")
+            logger.error("Audio file not found: {}", path)
             return False
 
         device = self._resolve_device()
@@ -107,8 +111,8 @@ class AudioPlayer:
             while proc.poll() is None:
                 if time.time() - start_time > 60:
                     proc.kill()
-                    print(
-                        f"[ERROR] aplay timed out playing {path} (>60s) -- interrupted"
+                    logger.error(
+                        "aplay timed out playing {} (>60s) -- interrupted", path
                     )
                     return False
                 if bridge is not None:
@@ -125,31 +129,39 @@ class AudioPlayer:
                 stderr = (
                     proc.stderr.read().decode(errors="replace") if proc.stderr else ""
                 )
-                print(f"[ERROR] aplay failed playing {path}: {stderr.strip()}")
+                logger.error(
+                    "aplay failed playing {}: {}", path, stderr.strip()
+                )
                 return False
 
-            print(f"[OK] Played: {path}" + (f" (device: {device})" if device else ""))
+            logger.success(
+                "Played: {}{}", path, f" (device: {device})" if device else ""
+            )
             return True
         except FileNotFoundError:
-            print("[ERROR] 'aplay' not found on system -- install alsa-utils")
+            logger.error("'aplay' not found on system -- install alsa-utils")
             return False
         except Exception as exc:
-            print(f"[ERROR] aplay error playing {path}: {exc}")
+            logger.exception("aplay error playing {}: {}", path, exc)
             return False
 
     @staticmethod
-    def save_response(audio_bytes: bytes) -> Path:
-        """Writes raw WAV bytes to a timestamped file in RESPONSES_DIR and returns the resulting path."""
+    def save_response(audio_bytes: bytes, index: int | None = None) -> Path:
+        """Writes raw WAV bytes to a timestamped file in RESPONSES_DIR and returns the
+        resulting path. An index is appended when given: a streamed answer produces one
+        file per sentence, and the timestamp alone has only second resolution, so
+        consecutive chunks would otherwise overwrite each other."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        out_file = RESPONSES_DIR / f"response_{timestamp}.wav"
+        suffix = "" if index is None else f"_{index:02d}"
+        out_file = RESPONSES_DIR / f"response_{timestamp}{suffix}.wav"
         out_file.write_bytes(audio_bytes)
-        print(f"[OK] TTS response saved to: {out_file}")
+        logger.success("TTS response saved to: {}", out_file)
         return out_file
 
     def synthesize(self, text: str, personality: str | None = None) -> Optional[Path]:
         """Synthesizes text into a WAV file using the voice assigned to the given personality ('artistic', 'technical', 'child'), falling back to the default voice if no personality is given, and writes the result into RESPONSES_DIR. Returns the output path, or None if the text is empty/whitespace or synthesis fails."""
         if not text or not text.strip():
-            print("[WARN] AudioPlayer: synthesize called with empty text — skipping.")
+            logger.warning("synthesize called with empty text — skipping.")
             return None
 
         voice_key = (
@@ -174,15 +186,13 @@ class AudioPlayer:
         if bridge is not None:
             try:
                 if not bridge.call("is_processing_active"):
-                    print(
-                        "[INFO] AudioPlayer: Generation was cancelled before playback."
-                    )
+                    logger.info("Generation was cancelled before playback.")
                     return False
                 bridge.call("set_processing_active", False)
                 bridge.call("set_playback_active", True)
             except Exception as exc:
-                print(
-                    f"[WARN] AudioPlayer: failed to set playback active on bridge: {exc}"
+                logger.warning(
+                    "Failed to set playback active on bridge: {}", exc
                 )
 
         try:
@@ -193,6 +203,22 @@ class AudioPlayer:
                     bridge.call("set_playback_active", False)
                 except Exception:
                     pass
+
+    def stream(
+        self, personality: str | None = None, bridge=None, on_first_audio=None
+    ) -> "SentenceSpeaker":
+        """Opens a speaker that synthesises and plays sentences as they are fed to it.
+
+        Use this instead of synthesize_and_play when the text arrives incrementally from
+        the SLM: playback of the first sentence starts while the rest is still decoding,
+        which is most of the wait the user actually perceives.
+
+        on_first_audio is called once, just before the first chunk starts playing, so the
+        caller can flip the UI from "generating" to "speaking" at the moment sound begins.
+        """
+        return SentenceSpeaker(
+            self, personality=personality, bridge=bridge, on_first_audio=on_first_audio
+        )
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
         """Runs Piper synthesis for the given text using the voice identified by voice_key, applying that voice's configured speaker id and prosody settings. Returns the resulting WAV bytes, or None if the voice cannot be loaded, synthesis produces no usable audio, or an error occurs."""
@@ -225,46 +251,66 @@ class AudioPlayer:
 
             wav_bytes = buf.getvalue()
             if len(wav_bytes) <= 44:
-                print(
-                    f"[ERROR] AudioPlayer: synthesis generated empty audio ({len(wav_bytes)} bytes) for voice '{voice_key}'"
+                logger.error(
+                    "Synthesis generated empty audio ({} bytes) for voice {!r}",
+                    len(wav_bytes),
+                    voice_key,
                 )
                 return None
 
-            print(
-                f"[OK] AudioPlayer: synthesised {len(wav_bytes)} bytes (voice '{voice_key}')."
+            logger.success(
+                "Synthesised {} bytes (voice {!r}).", len(wav_bytes), voice_key
             )
             return wav_bytes
         except Exception as exc:
-            print(
-                f"[ERROR] AudioPlayer: synthesis failed for voice '{voice_key}': {exc}"
+            logger.exception(
+                "Synthesis failed for voice {!r}: {}", voice_key, exc
             )
             return None
 
+    def preload(self, voice_keys=None) -> int:
+        """Eagerly loads the Piper voices so neither the first spoken response nor the first
+        press of a not-yet-used personality button stalls on a cold voice load.
+
+        Defaults to every voice in PERSONALITY_VOICE (two distinct ONNX files across the
+        three personalities). Returns the number of voices successfully loaded; synthesis
+        still falls back to loading on demand for anything that failed here.
+        """
+        if voice_keys is None:
+            voice_keys = sorted(set(PERSONALITY_VOICE.values()))
+        return sum(1 for key in voice_keys if self._load_voice(key) is not None)
+
     def _load_voice(self, voice_key: str) -> Optional[object]:
         """Returns the cached or newly loaded PiperVoice instance for voice_key, or None if the key is unrecognized, its model files are missing, or piper-tts is not installed."""
-        if voice_key in self._voices:
-            return self._voices[voice_key]
-
         entry = _VOICE_REGISTRY.get(voice_key)
         if entry is None:
-            print(
-                f"[WARN] AudioPlayer: unknown voice '{voice_key}'. Available: {', '.join(_VOICE_REGISTRY)}"
+            logger.warning(
+                "Unknown voice {!r}. Available: {}",
+                voice_key,
+                ", ".join(_VOICE_REGISTRY),
             )
             return None
 
         onnx_stem, _ = entry
+
+        # Cached per ONNX file, not per voice key: several personalities can share one
+        # multi-speaker model (spike and prudence are both en_GB-semaine-medium) and only
+        # differ by the speaker_id applied at synthesis time, so one load serves both.
+        if onnx_stem in self._voices:
+            return self._voices[onnx_stem]
+
         onnx_file = self._tts_models_dir / f"{onnx_stem}.onnx"
         json_file = self._tts_models_dir / f"{onnx_stem}.onnx.json"
 
         if not onnx_file.is_file():
-            print(
-                f"[WARN] AudioPlayer: ONNX model not found at {onnx_file}. "
-                "Download it following the instructions in models/tts/README.md. "
-                "Returning empty audio."
+            logger.warning(
+                "ONNX model not found at {}. Download it following the "
+                "instructions in models/tts/README.md. Returning empty audio.",
+                onnx_file,
             )
             return None
         if not json_file.is_file():
-            print(f"[WARN] AudioPlayer: ONNX config not found at {json_file}.")
+            logger.warning("ONNX config not found at {}.", json_file)
             return None
 
         if not hasattr(self, "_piper_available"):
@@ -273,10 +319,9 @@ class AudioPlayer:
 
                 self._piper_available = True
             except ImportError:
-                print(
-                    "[WARN] AudioPlayer: piper-tts is not installed. "
-                    "Add 'piper-tts>=1.2.0' to requirements.txt and reinstall. "
-                    "Returning empty audio."
+                logger.warning(
+                    "piper-tts is not installed. Add 'piper-tts>=1.2.0' to "
+                    "requirements.txt and reinstall. Returning empty audio."
                 )
                 self._piper_available = False
 
@@ -286,13 +331,94 @@ class AudioPlayer:
         try:
             from piper import PiperVoice  # type: ignore[import]
 
-            print(f"[OK] AudioPlayer: loading voice '{voice_key}' ...")
+            logger.info("Loading voice {!r} ...", voice_key)
             voice_obj = PiperVoice.load(str(onnx_file), str(json_file))
-            self._voices[voice_key] = voice_obj
-            print(
-                f"[OK] AudioPlayer: voice '{voice_key}' loaded ({voice_obj.config.sample_rate} Hz)."
+            self._voices[onnx_stem] = voice_obj
+            logger.success(
+                "Voice {!r} loaded ({} Hz).",
+                voice_key,
+                voice_obj.config.sample_rate,
             )
             return voice_obj
         except Exception as exc:
-            print(f"[ERROR] AudioPlayer: failed to load voice '{voice_key}': {exc}")
+            logger.exception("Failed to load voice {!r}: {}", voice_key, exc)
             return None
+
+
+class SentenceSpeaker:
+    """Plays an answer sentence by sentence while the rest of it is still being generated.
+
+    Synthesis and playback run on one background thread fed by a queue, so feed() returns
+    immediately and the SLM decode loop is never blocked waiting on Piper or aplay. Chunks
+    are spoken strictly in the order fed, which is what keeps the answer intelligible.
+
+    Created via AudioPlayer.stream(); not meant to be instantiated directly.
+    """
+
+    def __init__(self, player, personality=None, bridge=None, on_first_audio=None):
+        self._player = player
+        self._personality = personality
+        self._bridge = bridge
+        self._on_first_audio = on_first_audio
+        self._queue: "queue.Queue[Optional[str]]" = queue.Queue()
+        self._cancelled = threading.Event()
+        self._spoke_anything = False
+        self._index = 0
+        self._worker = threading.Thread(
+            target=self._run, name="tts-stream", daemon=True
+        )
+        self._worker.start()
+
+    def feed(self, sentence: str) -> None:
+        """Queues one finished sentence for synthesis and playback. Returns at once."""
+        if sentence and sentence.strip() and not self._cancelled.is_set():
+            self._queue.put(sentence.strip())
+
+    def close(self) -> bool:
+        """Signals that no more sentences are coming and waits for everything queued to
+        finish playing. Returns True if at least one chunk was actually spoken."""
+        self._queue.put(None)
+        self._worker.join()
+        return self._spoke_anything
+
+    def cancel(self) -> None:
+        """Drops anything not yet spoken. The chunk already playing finishes, which is
+        bounded by one sentence of audio."""
+        self._cancelled.set()
+        self._queue.put(None)
+
+    def _run(self) -> None:
+        while True:
+            sentence = self._queue.get()
+            if sentence is None or self._cancelled.is_set():
+                return
+            try:
+                self._speak(sentence)
+            except Exception as exc:
+                # One bad sentence must not silence the rest of the answer.
+                logger.exception("Streaming TTS failed on a sentence: {}", exc)
+
+    def _speak(self, sentence: str) -> None:
+        voice_key = (
+            PERSONALITY_VOICE.get(self._personality, DEFAULT_VOICE)
+            if self._personality
+            else DEFAULT_VOICE
+        )
+        wav_bytes = self._player._synthesize(sentence, voice_key)
+        if wav_bytes is None:
+            return
+        if self._cancelled.is_set():
+            return
+
+        out_file = self._player.save_response(wav_bytes, index=self._index)
+        self._index += 1
+
+        if not self._spoke_anything:
+            self._spoke_anything = True
+            if self._on_first_audio is not None:
+                try:
+                    self._on_first_audio()
+                except Exception as exc:
+                    logger.warning("on_first_audio callback failed: {}", exc)
+
+        self._player.play(out_file, bridge=self._bridge)

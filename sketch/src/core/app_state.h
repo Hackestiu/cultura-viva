@@ -29,9 +29,12 @@ extern bool viewSwitchDebounced;
 extern bool hasCapturedPhoto;
 extern bool photoConfirmed;
 extern bool photoWaitingConfirmation;
+extern bool highResPhotoDrawn;
 extern bool volumeOverlayVisible;
 extern unsigned long lastVolumeChangeMillis;
 const unsigned long VOLUME_OVERLAY_TIMEOUT_MS = 1500;
+
+bool is_photo_waiting_confirmation();
 
 /**
  * Assistant status overlay states for UI pill messages.
@@ -59,6 +62,12 @@ extern int8_t photoValidationState;
  * Set by Python via set_retake_message() before state 2.
  */
 extern char retakeLocationLabel[40];
+
+/**
+ * Observed monument label for the "Photo validated!" screen.
+ * Set by Python via set_detected_monument() before state 1.
+ */
+extern char detectedMonumentLabel[40];
 
 /**
  * Returns the currently selected personality index (0=Artistic, 1=Technical, 2=Child).
@@ -144,4 +153,12 @@ void set_photo_validation_state(int state);
  * @param msg Location name (e.g., "Park Guell").
  */
 void set_retake_message(String msg);
+
+/**
+ * Sets the detected monument label string for the "Photo validated!" screen.
+ * Called by Python before set_photo_validation_state(1).
+ *
+ * @param msg Monument element name (e.g., "Escalinata del Drac").
+ */
+void set_detected_monument(String msg);
 

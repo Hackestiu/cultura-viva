@@ -11,7 +11,8 @@ import re
 
 import numpy as np
 
-from config import MIC_DEVICE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
+from config import MIC_DEVICE, MIC_SAMPLE_RATE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
+from logging_setup import logger
 
 try:
     import sounddevice as sd  # type: ignore[import]
@@ -23,6 +24,9 @@ try:
 except ModuleNotFoundError:
     Microphone = None
 
+
+# Encoder window, in seconds. See transcribe().
+STT_CHUNK_LENGTH_S = 15
 
 # Gaudí domain vocabulary — used by faster-whisper to recognize terms that appear frequently in the audioguide context.
 
@@ -136,18 +140,28 @@ class MicrophoneManager:
             self._mic.start()
 
     def record_until_stopped(self, is_recording):
-        """Captures audio continuously — via sounddevice if available, otherwise via successive Microphone.record_wav() chunks — checking the is_recording predicate between chunks and stopping once it returns false or RECORD_MAX_SECONDS is reached. Returns the captured samples concatenated into a single 1D numpy array, or None if no audio backend is available, no audio was captured, or capture fails."""
+        """Captures audio continuously — via sounddevice if available, otherwise via successive
+        Microphone.record_wav() chunks — checking the is_recording predicate between chunks and
+        stopping once it returns false or RECORD_MAX_SECONDS is reached.
+
+        When sounddevice is used the stream is opened at the device's native sample rate
+        (MIC_SAMPLE_RATE) and the result is resampled to 16 kHz so that faster-whisper
+        always receives audio at its expected rate, regardless of the hardware.
+
+        Returns the captured samples as a 1D int16 numpy array at 16 kHz, or None on error.
+        """
+        TARGET_RATE = 16000
         chunks = []
         if sd is not None:
-            sample_rate = 16000
-            block_size = 1024
-            max_frames = int(RECORD_MAX_SECONDS * sample_rate)
+            capture_rate = MIC_SAMPLE_RATE
+            block_size = int(capture_rate * 0.05)   # ~50 ms blocks
+            max_frames = int(RECORD_MAX_SECONDS * capture_rate)
             frames_read = 0
 
             try:
                 with sd.InputStream(
                     device=MIC_DEVICE,
-                    samplerate=sample_rate,
+                    samplerate=capture_rate,
                     channels=1,
                     dtype="int16",
                     blocksize=block_size,
@@ -158,7 +172,7 @@ class MicrophoneManager:
                             min(block_size, max_frames - frames_read)
                         )
                         if overflowed:
-                            print("[WARN] ALSA input overflow while recording")
+                            logger.warning("ALSA input overflow while recording")
                         samples = np.asarray(chunk, dtype=np.int16).reshape(-1)
                         if len(samples) > 0:
                             chunks.append(samples.copy())
@@ -166,8 +180,67 @@ class MicrophoneManager:
                         if not is_recording():
                             break
             except Exception as exc:
-                print(f"[ERROR] Continuous microphone capture failed: {exc}")
+                logger.exception("Continuous microphone capture failed: {}", exc)
                 return None
+
+            if not chunks:
+                return None
+
+            audio = np.concatenate(chunks)
+
+            # Resample to 16 kHz if the hardware runs at a different rate
+            if capture_rate != TARGET_RATE:
+                try:
+                    import soxr  # type: ignore[import]
+                    audio_f = audio.astype(np.float32) / 32768.0
+                    resampled_f = soxr.resample(audio_f, capture_rate, TARGET_RATE)
+                    audio = (resampled_f * 32768.0).astype(np.int16)
+                    logger.success(
+                        "Resampled mic audio {} Hz -> {} Hz (soxr)",
+                        capture_rate,
+                        TARGET_RATE,
+                    )
+                except ImportError:
+                    # soxr not available — try scipy
+                    try:
+                        from scipy.signal import resample_poly  # type: ignore[import]
+                        import math as _math
+                        g = _math.gcd(capture_rate, TARGET_RATE)
+                        audio_f = audio.astype(np.float32)
+                        audio_f = resample_poly(audio_f, TARGET_RATE // g, capture_rate // g)
+                        audio = np.clip(audio_f, -32768, 32767).astype(np.int16)
+                        logger.success(
+                            "Resampled mic audio {} Hz -> {} Hz (scipy)",
+                            capture_rate,
+                            TARGET_RATE,
+                        )
+                    except ImportError:
+                        # Last resort: integer decimation with a simple anti-alias FIR
+                        # Works correctly when capture_rate is an exact integer multiple of TARGET_RATE
+                        # (e.g. 48000 / 16000 = 3).  For other ratios it still works but is
+                        # less accurate — good enough for speech recognition.
+                        import math as _math
+                        ratio = capture_rate / TARGET_RATE
+                        if ratio == int(ratio):
+                            n = int(ratio)
+                            # Simple n-tap moving-average anti-alias filter before decimation
+                            kernel = np.ones(n, dtype=np.float32) / n
+                            audio_f = np.convolve(audio.astype(np.float32), kernel, mode="same")
+                            audio = audio_f[::n].astype(np.int16)
+                        else:
+                            # Non-integer ratio: use numpy linear interpolation (crude but functional)
+                            old_len = len(audio)
+                            new_len = int(old_len * TARGET_RATE / capture_rate)
+                            x_old = np.arange(old_len)
+                            x_new = np.linspace(0, old_len - 1, new_len)
+                            audio = np.interp(x_new, x_old, audio.astype(np.float32)).astype(np.int16)
+                        logger.success(
+                            "Resampled mic audio {} Hz -> {} Hz (numpy fallback)",
+                            capture_rate,
+                            TARGET_RATE,
+                        )
+            return audio
+
         elif self._mic is not None:
             elapsed = 0.0
             while elapsed < RECORD_MAX_SECONDS:
@@ -196,8 +269,13 @@ class MicrophoneManager:
         min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
         max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
         mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
-        print(
-            f"[DEBUG MIC] dtype={audio.dtype}, length={len(audio)}, min={min_v:.2f}, max={max_v:.2f}, mean={mean_v:.2f}"
+        logger.debug(
+            "Mic buffer: dtype={}, length={}, min={:.2f}, max={:.2f}, mean={:.2f}",
+            audio.dtype,
+            len(audio),
+            min_v,
+            max_v,
+            mean_v,
         )
 
         # Handle various audio formats
@@ -217,44 +295,80 @@ class MicrophoneManager:
             wf.setsampwidth(2)  # 16-bit = 2 bytes
             wf.setframerate(16000)  # Microphone.RATE_16K
             wf.writeframes(samples.tobytes())
-        print(
-            f"[OK] Audio saved to: {out_file} (button {button_id}, model '{model_name}', max amplitude: {max_sample}/32767, duration: {len(samples)/16000:.1f}s)"
+        logger.success(
+            "Audio saved to: {} (button {}, model {!r}, max amplitude: {}/32767, "
+            "duration: {:.1f}s)",
+            out_file,
+            button_id,
+            model_name,
+            max_sample,
+            len(samples) / 16000,
         )
         return out_file
+
+    def _ensure_whisper(self):
+        """Loads and caches the WhisperModel on first call, returning it (or None if the
+        model directory is missing or faster-whisper is not installed). Subsequent calls
+        are a no-op, so this is safe to call from both preload() and transcribe()."""
+        if hasattr(self, "_whisper"):
+            return self._whisper
+
+        from config import STT_MODEL_PATH
+
+        if not STT_MODEL_PATH.exists():
+            logger.warning(
+                "faster-whisper model not found at {}. Download it following the "
+                "instructions in models/stt/README.md.",
+                STT_MODEL_PATH,
+            )
+            self._whisper = None
+            return None
+
+        try:
+            from faster_whisper import WhisperModel  # type: ignore[import]
+
+            # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
+            self._whisper = WhisperModel(
+                str(STT_MODEL_PATH),
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=4,
+            )
+            logger.success(
+                "faster-whisper model loaded: {}", STT_MODEL_PATH.name
+            )
+        except ImportError:
+            logger.warning(
+                "faster-whisper is not installed. Add 'faster-whisper>=1.0.0' to "
+                "requirements.txt and reinstall. Returning empty transcription string."
+            )
+            self._whisper = None
+        except Exception as exc:
+            logger.exception("Could not load faster-whisper model: {}", exc)
+            self._whisper = None
+
+        return self._whisper
+
+    def preload(self) -> bool:
+        """Eagerly loads the STT weights so the first transcription does not pay the
+        cold-start cost. Returns True if the model is ready. Safe to call more than once;
+        transcribe() still loads on demand if this was never called or failed."""
+        return self._ensure_whisper() is not None
 
     def transcribe(self, audio_path) -> str:
         """Transcribes a WAV file to text with faster-whisper, biasing recognition toward Gaudí domain vocabulary via an initial prompt and hotwords, and canonicalizing known misspellings in the result. Lazily loads the WhisperModel on first call. Returns the transcribed text, or an empty string if the model file is missing, faster-whisper isn't installed, or transcription fails."""
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
-            print(
-                f"[WARN] faster-whisper model not found at {STT_MODEL_PATH}. "
-                "Download it following the instructions in models/stt/README.md. "
-                "Returning empty transcription string."
+            logger.warning(
+                "faster-whisper model not found at {}. Download it following the "
+                "instructions in models/stt/README.md. Returning empty "
+                "transcription string.",
+                STT_MODEL_PATH,
             )
             return ""
 
-        if not hasattr(self, "_whisper"):
-            try:
-                from faster_whisper import WhisperModel  # type: ignore[import]
-
-                # int8 quantization + 4 threads: benchmark-validated for Cortex-A53 (UNO Q)
-                self._whisper = WhisperModel(
-                    str(STT_MODEL_PATH),
-                    device="cpu",
-                    compute_type="int8",
-                    cpu_threads=4,
-                )
-                print(f"[OK] faster-whisper model loaded: {STT_MODEL_PATH.name}")
-            except ImportError:
-                print(
-                    "[WARN] faster-whisper is not installed. "
-                    "Add 'faster-whisper>=1.0.0' to requirements.txt and reinstall. "
-                    "Returning empty transcription string."
-                )
-                self._whisper = None
-
-        if self._whisper is None:
+        if self._ensure_whisper() is None:
             return ""
 
         try:
@@ -268,11 +382,25 @@ class MicrophoneManager:
                 condition_on_previous_text=False,
                 initial_prompt=DOMAIN_PROMPT,
                 hotwords=build_hotwords(),
+                # Whisper pads every window to chunk_length seconds before the
+                # encoder runs, so a 4 s question otherwise costs the same as a
+                # 30 s one. Halving the window halves the encoder input
+                # (3000 -> 1500 mel frames). Questions longer than 15 s are not
+                # truncated -- they are processed as successive windows.
+                chunk_length=STT_CHUNK_LENGTH_S,
+                # Timestamp tokens are interleaved with text tokens and then
+                # discarded below, so decoding them is wasted work.
+                without_timestamps=True,
             )
             raw_text = " ".join(s.text for s in segments).strip()
             text = canonicalize_domain_entities(raw_text)
-            print(f"[OK] Transcription: '{text[:80]}{'...' if len(text) > 80 else ''}'")
+            logger.success(
+                "Transcription: {!r}",
+                text[:80] + ("..." if len(text) > 80 else ""),
+            )
             return text
         except Exception as exc:
-            print(f"[ERROR] faster-whisper failed transcribing {audio_path}: {exc}")
+            logger.exception(
+                "faster-whisper failed transcribing {}: {}", audio_path, exc
+            )
             return ""

@@ -119,6 +119,7 @@ void updateControls() {
         if (hasCapturedPhoto) {
           photoConfirmed = true;
           photoWaitingConfirmation = false;
+          highResPhotoDrawn = false;
           Monitor.println("[EVENT] Photo CONFIRMED via switch -> Map mode unlocked for audio!");
           buzzer.tone(1600, 80);
           delay(90);
@@ -126,6 +127,7 @@ void updateControls() {
         }
       } else {
         photoWaitingConfirmation = false;
+        highResPhotoDrawn = false;
       }
 
       if (currentUiState == UI_ACTIVE) {
@@ -143,6 +145,11 @@ void updateControls() {
     buzzer.tone(700, 120);
     Monitor.println("[EVENT] Button D7 pressed -> CANCELLED answer generation!");
     drawCurrentView();
+  } else if (mapCompletionCelebrationActive && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
+    // Dismiss map completion celebration on button press
+    mapCompletionCelebrationActive = false;
+    buzzer.tone(1500, 50);
+    drawCurrentView();
   } else if (!processingActive && !playbackActive && photoValidationState == -1 && extBtnPressed && !lastExtBtnState && currentUiState == UI_ACTIVE) {
     if (recordingActive) {
       recordingActive = false;
@@ -153,6 +160,7 @@ void updateControls() {
         hasCapturedPhoto = false;
         photoConfirmed = false;
         photoWaitingConfirmation = false;
+        highResPhotoDrawn = false;
         Monitor.println("[EVENT] Button D7 pressed -> photo rejected, returning to live camera");
         buzzer.tone(700, 100);
         drawCameraViewPlaceholder();
@@ -193,8 +201,9 @@ void updateControls() {
   if (newCameraFrameFlag) {
     newCameraFrameFlag = false;
     if (viewSwitchOn && currentUiState == UI_ACTIVE) {
-      drawCameraFrame();
-      if (photoWaitingConfirmation) {
+      if (!photoWaitingConfirmation) {
+        drawCameraFrame();
+      } else {
         drawPhotoConfirmationOverlay();
       }
       UiOverlayType overlay = getCurrentOverlayType();
@@ -292,6 +301,11 @@ void updateControls() {
       drawCurrentView();
     }
   } else if (currentUiState == UI_ACTIVE) {
+    if (mapCompletionCelebrationActive && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
+      mapCompletionCelebrationActive = false;
+      buzzer.tone(1500, 50);
+      drawCurrentView();
+    }
     if (!recordingActive && !processingActive && !playbackActive
         && (btnAPressedEdge || btnBPressedEdge || btnCPressedEdge)) {
       personalityIndex = btnAPressedEdge ? 0 : (btnBPressedEdge ? 1 : 2);
@@ -310,7 +324,10 @@ void updateControls() {
   } else if (currentUiState == UI_VOICE_SELECT) {
     ledA = true; ledB = true; ledC = true;
   } else if (currentUiState == UI_ACTIVE) {
-    if (recordingActive || processingActive || playbackActive) {
+    if (mapCompletionCelebrationActive) {
+      bool blink = ((millis() / 150) % 2) == 0;
+      ledA = blink; ledB = blink; ledC = blink;
+    } else if (recordingActive || processingActive || playbackActive) {
       bool blink = ((millis() / 300) % 2) == 0;
       ledA = blink; ledB = blink; ledC = blink;
     } else {
@@ -375,6 +392,16 @@ void updateControls() {
     }
   }
 
+  // Auto-hide map completion celebration overlay after timeout and restore map
+  if (mapCompletionCelebrationActive) {
+    if (millis() - mapCompletionCelebrationStart >= MAP_COMPLETION_HOLD_MS) {
+      mapCompletionCelebrationActive = false;
+      if (!viewSwitchDebounced && currentUiState == UI_ACTIVE) {
+        drawParkMap();
+      }
+    }
+  }
+
   // Assistant overlay handling (Recording / Generating / Speaking with animated dots)
   static UiOverlayType lastOverlayType = UI_OVERLAY_NONE;
   static unsigned long lastOverlayAnimMillis = 0;
@@ -419,13 +446,14 @@ void updateControls() {
       Monitor.println("[EVENT] Vision: Scanning photo...");
 
     } else if (photoValidationState == 1) {
-      // Valid monument: draw success screen and start hold timer
-      drawVisionValidScreen();
+      // Valid monument: draw success screen showing detected monument and start hold timer
+      drawVisionValidScreen(detectedMonumentLabel);
       buzzer.tone(1800, 80);
       delay(90);
       buzzer.tone(2200, 120);
       validationHoldStart = millis();
-      Monitor.println("[EVENT] Vision: Photo validated!");
+      Monitor.print("[EVENT] Vision: Photo validated! Element: ");
+      Monitor.println(detectedMonumentLabel);
 
     } else if (photoValidationState == 2) {
       // Invalid: draw retake screen and start hold timer
@@ -451,14 +479,15 @@ void updateControls() {
     }
   }
 
-  // Auto-advance from state 1 (valid) after hold period -> show photo confirmation
+  // Auto-advance from state 1 (valid) after hold period.
+  // The actual screen transition is handled atomically in receive_photo_chunk()
+  // on the first chunk. This timer guards against the edge case where chunks are not received.
   if (photoValidationState == 1 && (millis() - validationHoldStart >= 5000)) {
     photoValidationState = -1;
     lastPhotoValidationState = -1;
     hasCapturedPhoto = true;
     photoWaitingConfirmation = true;
-    if (viewSwitchOn && currentUiState == UI_ACTIVE) {
-      drawCameraFrame();
+    if (viewSwitchOn && currentUiState == UI_ACTIVE && !highResPhotoDrawn) {
       drawPhotoConfirmationOverlay();
     }
     buzzer.tone(2000, 100);

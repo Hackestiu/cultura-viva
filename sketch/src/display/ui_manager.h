@@ -4,8 +4,6 @@
 #include "ui_screens.h"
 #include "../core/app_state.h"
 
-extern Adafruit_ST7735 tft;
-
 /**
  * Initializes ST7735S display hardware, pin modes, and backlight.
  */
@@ -38,5 +36,3 @@ void drawGeneratingAnswerOverlay(uint8_t dotCount = 0, bool fullRedraw = true);
  * Renders a discreet vertical volume bar on the right edge of the screen (0-100%).
  */
 void drawVolumeBar(int16_t volume);
-
-

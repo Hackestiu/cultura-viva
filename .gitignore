@@ -24,6 +24,7 @@ Thumbs.db
 python/data/photos/*.jpg
 python/data/recordings/*.wav
 python/data/responses/*.wav
+python/data/logs/*.log
 !python/data/photos/.gitkeep
 !python/data/recordings/.gitkeep
 !python/data/responses/.gitkeep
@@ -34,4 +35,6 @@ python/data/responses/*.wav
 *.gguf
 *.bin
 *.pt
-*.pth
+*.pth.cache/
+.cache/
+python/lib/

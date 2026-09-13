@@ -4,12 +4,17 @@
 #include "landmarks_sagrada.h"
 #include "ui_manager.h"
 #include "../core/app_state.h"
+#include "../input/controls.h"
 
 bool visited[NUM_LANDMARKS] = { false };
 int8_t lastVisitedId = -1;
 bool hasLocation = false;
 int16_t locX = 0, locY = 0;
 static bool sagradaMap = true;
+
+bool mapCompletionCelebrationActive = false;
+unsigned long mapCompletionCelebrationStart = 0;
+static bool mapCompletionNotified = false;
 
 static uint16_t C_VOID[2], C_BLOCK[2], C_BLOCKD[2], C_FORESTDD[2], C_FOREST[2], C_FORESTL[2],
                 C_SCRUB[2], C_SCRUBL[2], C_PATH[2], C_PATHD[2], C_SAND[2], C_SANDD[2],
@@ -246,32 +251,114 @@ static void drawLocationMarker() {
   tft.drawCircle(locX, locY, 5, C_LOCATION);
 }
 
+uint8_t getActiveLandmarkTotal() {
+  return activeLandmarkCount();
+}
+
+uint8_t getVisitedLandmarkCount() {
+  uint8_t count = 0;
+  uint8_t total = activeLandmarkCount();
+  for (uint8_t i = 0; i < total; i++) {
+    if (visited[i]) count++;
+  }
+  return count;
+}
+
+bool isMapCompleted() {
+  uint8_t total = activeLandmarkCount();
+  if (total == 0) return false;
+  for (uint8_t i = 0; i < total; i++) {
+    if (!visited[i]) return false;
+  }
+  return true;
+}
+
+void drawMapCompletedOverlay() {
+  const int16_t x = 8;
+  const int16_t y = 14;
+  const int16_t w = 144;
+  const int16_t h = 88;
+
+  // Solid dark container
+  tft.fillRoundRect(x, y, w, h, 6, 0x0000);
+  // Double gold accent border
+  tft.drawRoundRect(x, y, w, h, 6, 0xFFE0);
+  tft.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 5, 0xFFE0);
+
+  // Top banner (gold background, dark text)
+  tft.fillRoundRect(x + 4, y + 4, w - 8, 16, 3, 0xFFE0);
+  tft.setTextSize(1);
+  tft.setTextColor(0x0000); // Black text
+  tft.setCursor(x + 14, y + 8);
+  tft.print(F("MAPA COMPLETAT!"));
+
+  // Subtitle / congratulations
+  tft.setTextColor(0xFFFF); // White
+  tft.setCursor(x + 38, y + 26);
+  tft.print(F("Enhorabona!"));
+
+  // Message body
+  tft.setTextColor(tft.color565(255, 215, 60)); // Warm gold
+  tft.setCursor(x + 12, y + 40);
+  tft.print(F("Has visitat tots els"));
+  tft.setCursor(x + 20, y + 51);
+  tft.print(F("punts del mapa!"));
+
+  // Badge capsule at the bottom
+  uint8_t count = getVisitedLandmarkCount();
+  uint8_t total = getActiveLandmarkTotal();
+  tft.fillRoundRect(x + 16, y + 66, w - 32, 14, 3, tft.color565(20, 60, 30));
+  tft.drawRoundRect(x + 16, y + 66, w - 32, 14, 3, 0x07E0);
+  tft.setTextColor(0x07E0); // Bright green
+  tft.setCursor(x + 22, y + 69);
+  tft.print(F("[ "));
+  tft.print(count);
+  tft.print(F("/"));
+  tft.print(total);
+  tft.print(F(" Descoberts ]"));
+}
+
 static void drawMinimapStatusBar() {
   tft.fillRect(0, 112, 160, 16, C_INK);
   tft.drawFastHLine(0, 112, 160, C_BLOCKD[0]);
 
-  uint8_t count = 0;
+  uint8_t count = getVisitedLandmarkCount();
+  uint8_t total = getActiveLandmarkTotal();
   const Landmark* landmarks = activeLandmarks();
-  uint8_t landmarkCount = activeLandmarkCount();
-  for (uint8_t i = 0; i < landmarkCount; i++) if (visited[i]) count++;
 
-  tft.fillRect(3, 115, 11, 11, C_RING);
-  tft.setTextSize(1);
-  tft.setTextColor(C_INK);
-  tft.setCursor(count < 10 ? 6 : 4, 118);
-  tft.print(count);
+  bool completed = (count >= total && total > 0);
 
-  const char* label;
-  if (hasLocation) {
-    label = landmarks[nearestLandmarkId(locX, locY)].screen;
-  } else if (lastVisitedId >= 0) {
-    label = landmarks[lastVisitedId].screen;
+  if (completed) {
+    // Golden celebration badge for counter
+    tft.fillRect(3, 115, 11, 11, 0xFFE0);
+    tft.setTextSize(1);
+    tft.setTextColor(0x0000); // Black text on gold
+    tft.setCursor(count < 10 ? 6 : 4, 118);
+    tft.print(count);
+
+    // Celebration status text
+    tft.setTextColor(0xFFE0);
+    tft.setCursor(19, 118);
+    tft.print(F("MAPA COMPLETAT!"));
   } else {
-    label = sagradaMap ? "SAGRADA FAMILIA" : "PARK GUELL";
+    tft.fillRect(3, 115, 11, 11, C_RING);
+    tft.setTextSize(1);
+    tft.setTextColor(C_INK);
+    tft.setCursor(count < 10 ? 6 : 4, 118);
+    tft.print(count);
+
+    const char* label;
+    if (hasLocation) {
+      label = landmarks[nearestLandmarkId(locX, locY)].screen;
+    } else if (lastVisitedId >= 0) {
+      label = landmarks[lastVisitedId].screen;
+    } else {
+      label = sagradaMap ? "SAGRADA FAMILIA" : "PARK GUELL";
+    }
+    tft.setTextColor(C_RING);
+    tft.setCursor(19, 118);
+    tft.print(label);
   }
-  tft.setTextColor(C_RING);
-  tft.setCursor(19, 118);
-  tft.print(label);
 }
 
 void drawParkMap() {
@@ -283,12 +370,29 @@ void drawParkMap() {
   }
   drawLocationMarker();
   drawMinimapStatusBar();
+  if (mapCompletionCelebrationActive) {
+    drawMapCompletedOverlay();
+  }
 }
 
 void markVisited(uint8_t id) {
-  if (id >= NUM_LANDMARKS) return;
+  if (id >= activeLandmarkCount()) return;
   visited[id] = true;
   lastVisitedId = id;
+
+  bool wasCompleted = isMapCompleted();
+  if (wasCompleted && !mapCompletionNotified) {
+    mapCompletionNotified = true;
+    mapCompletionCelebrationActive = true;
+    mapCompletionCelebrationStart = millis();
+
+    // Celebratory victory fanfare on Modulino Buzzer
+    buzzer.tone(1318, 90); delay(95);
+    buzzer.tone(1567, 90); delay(95);
+    buzzer.tone(2093, 110); delay(115);
+    buzzer.tone(2637, 250);
+  }
+
   if (!viewSwitchDebounced) {
     drawParkMap();
     UiOverlayType overlay = getCurrentOverlayType();
@@ -321,6 +425,8 @@ void resetMinimapState() {
   for (uint8_t i = 0; i < NUM_LANDMARKS; i++) visited[i] = false;
   lastVisitedId = -1;
   hasLocation = false;
+  mapCompletionNotified = false;
+  mapCompletionCelebrationActive = false;
   if (!viewSwitchDebounced) {
     drawParkMap();
     UiOverlayType overlay = getCurrentOverlayType();
@@ -338,6 +444,8 @@ bool set_minimap_location(int location) {
   bool nextSagradaMap = location == 1;
   if (nextSagradaMap == sagradaMap) return true;
   sagradaMap = nextSagradaMap;
+  mapCompletionNotified = false;
+  mapCompletionCelebrationActive = false;
   initMinimapColors();
   resetMinimapState();
   return true;
@@ -363,4 +471,8 @@ bool set_location_xy(int x, int y) {
 bool reset_minimap() {
   resetMinimapState();
   return true;
+}
+
+bool is_map_completed() {
+  return isMapCompleted();
 }

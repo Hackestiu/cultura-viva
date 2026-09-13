@@ -1,9 +1,9 @@
 # Cultura Viva — Arduino UNO Q
 
-Interactive, bilingual multimodal AI audio guide for Park Güell and the Sagrada Família. Visitors capture a photo of a Gaudí architectural element, review the shot, ask a question aloud, and receive an instant spoken answer tailored to their chosen guide personality (Artistic, Technical, or Child).
+Interactive multimodal AI audio guide for Park Güell and the Sagrada Família. Visitors capture a photo of a Gaudí architectural element, review the shot, ask a question aloud, and receive an instant spoken answer tailored to their chosen guide personality (Artistic, Technical, or Child).
 
 The system runs on the **Arduino UNO Q** dual-processor architecture:
-- **STM32 Microcontroller (MCU)**: Runs the real-time C++ Arduino sketch controlling the ST7735S LCD display, physical inputs (buttons, switches, rotary encoder), buzzer feedback, GPS ingestion, and minimap rendering.
+- **STM32 Microcontroller (MCU)**: Runs the real-time C++ Arduino sketch controlling the ST7735S LCD display, physical inputs (buttons, switch, rotary knob), buzzer feedback, GPS ingestion, and minimap rendering.
 - **Qualcomm QRB2210 Linux Processor (MPU)**: Runs the Python AI pipeline orchestrating computer vision (ONNX), speech-to-text (faster-whisper), knowledge graph retrieval, small language model reasoning (Qwen2.5 via llama-cpp-python), and speech synthesis (Piper TTS).
 
 Communication between the MCU and MPU occurs over high-speed **Arduino Bridge RPC**.
@@ -43,8 +43,8 @@ cultura-viva-uno-q/
 │       │   ├── config.h         ← Pin assignments, baud rates, and timing limits
 │       │   └── rpc_manager.h/.cpp ← Bridge RPC method registrations
 │       ├── display/
-│       │   ├── camera_view.h/.cpp ← Chunked frame renderer, review overlay & validation
-│       │   ├── minimap.h/.cpp   ← 40×28 tilemap rendering, landmark pins & location marker
+│       │   ├── camera_view.h/.cpp ← Frame renderer, review overlay & validation screens
+│       │   ├── minimap.h/.cpp   ← 40×28 tilemap rendering, landmark pins & user marker
 │       │   ├── ui_manager.h/.cpp ← UI state machine, status overlay pills & volume bar
 │       │   ├── ui_screens.h     ← UI layout primitives, navigation headers and cards
 │       │   ├── ui_assets.h      ← Onboarding and tutorial RGB565 bitmaps
@@ -60,20 +60,23 @@ cultura-viva-uno-q/
 └── python/                      ← Python AI Pipeline (Qualcomm Linux MPU)
     ├── main.py                  ← Central orchestration loop (App.run)
     ├── config.py                ← Central paths, devices, thresholds, and audio parameters
+    ├── benchmark.py             ← Per-stage latency benchmark utility
+    ├── logging_setup.py         ← Centralized logger configuration
     ├── requirements.txt         ← Core Python dependencies
     ├── core/
     │   ├── model_module.py      ← Prompt construction, Knowledge Graph loader & local SLM
     │   ├── vision_module.py     ← ONNX classifier for Gaudí architectural elements
     │   └── minimap_module.py    ← Landmark visit and marker updates via Bridge RPC
     ├── hw/
+    │   ├── device_discovery.py  ← Auto-detection of camera, microphone, and playback ALSA paths
     │   ├── camera_module.py     ← 1080p capture and base64 live-view thumbnail streaming
     │   ├── microphone_module.py ← Chunked audio recording and faster-whisper STT
-    │   ├── audio_playback_module.py ← Piper TTS synthesis and ALSA playback with live volume
+    │   ├── audio_playback_module.py ← Piper TTS streaming and ALSA playback with live volume
     │   └── location_module.py   ← GPS coordinate ingestion and Haversine site resolution
     ├── minimapa/                ← JSON coordinate datasets for minimap landmarks
     └── models/                  ← AI model weights and knowledge graph (downloaded separately)
         ├── knowledge/           ← Gaudí fact sheets (element_sheets.json, knowledge_base.json)
-        ├── slm/                 ← Quantized GGUF language model (Qwen2.5 1.5B Instruct)
+        ├── slm/                 ← Quantized GGUF language model (Qwen2.5 1.5B / 0.5B Instruct)
         ├── stt/                 ← faster-whisper speech recognition model
         ├── tts/                 ← Piper voice ONNX models and configs
         └── vision/              ← ONNX classification models for Park Güell & Sagrada Família
@@ -112,13 +115,15 @@ cultura-viva-uno-q/
 +-----------------------------------------------------------------------------------+
 | 4. QUESTION & SPEECH REASONING (Switch D6 OFF - Map Mode)                         |
 |    - Press Button D7 -> Starts audio recording (Red overlay pill).                |
+|    - Background SLM prefill: Stable prompt prefix (monument facts + personality)  |
+|      is prefilled into KV-cache while the user is still speaking.                 |
 |    - Press Button D7 again -> Stops recording. AI pipeline executes:              |
-|        1. Speech-to-Text (faster-whisper) transcribes spoken question.            |
-|        2. Vision Classifier (ONNX) identifies specific architectural element.     |
-|        3. Knowledge Graph retrieves grounded facts for site + element.            |
-|        4. Small Language Model (Qwen2.5 1.5B via llama-cpp) generates response.   |
-|        5. Text-to-Speech (Piper) synthesizes spoken audio.                        |
-|        6. Audio Player plays output through headphones; volume adjustable via Knob.|
+|        1. Speech-to-Text (faster-whisper) transcribes audio question.             |
+|        2. Vision Classifier (ONNX) confirms architectural element.                |
+|        3. Knowledge Graph provides grounded context.                              |
+|        4. Small Language Model (Qwen2.5 via llama-cpp) completes decoding.        |
+|        5. Text-to-Speech (Piper) synthesizes sentences in a streaming pipeline.   |
+|        6. Audio Player plays output sentence-by-sentence with live volume knob.   |
 |    - Landmark visited is marked on the interactive LCD minimap.                   |
 |    - Pressing Button D7 during processing immediately cancels generation.         |
 +-----------------------------------------------------------------------------------+
@@ -156,6 +161,29 @@ The STM32 MCU registers RPC endpoints via `Bridge.provide(...)`, called by Pytho
 | `reset_minimap()` | `bool` | Clears all visited landmarks and resets user position marker. |
 | `set_photo_validation_state(s)` | `void` | Sets vision state: 0 = scanning, 1 = valid, 2 = invalid, -1 = idle. |
 | `set_retake_message(msg)` | `void` | Sets the location name string displayed on the retake screen. |
+| `set_detected_monument(msg)` | `void` | Sets the recognized element name displayed on the validation screen. |
+
+---
+
+## Performance Benchmark
+
+The audio guide pipeline runs entirely on four ARM Cortex-A53 cores on the Qualcomm QRB2210 MPU. To measure latency across individual stages without launching the full interactive application, use `python/benchmark.py`:
+
+```bash
+cd cultura-viva-uno-q/python
+python3 benchmark.py --json results.json
+```
+
+| Parameter | Purpose |
+|---|---|
+| `--reps N` | Number of repetitions per stage (default 3; median reported) |
+| `--stage {vision,stt,slm,tts}` | Benchmark an isolated stage |
+| `--photo PATH` / `--audio PATH` | Provide specific test fixtures |
+| `--json PATH` | Export benchmark metrics to a JSON file |
+
+### Latency Optimization Mechanisms
+1. **Asynchronous Prefill Overlap**: Once a photo is confirmed, the static prompt prefix (system instructions + monument facts) is prefilled into the SLM KV-cache on a background thread while the visitor speaks. When recording ends, only the new user question requires prefill.
+2. **Sentence-Level Streaming to TTS**: Instead of waiting for the full SLM generation to finish (60+ tokens), tokens are emitted sentence-by-sentence. Piper synthesizes audio for sentence $N$ while the SLM decodes sentence $N+1$, minimizing time-to-first-audio.
 
 ---
 
@@ -170,9 +198,9 @@ The STM32 MCU registers RPC endpoints via `Bridge.provide(...)`, called by Pytho
 - Connect the Logitech Brio 105 USB webcam to the USB-A port and plug headphones into the 3.5mm jack.
 
 ### 2. Flash the Microcontroller Sketch
-1. Open Arduino Lab for MicroPython or the Arduino IDE.
+1. Open Arduino Lab or the Arduino IDE.
 2. Select target board **Arduino UNO Q** (profile: `arduino:zephyr:unoq`).
-3. Open `sketch/sketch.ino` and flash it to the board.
+3. Open `sketch/sketch.ino` and upload it to the board.
 
 ### 3. Install Python Dependencies
 On the Arduino UNO Q Linux MPU:
@@ -181,13 +209,13 @@ cd cultura-viva-uno-q/python
 pip install -r requirements.txt
 ```
 
-*Required external packages on aarch64*: `onnxruntime`, `faster-whisper`, `llama-cpp-python`, `piper-tts`, `sounddevice`, `numpy`, `pillow`.
+*Required packages on aarch64*: `onnxruntime`, `faster-whisper`, `llama-cpp-python`, `piper-tts`, `sounddevice`, `numpy`, `pillow`, `loguru`.
 
 ### 4. Download Model Weights
 Place the required model files into their respective folders under `python/models/`:
 - **Speech-to-Text**: `python/models/stt/faster-whisper-base.en`
 - **Language Model**: `python/models/slm/qwen2.5-1.5b-instruct-q4_k_m.gguf`
-- **Text-to-Speech**: Piper `.onnx` and `.onnx.json` files in `python/models/tts/`
+- **Text-to-Speech**: Piper `.onnx` and `.onnx.json` voice models in `python/models/tts/`:
   - `en_US-libritts_r-medium.onnx`
   - `en_GB-semaine-medium.onnx`
 - **Vision Models**: ONNX models and labels in `python/models/vision/park_guell/` and `python/models/vision/sagrada_familia/`

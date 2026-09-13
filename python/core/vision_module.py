@@ -22,6 +22,11 @@ from pathlib import Path
 
 import numpy as np
 
+try:
+    from logging_setup import logger
+except ImportError:  # module used standalone, without the app root on sys.path
+    from loguru import logger
+
 
 try:
     from config import (
@@ -100,7 +105,7 @@ class VisionClassifier:
 
         path = Path(photo_path)
         if not path.exists():
-            print(f"[WARN] vision_module: photo not found: {path}")
+            logger.warning("Photo not found: {}", path)
             return None
 
         session_meta = self._load_session(location)
@@ -110,6 +115,16 @@ class VisionClassifier:
         session, meta = session_meta
         return self._run_inference(session, meta, path, location)
 
+    def preload(self, location: str) -> bool:
+        """Eagerly loads the ONNX session for one site so the first photo does not pay the
+        onnxruntime import plus session-creation cost.
+
+        Only the given site is loaded — the device is realistically at one monument per
+        session, and the other site's model still loads on demand if the location changes.
+        Returns True if the session is ready.
+        """
+        return self._load_session(location) is not None
+
     def _load_session(self, location: str):
         """Retrieves the cached ONNX InferenceSession and label metadata for a site, loading and caching them on first request. Returns None (and caches that outcome) if the location is unrecognized or its model files are missing or fail to load."""
         if location in self._sessions:
@@ -117,9 +132,7 @@ class VisionClassifier:
 
         model_dir = LOCATION_MODEL_DIRS.get(location)
         if model_dir is None:
-            print(
-                f"[WARN] vision_module: unknown location '{location}'. Returning None."
-            )
+            logger.warning("Unknown location {!r}. Returning None.", location)
             self._sessions[location] = None
             return None
 
@@ -127,17 +140,17 @@ class VisionClassifier:
         labels_path = model_dir / "labels.json"
 
         if not onnx_path.exists():
-            print(
-                f"[WARN] vision_module: ONNX model not found at {onnx_path}. "
-                "Ensure model.onnx and labels.json are in the model folder. Returning None."
+            logger.warning(
+                "ONNX model not found at {}. Ensure model.onnx and labels.json are "
+                "in the model folder. Returning None.",
+                onnx_path,
             )
             self._sessions[location] = None
             return None
 
         if not labels_path.exists():
-            print(
-                f"[WARN] vision_module: labels.json not found at {labels_path}. "
-                "Returning None."
+            logger.warning(
+                "labels.json not found at {}. Returning None.", labels_path
             )
             self._sessions[location] = None
             return None
@@ -153,20 +166,20 @@ class VisionClassifier:
                 providers=["CPUExecutionProvider"],
             )
             self._sessions[location] = (session, meta)
-            print(
-                f"[OK] vision_module: ONNX model loaded for '{location}' from {model_dir}"
+            logger.success(
+                "ONNX model loaded for {!r} from {}", location, model_dir
             )
             return self._sessions[location]
 
         except ImportError:
-            print(
-                "[WARN] vision_module: 'onnxruntime' is not installed. "
-                "Run: pip install onnxruntime pillow numpy. Returning None."
+            logger.warning(
+                "'onnxruntime' is not installed. Run: pip install onnxruntime "
+                "pillow numpy. Returning None."
             )
             self._sessions[location] = None
             return None
         except Exception as exc:
-            print(f"[ERROR] vision_module: error loading model for '{location}': {exc}")
+            logger.exception("Error loading model for {!r}: {}", location, exc)
             self._sessions[location] = None
             return None
 
@@ -192,35 +205,39 @@ class VisionClassifier:
             raw_label = str(id2label.get(str(top_idx), top_idx)).strip()
             label_lower = raw_label.lower()
 
-            print(
-                f"[OK] vision_module: '{raw_label}' "
-                f"(confidence: {confidence:.1%}, location: {location})"
+            logger.success(
+                "Classified as {!r} (confidence: {:.1%}, location: {})",
+                raw_label,
+                confidence,
+                location,
             )
 
             # Check if predicted class is the non-recognizable elements class
             if label_lower in VISION_NON_RECOGNIZABLE_LABELS:
-                print(
-                    f"[INFO] vision_module: photo classified as non-recognizable element "
-                    f"('{raw_label}' -> '{VISION_UNKNOWN_LABEL}')."
+                logger.info(
+                    "Photo classified as non-recognizable element ({!r} -> {!r}).",
+                    raw_label,
+                    VISION_UNKNOWN_LABEL,
                 )
                 return VISION_UNKNOWN_LABEL
 
             # Check confidence threshold for recognized monument elements
             if confidence < CONFIDENCE_THRESHOLD:
-                print(
-                    f"[WARN] vision_module: confidence {confidence:.1%} < "
-                    f"threshold {CONFIDENCE_THRESHOLD:.0%} — returning '{VISION_UNKNOWN_LABEL}'."
+                logger.warning(
+                    "Confidence {:.1%} < threshold {:.0%} — returning {!r}.",
+                    confidence,
+                    CONFIDENCE_THRESHOLD,
+                    VISION_UNKNOWN_LABEL,
                 )
                 return VISION_UNKNOWN_LABEL
 
             return raw_label
 
         except ImportError:
-            print(
-                "[WARN] vision_module: 'Pillow' is not installed. "
-                "Run: pip install pillow. Returning None."
+            logger.warning(
+                "'Pillow' is not installed. Run: pip install pillow. Returning None."
             )
             return None
         except Exception as exc:
-            print(f"[ERROR] vision_module: error during inference: {exc}")
+            logger.exception("Error during inference: {}", exc)
             return None

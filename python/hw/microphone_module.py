@@ -11,7 +11,20 @@ import re
 
 import numpy as np
 
-from config import MIC_DEVICE, MIC_SAMPLE_RATE, RECORD_CHUNK_SECONDS, RECORD_MAX_SECONDS, RECORDINGS_DIR
+from config import (
+    MIC_DEVICE,
+    MIC_SAMPLE_RATE,
+    RECORD_CHUNK_SECONDS,
+    RECORD_MAX_SECONDS,
+    RECORDINGS_DIR,
+    SILENCE_CALIBRATION_SECONDS,
+    SILENCE_HANGOVER_SECONDS,
+    SILENCE_LEADIN_SECONDS,
+    SILENCE_RMS_ABSOLUTE,
+    SILENCE_RMS_CEILING,
+    SILENCE_RMS_NOISE_FACTOR,
+    SILENCE_TRIM_PADDING_SECONDS,
+)
 from logging_setup import logger
 
 try:
@@ -102,6 +115,122 @@ def as_int16(audio: np.ndarray) -> np.ndarray:
     return audio.astype(np.int16)
 
 
+def rms(samples: np.ndarray) -> float:
+    """Returns the root-mean-square level of a block of samples, in int16 units (0..32767)."""
+    if len(samples) == 0:
+        return 0.0
+    block = samples.astype(np.float32)
+    return float(np.sqrt(np.mean(block * block)))
+
+
+def silence_threshold(noise_floor: float) -> float:
+    """Returns the RMS level below which audio counts as silence, given the room noise
+    floor. A block has to be quiet in absolute terms *and* quiet relative to the room,
+    so a recording made in a busy plaza still ends instead of running to
+    RECORD_MAX_SECONDS -- but never above SILENCE_RMS_CEILING, which keeps a very loud
+    room from raising the bar above the visitor's own voice."""
+    return min(
+        SILENCE_RMS_CEILING,
+        max(SILENCE_RMS_ABSOLUTE, noise_floor * SILENCE_RMS_NOISE_FACTOR),
+    )
+
+
+class SilenceGate:
+    """Decides, block by block, when a recording has ended by itself.
+
+    The first SILENCE_CALIBRATION_SECONDS of audio measure the room noise floor; from
+    then on every block is classified as speech or silence against that floor. The
+    recording ends after SILENCE_HANGOVER_SECONDS of continuous silence once the visitor
+    has spoken, or after SILENCE_LEADIN_SECONDS if they never do -- a button pressed by
+    accident should not hold the whole pipeline open for a minute.
+
+    Consecutive, not cumulative: the pause between two sentences resets the count, so a
+    question asked in two parts is captured whole as long as the gap is under the
+    hangover.
+    """
+
+    def __init__(self, sample_rate: int):
+        self.sample_rate = sample_rate
+        self.speech_detected = False
+        self._calibration_target = int(SILENCE_CALIBRATION_SECONDS * sample_rate)
+        self._calibration: list[np.ndarray] = []
+        self._calibrated_frames = 0
+        self._threshold = float(SILENCE_RMS_ABSOLUTE)
+        self._silent_frames = 0
+
+    def feed(self, samples: np.ndarray) -> bool:
+        """Consumes one block of int16 samples. Returns True once the recording should stop."""
+        if self._calibrated_frames < self._calibration_target:
+            self._calibration.append(samples)
+            self._calibrated_frames += len(samples)
+            if self._calibrated_frames >= self._calibration_target:
+                noise_floor = rms(np.concatenate(self._calibration))
+                self._threshold = silence_threshold(noise_floor)
+                self._calibration = []
+                logger.debug(
+                    "Silence gate calibrated: noise floor {:.0f} RMS, threshold {:.0f} RMS",
+                    noise_floor,
+                    self._threshold,
+                )
+            return False
+
+        if rms(samples) >= self._threshold:
+            self.speech_detected = True
+            self._silent_frames = 0
+            return False
+
+        self._silent_frames += len(samples)
+        limit = (
+            SILENCE_HANGOVER_SECONDS if self.speech_detected else SILENCE_LEADIN_SECONDS
+        )
+        return self._silent_frames >= limit * self.sample_rate
+
+
+def trim_silence(audio: np.ndarray, sample_rate: int = 16000) -> np.ndarray:
+    """Crops the silence off both ends of a recording, keeping
+    SILENCE_TRIM_PADDING_SECONDS either side of the speech.
+
+    This is the part that is actually paid for downstream: Whisper pads every window to
+    a fixed length before the encoder runs, so the room tone between the last word and
+    the button press is encoded at the same price as speech. The visitor is silent for a
+    moment at both ends of nearly every recording, and cropping it is pure saving on the
+    critical path between the question and the answer.
+
+    The noise floor is taken as the 10th percentile of the frame levels, so it adapts to
+    the room rather than to a fixed number. Audio with no frame above the threshold is
+    returned unchanged: a whispered question is better transcribed in full than cropped
+    away to nothing.
+    """
+    audio = np.asarray(audio).reshape(-1)
+    frame = max(1, int(0.02 * sample_rate))  # 20 ms
+    if len(audio) <= frame:
+        return audio
+
+    frames = audio[: len(audio) - len(audio) % frame].reshape(-1, frame).astype(np.float32)
+    levels = np.sqrt(np.mean(frames * frames, axis=1))
+    threshold = silence_threshold(float(np.percentile(levels, 10)))
+
+    voiced = np.flatnonzero(levels >= threshold)
+    if len(voiced) == 0:
+        logger.debug("Silence trim skipped: no frame above {:.0f} RMS", threshold)
+        return audio
+
+    padding = int(SILENCE_TRIM_PADDING_SECONDS * sample_rate)
+    start = max(0, int(voiced[0]) * frame - padding)
+    end = min(len(audio), (int(voiced[-1]) + 1) * frame + padding)
+    trimmed = audio[start:end]
+
+    dropped = (len(audio) - len(trimmed)) / sample_rate
+    if dropped > 0.05:
+        logger.info(
+            "Trimmed {:.1f}s of silence ({:.1f}s -> {:.1f}s of audio to transcribe)",
+            dropped,
+            len(audio) / sample_rate,
+            len(trimmed) / sample_rate,
+        )
+    return trimmed
+
+
 def build_hotwords() -> str:
     """Returns the domain keyword aliases joined into a single space-separated string for Whisper hotword biasing."""
     return " ".join(DOMAIN_KEYWORD_ALIASES)
@@ -138,7 +267,13 @@ class MicrophoneManager:
     def record_until_stopped(self, is_recording):
         """Captures audio continuously — via sounddevice if available, otherwise via successive
         Microphone.record_wav() chunks — checking the is_recording predicate between chunks and
-        stopping once it returns false or RECORD_MAX_SECONDS is reached.
+        stopping once it returns false, the visitor falls silent, or RECORD_MAX_SECONDS is
+        reached.
+
+        Silence ends the recording on its own (see SilenceGate), so the visitor does not have
+        to reach for D7 to stop it; pressing D7 still works and stops it immediately. Whatever
+        silence is left at either end is cropped before returning, so the seconds of room tone
+        between the last word and the stop are never handed to Whisper.
 
         When sounddevice is used the stream is opened at the device's native sample rate
         (MIC_SAMPLE_RATE) and the result is resampled to 16 kHz so that faster-whisper
@@ -153,6 +288,7 @@ class MicrophoneManager:
             block_size = int(capture_rate * 0.05)   # ~50 ms blocks
             max_frames = int(RECORD_MAX_SECONDS * capture_rate)
             frames_read = 0
+            gate = SilenceGate(capture_rate)
 
             try:
                 with sd.InputStream(
@@ -173,6 +309,15 @@ class MicrophoneManager:
                         if len(samples) > 0:
                             chunks.append(samples.copy())
                             frames_read += len(samples)
+                            if gate.feed(samples):
+                                logger.info(
+                                    "Recording stopped on silence after {:.1f}s ({}).",
+                                    frames_read / capture_rate,
+                                    "speech captured"
+                                    if gate.speech_detected
+                                    else "nothing was said",
+                                )
+                                break
                         if not is_recording():
                             break
             except Exception as exc:
@@ -235,14 +380,23 @@ class MicrophoneManager:
                             capture_rate,
                             TARGET_RATE,
                         )
-            return audio
+            return trim_silence(audio, TARGET_RATE)
 
         elif self._mic is not None:
+            # This backend already delivers 16 kHz, so the gate and the trim share its rate.
+            gate = SilenceGate(TARGET_RATE)
             elapsed = 0.0
             while elapsed < RECORD_MAX_SECONDS:
-                chunk = self._mic.record_wav(duration=RECORD_CHUNK_SECONDS)
-                chunks.append(np.asarray(chunk).reshape(-1))
+                chunk = as_int16(self._mic.record_wav(duration=RECORD_CHUNK_SECONDS))
+                chunks.append(chunk)
                 elapsed += RECORD_CHUNK_SECONDS
+                if gate.feed(chunk):
+                    logger.info(
+                        "Recording stopped on silence after {:.1f}s ({}).",
+                        elapsed,
+                        "speech captured" if gate.speech_detected else "nothing was said",
+                    )
+                    break
                 if not is_recording():
                     break
         else:
@@ -250,7 +404,7 @@ class MicrophoneManager:
 
         if not chunks:
             return None
-        return np.concatenate(chunks)
+        return trim_silence(np.concatenate(chunks), TARGET_RATE)
 
     @staticmethod
     def save(button_id: str, model_name: str, audio: np.ndarray):

@@ -25,6 +25,7 @@ extern bool processingActive;
 extern bool playbackActive;
 extern bool photoTriggerFlag;
 extern bool playShutterSoundFlag;
+extern bool playRecordingStoppedSoundFlag;
 extern bool viewSwitchDebounced;
 extern bool hasCapturedPhoto;
 extern bool photoConfirmed;
@@ -81,6 +82,10 @@ int get_volume();
 
 /**
  * Sets whether user audio recording is active.
+ *
+ * Called over the Bridge by the MPU, which ends a recording once the visitor falls
+ * silent. Stopping this way raises playRecordingStoppedSoundFlag so the visitor hears
+ * the same confirmation tone the D7 button gives.
  *
  * @param active True to activate recording, false to deactivate.
  */

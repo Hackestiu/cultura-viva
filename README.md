@@ -21,7 +21,7 @@ Communication between the MCU and MPU occurs over high-speed **Arduino Bridge RP
 | **Modulino Knob** | I2C (Wire1 / Qwiic) | Rotary encoder for real-time headphone volume control (0–100%) |
 | **Modulino Buzzer** | I2C (Wire1 / Qwiic) | Acoustic feedback for shutter clicks, confirmations, and alerts |
 | **Mode Switch** | Digital Pin D6 (internal pull-up) | Mode selector: HIGH = Camera Live View, LOW = Minimap Navigation |
-| **Action Button** | Digital Pin D7 (internal pull-up) | Shutter button in Camera mode, Record/Stop toggle in Map mode, Cancel during generation |
+| **Action Button** | Digital Pin D7 (internal pull-up) | Shutter button in Camera mode, Record/Stop toggle in Map mode (recording also stops itself on silence), Cancel during generation |
 | **NEO-6M GPS** | Serial1 (9600 baud) | Automatic proximity detection between Park Güell and Sagrada Família |
 | **Headphones / Speaker** | 3.5mm Jack (ALSA `plughw:0,0`) | Piper TTS spoken audio output |
 
@@ -70,7 +70,7 @@ cultura-viva-uno-q/
     ├── hw/
     │   ├── device_discovery.py  ← Auto-detection of camera, microphone, and playback ALSA paths
     │   ├── camera_module.py     ← 1080p capture and base64 live-view thumbnail streaming
-    │   ├── microphone_module.py ← Chunked audio recording and faster-whisper STT
+    │   ├── microphone_module.py ← Audio recording, RMS silence detection and faster-whisper STT
     │   ├── audio_playback_module.py ← Piper TTS streaming and ALSA playback with live volume
     │   └── location_module.py   ← GPS coordinate ingestion and Haversine site resolution
     ├── minimapa/                ← JSON coordinate datasets for minimap landmarks
@@ -117,7 +117,9 @@ cultura-viva-uno-q/
 |    - Press Button D7 -> Starts audio recording (Red overlay pill).                |
 |    - Background SLM prefill: Stable prompt prefix (monument facts + personality)  |
 |      is prefilled into KV-cache while the user is still speaking.                 |
-|    - Press Button D7 again -> Stops recording. AI pipeline executes:              |
+|    - Recording stops on its own once the visitor falls silent (~1.5 s), or on a   |
+|      second press of Button D7. Silence at both ends is cropped before STT.       |
+|    - Then the AI pipeline executes:                                               |
 |        1. Speech-to-Text (faster-whisper) transcribes audio question.             |
 |        2. Vision Classifier (ONNX) confirms architectural element.                |
 |        3. Knowledge Graph provides grounded context.                              |
@@ -146,7 +148,7 @@ The STM32 MCU registers RPC endpoints via `Bridge.provide(...)`, called by Pytho
 | `receive_camera_chunk(idx, total, b64)` | `void` | Receives a Base64 RGB565 thumbnail chunk from Python and draws to LCD. |
 | `get_personality_index()` | `int` | Selected guide personality (0 = Artistic, 1 = Technical, 2 = Child). |
 | `is_recording_active()` | `bool` | `true` while user audio recording is in progress. |
-| `set_recording_active(bool)` | `void` | Enables or disables recording state from Python. |
+| `set_recording_active(bool)` | `void` | Enables or disables recording state from Python; used by the MPU to end a recording on detected silence, which also sounds the stop tone. |
 | `is_processing_active()` | `bool` | `true` while AI pipeline (STT, SLM, TTS) is executing. |
 | `set_processing_active(bool)` | `void` | Controls the "Generating answer..." status pill and cancellation listener. |
 | `is_playback_active()` | `bool` | `true` while Piper TTS audio is playing through ALSA. |
@@ -183,7 +185,8 @@ python3 benchmark.py --json results.json
 
 ### Latency Optimization Mechanisms
 1. **Asynchronous Prefill Overlap**: Once a photo is confirmed, the static prompt prefix (system instructions + monument facts) is prefilled into the SLM KV-cache on a background thread while the visitor speaks. When recording ends, only the new user question requires prefill.
-2. **Sentence-Level Streaming to TTS**: Instead of waiting for the full SLM generation to finish (60+ tokens), tokens are emitted sentence-by-sentence. Piper synthesizes audio for sentence $N$ while the SLM decodes sentence $N+1$, minimizing time-to-first-audio.
+2. **RMS Silence Detection**: The recording ends by itself once the visitor stops talking, and the remaining silence is cropped off both ends before the samples reach Whisper. The encoder pads every window to a fixed length, so room tone between the last word and the stop is encoded at the same price as speech — cropping it removes that cost entirely from the critical path. Thresholds adapt to the room noise floor measured at the start of each recording (`SILENCE_*` in `python/config.py`); in a room too loud to judge, detection backs off and D7 stops the recording as before.
+3. **Sentence-Level Streaming to TTS**: Instead of waiting for the full SLM generation to finish (60+ tokens), tokens are emitted sentence-by-sentence. Piper synthesizes audio for sentence $N$ while the SLM decodes sentence $N+1$, minimizing time-to-first-audio.
 
 ---
 

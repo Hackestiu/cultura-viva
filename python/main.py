@@ -318,6 +318,14 @@ def run_app() -> None:
                     audio = microphone.record_until_stopped(
                         is_recording=lambda: Bridge.call("is_recording_active")
                     )
+                    # The capture ends on silence as well as on D7, and in that case the
+                    # sketch still believes it is recording -- it would keep the recording
+                    # overlay up and read the next D7 press as "stop". Idempotent when the
+                    # button is what ended it.
+                    try:
+                        Bridge.call("set_recording_active", False)
+                    except Exception as exc:
+                        logger.warning("Failed to clear the recording flag: {}", exc)
                     if audio is not None:
                         Bridge.call("set_processing_active", True)
                         try:
@@ -330,6 +338,16 @@ def run_app() -> None:
                             question_text = microphone.transcribe(audio)
                             if not Bridge.call("is_processing_active"):
                                 logger.info("Generation cancelled by user after STT.")
+                                return
+
+                            if not question_text.strip():
+                                # Silence ends a recording on its own, so a button pressed
+                                # by accident now reaches here routinely. Answering an
+                                # empty question would tie up the SLM and the speaker for
+                                # nothing.
+                                logger.info(
+                                    "No question heard in the recording — nothing to answer."
+                                )
                                 return
 
                             element = last_detected_element

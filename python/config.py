@@ -110,6 +110,46 @@ DEFAULT_VOLUME_PERCENT = 70
 RECORD_CHUNK_SECONDS = 0.5
 RECORD_MAX_SECONDS = 60.0
 
+# ---------------------------------------------------------------------------
+# Silence detection (see hw/microphone_module.py).
+#
+# Two uses, one measurement: a recording stops by itself once the visitor stops
+# talking, and the silence still left at either end is cropped off before the
+# samples reach Whisper -- the encoder pads every window to a fixed length, so
+# seconds of room tone between the last word and the button cost real time on
+# the critical path.
+#
+# Levels are RMS in int16 units (0..32767). A block counts as silence when it is
+# below SILENCE_RMS_ABSOLUTE *and* below SILENCE_RMS_NOISE_FACTOR times the room
+# noise floor measured at the start of the recording, so a noisy plaza raises the
+# bar instead of keeping the recording open forever.
+# ---------------------------------------------------------------------------
+
+SILENCE_RMS_ABSOLUTE = 300
+SILENCE_RMS_NOISE_FACTOR = 3.0
+
+# Ceiling on the threshold the factor above can produce. Speech a hand's length from
+# the Brio sits a few thousand RMS, so a very loud room could otherwise raise the bar
+# above the visitor's own voice -- the gate would hear speech as silence and cut the
+# question off. Capping it means a room that loud simply stops auto-detecting: the
+# recording runs until D7 or RECORD_MAX_SECONDS, as it did before.
+SILENCE_RMS_CEILING = 1500
+
+# Room tone sampled at the start of each recording to set the noise floor.
+SILENCE_CALIBRATION_SECONDS = 0.3
+
+# Silence after the visitor has spoken that ends the recording. Long enough to
+# survive the pause between two sentences, short enough not to be noticed.
+SILENCE_HANGOVER_SECONDS = 1.5
+
+# Silence *before* any speech that ends the recording, so a button pressed by
+# accident does not hold the pipeline open until RECORD_MAX_SECONDS.
+SILENCE_LEADIN_SECONDS = 6.0
+
+# Kept either side of the speech when cropping, so a soft first or last
+# consonant is not clipped off.
+SILENCE_TRIM_PADDING_SECONDS = 0.25
+
 # Camera capture resolution / codec settings
 CAMERA_PHOTO_WIDTH = 1920
 CAMERA_PHOTO_HEIGHT = 1080

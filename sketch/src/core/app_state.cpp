@@ -9,6 +9,7 @@ bool processingActive = false;
 bool playbackActive = false;
 bool photoTriggerFlag = false;
 bool playShutterSoundFlag = false;
+bool playRecordingStoppedSoundFlag = false;
 bool viewSwitchDebounced = true;
 bool hasCapturedPhoto = false;
 bool photoConfirmed = false;
@@ -29,6 +30,9 @@ int get_volume() {
 }
 
 void set_recording_active(bool active) {
+  if (recordingActive && !active) {
+    playRecordingStoppedSoundFlag = true;
+  }
   recordingActive = active;
 }
 

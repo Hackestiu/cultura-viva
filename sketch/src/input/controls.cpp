@@ -197,6 +197,13 @@ void updateControls() {
     drawPhotoConfirmationOverlay();
   }
 
+  // The MPU ends a recording on silence; sound the same tone the button does.
+  if (playRecordingStoppedSoundFlag) {
+    playRecordingStoppedSoundFlag = false;
+    buzzer.tone(900, 90);
+    Monitor.println("[EVENT] Silence detected -> stopped recording question");
+  }
+
   // Camera frame update rendering trigger
   if (newCameraFrameFlag) {
     newCameraFrameFlag = false;

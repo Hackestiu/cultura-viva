@@ -63,11 +63,6 @@ location = LocationRegistry()
 player = AudioPlayer()
 minimap = MinimapManager()
 
-_LOCATION_LABELS: dict[str, str] = {
-    "park_guell": "Park Guell",
-    "sagrada_familia": "Sagrada Familia",
-}
-
 _ELEMENT_DISPLAY_NAMES: dict[str, str] = {
     # Park Guell
     "escalinata_drac": "Escalinata del Drac",
@@ -100,6 +95,13 @@ def _clean_dir(directory) -> None:
             except Exception as exc:
                 logger.warning("Could not delete {}: {}", f, exc)
     logger.info("Cleaned {} file(s) from {!r}.", deleted, str(directory))
+
+
+def _log_location() -> None:
+    """Resolves the site at startup so the log opens with which monument the device
+    believes it is at, the coordinates it got there from, and whether that was a real
+    GPS placement or a fallback. LocationRegistry writes the line itself."""
+    location.resolve(force=True)
 
 
 def _preload_models() -> None:
@@ -176,6 +178,7 @@ def run_app() -> None:
         MIC_DEVICE,
         PLAYBACK_DEVICE,
     )
+    _log_location()
     _preload_models()
 
     logger.info(
@@ -220,10 +223,7 @@ def run_app() -> None:
                     element = vision.classify(site, saved_path)
 
                     if element is None or element == "unknown":
-                        location_label = _LOCATION_LABELS.get(
-                            site, site.replace("_", " ").title()
-                        )
-                        Bridge.call("set_retake_message", location_label)
+                        Bridge.call("set_retake_message", location.display_name(site))
                         Bridge.call("set_photo_validation_state", 2)
                         last_detected_element = None
                         last_detected_site = None

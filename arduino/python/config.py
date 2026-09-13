@@ -37,6 +37,9 @@ MINIMAP_DIR = APP_DIR / "minimapa"
 LOCATIONS_DIR = APP_DIR / "locations"
 LOCATIONS_CONFIG_FILE = LOCATIONS_DIR / "locations.json"
 
+# Site used when GPS cannot place the visitor (no fix, or a fix outside every
+# site's radius). locations.json may name a different one in its "default" key;
+# this is the last resort if that file is missing or names an unknown site.
 DEFAULT_LOCATION = "sagrada_familia"
 
 for _dir in (
@@ -105,6 +108,12 @@ PLAYBACK_DEVICE: str = _env_str(
     # explicit None for "nothing found", which .get would have passed through.
     _discovered.get("playback") or "plughw:0,0",  # fallback to card 0
 )
+
+# Forces a site regardless of GPS (env override: CULTURA_LOCATION), for testing
+# away from the monuments and for a device whose GPS cannot see the sky. Must be
+# an id from locations.json; an unknown id is refused and logged, and GPS decides
+# as usual. Can also be set and cleared at runtime via LocationRegistry.
+LOCATION_OVERRIDE = _os.environ.get("CULTURA_LOCATION") or None
 
 DEFAULT_VOLUME_PERCENT = 70
 

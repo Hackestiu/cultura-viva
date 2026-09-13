@@ -570,7 +570,14 @@ class ModelRegistry:
                 # question about the same photo, or a personality switch. Restoring then
                 # would replace a cache that covers the whole prompt with one that covers
                 # only its head, and charge for the difference.
-                if facts and self._prefix_facts != facts:
+                #
+                # n_tokens is the live KV fill, and it is checked because _prefix_facts
+                # is only a claim about a context that something else may since have
+                # cleared: llm.reset() empties the cache without going through here, and
+                # then trusting the flag skips the restore and pays the full prefill
+                # instead of reading 6 MB off disk.
+                cache_emptied = getattr(llm, "n_tokens", 0) == 0
+                if facts and (cache_emptied or self._prefix_facts != facts):
                     if not self._restore_prefix(facts):
                         self._store_prefix(facts)
                     self._prefix_facts = facts

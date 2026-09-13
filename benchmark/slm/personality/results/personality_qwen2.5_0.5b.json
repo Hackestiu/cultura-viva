@@ -8,25 +8,25 @@
   ],
   "n_probes": 24,
   "n_answers": 72,
-  "generated_utc": "2026-09-13T15:57:30+00:00",
+  "generated_utc": "2026-09-13T17:28:46+00:00",
   "per_arm": {
     "artistic": {
       "n": 24,
-      "median_words": 23.5,
+      "median_words": 25.5,
       "min_words": 7,
-      "max_words": 45,
-      "truncated": 2,
+      "max_words": 48,
+      "truncated": 3,
       "echoed": 0,
-      "follows_format": 7
+      "follows_format": 8
     },
     "technical": {
       "n": 24,
-      "median_words": 24.5,
+      "median_words": 28.0,
       "min_words": 8,
-      "max_words": 47,
-      "truncated": 7,
+      "max_words": 48,
+      "truncated": 9,
       "echoed": 0,
-      "follows_format": 3
+      "follows_format": 4
     },
     "child": {
       "n": 24,
@@ -39,8 +39,8 @@
     }
   },
   "similarity": {
-    "probes_with_an_identical_pair": 2,
-    "median_max_similarity": 0.558,
+    "probes_with_an_identical_pair": 3,
+    "median_max_similarity": 0.606,
     "per_probe": [
       {
         "probe_id": "park_guell",
@@ -98,32 +98,32 @@
       },
       {
         "probe_id": "la_pedrera",
-        "max_similarity": 0.56,
-        "mean_similarity": 0.355,
+        "max_similarity": 0.236,
+        "mean_similarity": 0.204,
         "any_identical": false
       },
       {
         "probe_id": "catenaria_pedrera",
-        "max_similarity": 0.483,
-        "mean_similarity": 0.377,
+        "max_similarity": 0.349,
+        "mean_similarity": 0.29,
         "any_identical": false
       },
       {
         "probe_id": "caps_pedrera",
-        "max_similarity": 0.252,
-        "mean_similarity": 0.171,
+        "max_similarity": 0.286,
+        "mean_similarity": 0.241,
         "any_identical": false
       },
       {
         "probe_id": "facana_pedrera",
-        "max_similarity": 0.557,
-        "mean_similarity": 0.491,
-        "any_identical": false
+        "max_similarity": 1.0,
+        "mean_similarity": 0.788,
+        "any_identical": true
       },
       {
         "probe_id": "patis_pedrera",
-        "max_similarity": 0.536,
-        "mean_similarity": 0.216,
+        "max_similarity": 0.83,
+        "mean_similarity": 0.685,
         "any_identical": false
       },
       {
@@ -170,20 +170,20 @@
       },
       {
         "probe_id": "casa_batllo",
-        "max_similarity": 0.117,
-        "mean_similarity": 0.1,
+        "max_similarity": 0.368,
+        "mean_similarity": 0.311,
         "any_identical": false
       },
       {
         "probe_id": "pla_frontal_casa_batllo",
-        "max_similarity": 0.614,
-        "mean_similarity": 0.409,
+        "max_similarity": 0.537,
+        "mean_similarity": 0.337,
         "any_identical": false
       },
       {
         "probe_id": "pla_inferior_casa_batllo",
-        "max_similarity": 0.844,
-        "mean_similarity": 0.833,
+        "max_similarity": 0.755,
+        "mean_similarity": 0.569,
         "any_identical": false
       }
     ]
@@ -210,8 +210,8 @@
   "identification": {
     "matrix": {
       "artistic": {
-        "artistic": 14,
-        "technical": 9,
+        "artistic": 12,
+        "technical": 11,
         "child": 1,
         "unparsed": 0
       },
@@ -222,25 +222,25 @@
         "unparsed": 0
       },
       "child": {
-        "artistic": 8,
+        "artistic": 9,
         "technical": 11,
-        "child": 5,
+        "child": 4,
         "unparsed": 0
       }
     },
-    "correct": 33,
+    "correct": 30,
     "total": 72,
-    "accuracy": 0.458,
+    "accuracy": 0.417,
     "chance": 0.333,
     "per_arm_recall": {
-      "artistic": 0.583,
+      "artistic": 0.5,
       "technical": 0.583,
-      "child": 0.208
+      "child": 0.167
     },
     "prediction_spread": {
-      "technical": 34,
-      "child": 8,
-      "artistic": 30
+      "technical": 36,
+      "child": 7,
+      "artistic": 29
     }
   },
   "identification_detail": [
@@ -382,7 +382,7 @@
     {
       "probe_id": "la_pedrera",
       "arm": "artistic",
-      "predicted": "artistic"
+      "predicted": "technical"
     },
     {
       "probe_id": "la_pedrera",
@@ -392,7 +392,7 @@
     {
       "probe_id": "la_pedrera",
       "arm": "child",
-      "predicted": "child"
+      "predicted": "artistic"
     },
     {
       "probe_id": "catenaria_pedrera",
@@ -442,7 +442,7 @@
     {
       "probe_id": "patis_pedrera",
       "arm": "artistic",
-      "predicted": "artistic"
+      "predicted": "technical"
     },
     {
       "probe_id": "patis_pedrera",
@@ -608,17 +608,17 @@
   "grounding": {
     "artistic": {
       "n": 24,
-      "unsupported": 6,
+      "unsupported": 8,
       "unjudged": 0
     },
     "technical": {
       "n": 24,
-      "unsupported": 8,
+      "unsupported": 9,
       "unjudged": 0
     },
     "child": {
       "n": 24,
-      "unsupported": 6,
+      "unsupported": 5,
       "unjudged": 0
     }
   },
@@ -761,17 +761,17 @@
     {
       "probe_id": "la_pedrera",
       "arm": "artistic",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "la_pedrera",
       "arm": "technical",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "la_pedrera",
       "arm": "child",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "catenaria_pedrera",
@@ -791,7 +791,7 @@
     {
       "probe_id": "caps_pedrera",
       "arm": "artistic",
-      "verdict": "UNSUPPORTED"
+      "verdict": "SUPPORTED"
     },
     {
       "probe_id": "caps_pedrera",
@@ -821,17 +821,17 @@
     {
       "probe_id": "patis_pedrera",
       "arm": "artistic",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "patis_pedrera",
       "arm": "technical",
-      "verdict": "UNSUPPORTED"
+      "verdict": "SUPPORTED"
     },
     {
       "probe_id": "patis_pedrera",
       "arm": "child",
-      "verdict": "UNSUPPORTED"
+      "verdict": "SUPPORTED"
     },
     {
       "probe_id": "sagrada_familia",
@@ -941,17 +941,17 @@
     {
       "probe_id": "casa_batllo",
       "arm": "artistic",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "casa_batllo",
       "arm": "technical",
-      "verdict": "SUPPORTED"
+      "verdict": "UNSUPPORTED"
     },
     {
       "probe_id": "casa_batllo",
       "arm": "child",
-      "verdict": "UNSUPPORTED"
+      "verdict": "SUPPORTED"
     },
     {
       "probe_id": "pla_frontal_casa_batllo",

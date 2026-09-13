@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Arduino / IDE
+.vscode/
+.idea/
+*.swp
+*.bak
+build/
+.arduino/
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Runtime Generated Media
+python/data/photos/*.jpg
+python/data/recordings/*.wav
+python/data/responses/*.wav
+python/data/logs/*.log
+python/data/prefix_cache/*.pkl
+python/data/prefix_cache/*.tmp
+!python/data/photos/.gitkeep
+!python/data/recordings/.gitkeep
+!python/data/responses/.gitkeep
+
+# AI Model Files
+*.onnx
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.pth.cache/
+.cache/
+python/lib/

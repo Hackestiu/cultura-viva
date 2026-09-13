@@ -1,0 +1,29 @@
+{
+  "locations": [
+    {
+      "id": "park_guell",
+      "name": "Park Güell",
+      "lat": 41.413631,
+      "lon": 2.152482,
+      "radius_m": 400,
+      "minimap_id": 0
+    },
+    {
+      "id": "sagrada_familia",
+      "name": "Sagrada Família",
+      "lat": 41.403629,
+      "lon": 2.174349,
+      "radius_m": 300,
+      "minimap_id": 1
+    },
+    {
+      "id": "casa_batllo",
+      "name": "Casa Batlló",
+      "lat": 41.391944,
+      "lon": 2.165111,
+      "radius_m": 150,
+      "minimap_id": 2
+    }
+  ],
+  "default": "sagrada_familia"
+}

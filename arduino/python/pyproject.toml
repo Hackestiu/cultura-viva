@@ -1,0 +1,37 @@
+[project]
+name = "cultura-viva-uno-q"
+version = "2.0.0"
+description = "AI tourist guide for Arduino UNO Q (STT, SLM, TTS, and Vision)"
+requires-python = ">=3.10"
+dependencies = [
+    # Image processing and numerical arrays
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+
+    # Computer vision (ONNX classifiers for Park Güell and Sagrada Família)
+    "onnxruntime>=1.16.0",
+
+    # Speech-to-Text
+    "faster-whisper>=1.0.0",
+
+    # Small Language Model 
+    "llama-cpp-python>=0.2.0",
+
+    # Text-to-Speech 
+    "piper-tts>=1.2.0",
+
+    # Audio playback
+    "sounddevice>=0.4.6",
+
+    # Structured logging (console + per-run file)
+    "loguru>=0.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "huggingface-hub>=0.20.0",
+]
+
+[tool.uv]
+package = false

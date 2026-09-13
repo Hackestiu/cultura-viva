@@ -5,7 +5,7 @@ description = "TTS inference-time benchmark for small open-source models on the 
 requires-python = ">=3.10"
 dependencies = [
     "matplotlib",
-    "numpy",
+    "numpy<2",
     "soundfile",
 ]
 

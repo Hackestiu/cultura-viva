@@ -25,6 +25,8 @@ python/data/photos/*.jpg
 python/data/recordings/*.wav
 python/data/responses/*.wav
 python/data/logs/*.log
+python/data/prefix_cache/*.pkl
+python/data/prefix_cache/*.tmp
 !python/data/photos/.gitkeep
 !python/data/recordings/.gitkeep
 !python/data/responses/.gitkeep

@@ -8,6 +8,8 @@ The system runs on the **Arduino UNO Q** dual-processor architecture:
 
 Communication between the MCU and MPU occurs over high-speed **Arduino Bridge RPC**.
 
+> **First run:** warm the SLM prefix cache once with `python3 python/prewarm_cache.py` (~30s per element, ~12 min for all 24). It computes each element's KV-cache to disk so no visitor sits through a cold ~30s prefill; without it the cache still fills itself, one slow answer at a time. Re-run it after editing a knowledge sheet or swapping the GGUF — not after editing a personality prompt.
+
 ---
 
 ## Hardware Architecture
@@ -61,6 +63,7 @@ cultura-viva-uno-q/
     ├── main.py                  ← Central orchestration loop (App.run)
     ├── config.py                ← Central paths, devices, thresholds, and audio parameters
     ├── benchmark.py             ← Per-stage latency benchmark utility
+    ├── prewarm_cache.py         ← Pre-computes the SLM prefix KV-cache (run once on the board)
     ├── logging_setup.py         ← Centralized logger configuration
     ├── requirements.txt         ← Core Python dependencies
     ├── core/

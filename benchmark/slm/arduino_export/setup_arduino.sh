@@ -2,9 +2,13 @@
 set -e
 echo "CulturaViva: setting up Arduino UNO Q (Debian ARM64)"
 sudo apt update
-sudo apt install -y build-essential python3 python3-pip python3-venv git cpufrequtils
+sudo apt install -y build-essential python3 python3-pip python3-venv git
 
-sudo cpufreq-set -g performance || true
+if command -v cpufreq-set >/dev/null 2>&1; then
+	sudo cpufreq-set -g performance || true
+else
+	echo "cpufreq-set not available; continuing without changing the CPU governor."
+fi
 
 python3 -m venv venv
 source venv/bin/activate

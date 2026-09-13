@@ -1,0 +1,11 @@
+[
+  {
+    "id": "birth-death",
+    "question": "When and where was Antoni Gaudí born, and when did he die?",
+    "reference": "Gaudí was born on 25 June 1852 in Reus (or possibly Riudoms). He died on 10 June 1926 in Barcelona.",
+    "contexts": [
+      "The retrieved passage for this question goes here."
+    ],
+    "answer": "The SLM-generated answer goes here."
+  }
+]

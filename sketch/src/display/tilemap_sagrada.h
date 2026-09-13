@@ -49,9 +49,9 @@ const char* const MAP_ROWS_SAGRADA[MAP_ROW_COUNT_SAGRADA] = {
 // Tile legend:
 //  ' ' void / exterior    '#' outer wall edge (buttress/pinnacle)
 //  'w' wall fill masonry  'a' absis (apse) floor
-//  'y' sagristia floor    'x' creuer / transsepte floor
-//  't' base torres        'n' nau central floor
-//  'l' nau lateral        'c' porxo / Façana de la Glòria
+//  'y' sacristy floor     'x' transept / crossing floor
+//  't' tower base         'n' central nave floor
+//  'l' lateral nave       'c' porch / Glory Facade
 
 // ---------------------------------------------------------------------------
 // Unlocked (revealed) tile colors — warm limestone/sandstone real-life palette

@@ -72,6 +72,8 @@ int get_volume();
 
 /**
  * Sets whether user audio recording is active.
+ *
+ * @param active True to activate recording, false to deactivate.
  */
 void set_recording_active(bool active);
 
@@ -86,67 +88,58 @@ bool is_recording_active();
 bool is_playback_active();
 
 /**
- * Returns whether Python should continue sending live camera frames.
- * Returns whether the system is currently ready to receive and display live camera frames.
- * Returns false when awaiting photo confirmation, during assistant processing/playback, or while validating.
+ * Returns true when the system is ready to receive and display live camera frames.
+ * Returns false while awaiting photo confirmation, during AI processing/playback, or while validating.
  */
 bool camera_live_view_active();
 
 /**
- * Sets whether the Python audio/AI pipeline is processing the current question (STT, SLM, TTS synthesis).
- * Sets whether the AI pipeline is actively processing an audio question (transcription, reasoning, speech synthesis).
+ * Sets whether the AI pipeline is actively processing a question (STT transcription, SLM generation, TTS synthesis).
  *
- * @param active True if processing is running, false otherwise.
+ * @param active True while processing is running, false when complete.
  */
 void set_processing_active(bool active);
 
 /**
- * Returns whether the system is currently processing an answer.
  * Returns whether the AI pipeline is currently generating a response.
  */
 bool is_processing_active();
 
 /**
- * Sets whether the Python audio playback is active through headphones/speaker.
  * Sets whether speech response audio playback is currently running.
  *
- * @param active True during playback, false otherwise.
+ * @param active True during playback, false when complete.
  */
 void set_playback_active(bool active);
 
 /**
- * Returns true if a photo capture was triggered and clears the trigger flag.
- * Checks if a capture event occurred and atomically resets the event flag.
- *
- * @return True once upon capture trigger, false thereafter.
+ * Returns true once when a photo capture has been triggered, then atomically resets the flag.
+ * Subsequent calls return false until the next trigger event.
  */
 bool photo_trigger();
 
 /**
- * Confirms that a photo was successfully saved by Python, scheduling shutter sound feedback.
- * Notifies the MCU that the captured photo has been persisted, initiating confirmation UI and audio feedback.
+ * Notifies the MCU that the captured photo has been persisted by Python.
+ * Schedules the shutter sound and shows the confirmation prompt on the LCD.
  */
 void confirm_photo_saved();
 
 /**
- * Returns the debounced state of the display mode selection switch.
- * Returns the current debounced physical mode switch position (true for camera mode, false for map mode).
+ * Returns the current debounced physical mode switch position.
+ * True = camera mode (switch ON), false = map mode (switch OFF).
  */
 bool view_switch_state();
 
 /**
- * Sets the photo vision validation state:
- *  -1 = idle, 0 = checking, 1 = valid, 2 = invalid/retake
- * Updates the monument validation status shown on screen.
+ * Sets the photo vision validation state and redraws the corresponding status screen.
  *
  * @param state -1 for idle, 0 for in-progress scan, 1 for valid monument, 2 for non-monument / retake.
  */
 void set_photo_validation_state(int state);
 
 /**
- * Sets the location label string for the "not a monument in <X>" retake screen.
- * Called by Python before set_photo_validation_state(2).
- * Sets the human-readable site name displayed on the invalid monument retake screen.
+ * Sets the human-readable site name shown on the invalid monument retake screen.
+ * Must be called before set_photo_validation_state(2).
  *
  * @param msg Location name (e.g., "Park Guell").
  */

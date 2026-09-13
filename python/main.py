@@ -55,7 +55,7 @@ player = AudioPlayer()
 minimap = MinimapManager()
 
 _LOCATION_LABELS: dict[str, str] = {
-    "park_guell": "Parc Güell",
+    "park_guell": "Park Güell",
     "sagrada_familia": "Sagrada Família",
 }
 

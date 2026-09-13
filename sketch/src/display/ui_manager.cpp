@@ -111,40 +111,33 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
 
   switch (type) {
     case UI_OVERLAY_RECORDING:
-      borderColor = 0xF800; // Red border for recording
-      borderColor = 0xF800;
+      borderColor = 0xF800; // Red
       msg = "Recording audio";
       dotX = 95;
       break;
     case UI_OVERLAY_SPEAKING:
-      borderColor = 0x07E0; // Green border for speaking/answering
-      borderColor = 0x07E0;
+      borderColor = 0x07E0; // Green
       msg = "Speaking answer";
       dotX = 95;
       break;
     case UI_OVERLAY_GENERATING:
     default:
-      borderColor = 0xFFE0; // Yellow border for generating (STT/SLM/TTS synthesis)
-      borderColor = 0xFFE0;
+      borderColor = 0xFFE0; // Yellow
       msg = "Generating answer";
       dotX = 107;
       break;
   }
 
   if (fullRedraw) {
-    // High-contrast pill container in top-left corner
     tft.fillRoundRect(2, 2, 126, 13, 2, ST77XX_BLACK);
     tft.drawRoundRect(2, 2, 126, 13, 2, borderColor);
 
-    // Static message text
-    tft.setTextColor(0xFFFF, 0x0000); // White text on black
-    tft.setTextColor(0xFFFF, 0x0000);
+    tft.setTextColor(0xFFFF, 0x0000); // White text on black background
     tft.setTextSize(1);
     tft.setCursor(5, 5);
     tft.print(msg);
 
-    // If generating, display a sleek cancellation hint at the bottom pill
-    // Cancellation prompt banner shown only during processing
+    // Cancellation prompt shown only during processing
     if (type == UI_OVERLAY_GENERATING) {
       tft.fillRoundRect(10, 114, 140, 12, 2, ST77XX_BLACK);
       tft.drawRoundRect(10, 114, 140, 12, 2, 0xFFE0);
@@ -155,7 +148,6 @@ void drawAssistantOverlay(UiOverlayType type, uint8_t dotCount, bool fullRedraw)
     }
   }
 
-  // Only the animated dots update
   // Update animated dots in-place
   tft.setTextColor(0xFFFF, 0x0000);
   tft.setTextSize(1);
@@ -171,8 +163,7 @@ void drawVolumeBar(int16_t volume) {
   if (volume < 0) volume = 0;
   if (volume > 100) volume = 100;
 
-  // Very discreet vertical volume bar capsule on the far right edge
-  // Vertical volume bar track on the right edge
+  // Vertical volume bar capsule on the far right edge
   const int16_t trackX = 154;
   const int16_t trackY = 20;
   const int16_t trackW = 5;
@@ -182,13 +173,9 @@ void drawVolumeBar(int16_t volume) {
   const int16_t innerW = 3;
   const int16_t innerH = 84;
 
-  // Draw pill track capsule
   tft.fillRoundRect(trackX, trackY, trackW, trackH, 2, 0x2104); // Dark gray track
   tft.drawRoundRect(trackX, trackY, trackW, trackH, 2, 0x52AA); // Subtle border
-  tft.fillRoundRect(trackX, trackY, trackW, trackH, 2, 0x2104);
-  tft.drawRoundRect(trackX, trackY, trackW, trackH, 2, 0x52AA);
 
-  // Calculate fill height from bottom upwards
   // Fill height from bottom upwards
   int16_t fillH = (int16_t)(((int32_t)volume * innerH) / 100);
   if (fillH > innerH) fillH = innerH;
@@ -196,12 +183,10 @@ void drawVolumeBar(int16_t volume) {
 
   int16_t emptyH = innerH - fillH;
 
-  // Unfilled top portion
   if (emptyH > 0) {
     tft.fillRect(innerX, innerY, innerW, emptyH, 0x2104);
   }
-  // Filled bottom portion (white)
   if (fillH > 0) {
-    tft.fillRect(innerX, innerY + emptyH, innerW, fillH, 0xFFFF);
+    tft.fillRect(innerX, innerY + emptyH, innerW, fillH, 0xFFFF); // White fill
   }
 }

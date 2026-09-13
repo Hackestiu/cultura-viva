@@ -321,9 +321,13 @@ def run_app() -> None:
                     if audio is not None:
                         Bridge.call("set_processing_active", True)
                         try:
-                            wav_path = microphone.save(button_id, model_name, audio)
+                            # Saved for traceability — a puzzling answer can be traced
+                            # back to what the mic actually heard. The write itself is
+                            # a couple of hundred KB; transcription reads the samples
+                            # already in memory rather than decoding this file back.
+                            microphone.save(button_id, model_name, audio)
 
-                            question_text = microphone.transcribe(wav_path)
+                            question_text = microphone.transcribe(audio)
                             if not Bridge.call("is_processing_active"):
                                 logger.info("Generation cancelled by user after STT.")
                                 return

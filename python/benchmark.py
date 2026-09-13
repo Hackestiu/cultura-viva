@@ -340,26 +340,51 @@ def bench_vision(vision, photo: Path, reps: int) -> dict:
 
 
 def bench_stt(mic, audio: Path, reps: int) -> dict:
-    """Times faster-whisper transcription of a real recording, including the model load on the first (untimed) call."""
+    """Times faster-whisper transcription of a real recording, including the model load on
+    the first (untimed) call.
+
+    Timed from the samples in memory, which is what main.py passes: production never asks
+    faster-whisper to decode a file. One run from the path is timed alongside it so the
+    cost of that decode stays visible rather than being silently optimised out of view.
+    """
     import wave
 
+    import numpy as np
+
+    duration = None
     try:
         with wave.open(str(audio), "rb") as wf:
             duration = wf.getnframes() / float(wf.getframerate())
-    except Exception:
-        duration = None
+            pcm = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
+    except Exception as exc:
+        return {"samples": [], "detail": {"error": f"could not read {audio.name}: {exc}"}}
 
-    mic.transcribe(audio)  # warm-up, excluded from timings
+    mic.transcribe(pcm)  # warm-up, excluded from timings
 
     samples = []
     for _ in range(reps):
         with Timer() as t:
-            text = mic.transcribe(audio)
+            text = mic.transcribe(pcm)
         samples.append(t.elapsed)
 
-    detail = {"audio": audio.name, "audio_seconds": duration, "text": text}
+    with Timer() as t:
+        mic.transcribe(audio)
+    from_file = t.elapsed
+
+    detail = {
+        "audio": audio.name,
+        "audio_seconds": duration,
+        "text": text,
+        "from_file_s": from_file,
+    }
+    if samples:
+        detail["file_decode_overhead_s"] = from_file - statistics.median(samples)
     if duration and samples:
         detail["realtime_factor"] = statistics.median(samples) / duration
+    print(
+        f"     from samples {statistics.median(samples):.2f}s vs from WAV path "
+        f"{from_file:.2f}s (the difference is PyAV decode, which production skips)"
+    )
     return {"samples": samples, "detail": detail}
 
 

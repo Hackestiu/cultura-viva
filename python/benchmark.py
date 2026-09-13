@@ -398,7 +398,9 @@ def bench_slm(models, reps: int) -> dict:
     would otherwise reuse the shared prefix and report a misleadingly fast
     second run.
     """
-    from core.model_module import build_messages
+    # The same splitter production feeds TTS with, so "first sentence" here means
+    # exactly what it means at runtime.
+    from core.model_module import _split_ready_sentences, build_messages
 
     # Preloaded in section 1; drive the Llama object directly so we can stream
     # token-by-token and time the first one, which generate_response does not expose.
@@ -421,12 +423,17 @@ def bench_slm(models, reps: int) -> dict:
         )
 
         prefills, decodes, totals, prompt_tokens, decoded_counts = [], [], [], [], []
+        first_sentences: list[float] = []
 
         for _ in range(reps):
             llm.reset()  # clear KV cache so prefill is measured cold
             start = time.perf_counter()
             ttft = None
             n_prompt = None
+            # Time to the first complete sentence: the moment production hands
+            # something to Piper, and so the last SLM cost before any sound.
+            pending = ""
+            first_sentence = None
 
             stream = llm.create_chat_completion(
                 messages=messages,
@@ -440,6 +447,12 @@ def bench_slm(models, reps: int) -> dict:
                 delta = chunk["choices"][0].get("delta", {})
                 if not delta.get("content"):
                     continue
+                if first_sentence is None:
+                    pending += delta["content"]
+                    ready, pending = _split_ready_sentences(pending)
+                    if ready:
+                        first_sentence = time.perf_counter() - start
+
                 if ttft is None:
                     ttft = time.perf_counter() - start
                     # llm.n_tokens is the KV cache fill. Sampled at the first
@@ -462,6 +475,8 @@ def bench_slm(models, reps: int) -> dict:
             prefills.append(ttft)
             decodes.append(total - ttft)
             totals.append(total)
+            if first_sentence is not None:
+                first_sentences.append(first_sentence)
             decoded_counts.append(n_decoded)
             if n_prompt:
                 prompt_tokens.append(n_prompt)
@@ -508,6 +523,12 @@ def bench_slm(models, reps: int) -> dict:
             "decode_s": med_decode,
             "total_s": statistics.median(totals),
             "warm_prefill_s": statistics.median(warm_prefills) if warm_prefills else None,
+            "first_sentence_s": statistics.median(first_sentences) if first_sentences else None,
+            # Prefill removed, so this is the decode the visitor waits through
+            # before the first word is spoken, whatever the prefill cost.
+            "decode_to_first_sentence_s": (
+                statistics.median(first_sentences) - med_prefill if first_sentences else None
+            ),
             "prefill_tok_s": (med_prompt / med_prefill) if med_prompt else None,
             "decode_tok_s": (med_decoded / med_decode) if med_decode else None,
         }
@@ -557,7 +578,28 @@ def bench_tts(player, reps: int) -> dict:
             wav_bytes = player._synthesize(BENCH_TTS_TEXT, voice_key)
         samples.append(t.elapsed)
 
-    detail: dict = {"chars": len(BENCH_TTS_TEXT), "voice": voice_key}
+    # Production synthesises one sentence at a time, so the cost that lands before
+    # the first sound is one sentence, not the whole answer.
+    from core.model_module import _split_ready_sentences
+
+    ready, _ = _split_ready_sentences(BENCH_TTS_TEXT)
+    first_sentence = ready[0] if ready else BENCH_TTS_TEXT
+    first_samples = []
+    for _ in range(reps):
+        with Timer() as t:
+            player._synthesize(first_sentence, voice_key)
+        first_samples.append(t.elapsed)
+
+    detail: dict = {
+        "chars": len(BENCH_TTS_TEXT),
+        "voice": voice_key,
+        "first_sentence_chars": len(first_sentence),
+        "first_sentence_s": statistics.median(first_samples),
+    }
+    print(
+        f"     first sentence ({len(first_sentence)} chars) synthesised in "
+        f"{statistics.median(first_samples):.2f}s — this is what precedes first audio"
+    )
     if wav_bytes:
         try:
             import io
@@ -574,6 +616,80 @@ def bench_tts(player, reps: int) -> dict:
 # --------------------------------------------------------------------------
 # Summary
 # --------------------------------------------------------------------------
+
+
+def print_critical_path(results: dict) -> None:
+    """Prints time-to-first-audio: what the visitor actually waits through, from the
+    moment they stop speaking to the first word they hear.
+
+    Only the stages still on that path are counted, each with the number that applies
+    there rather than its isolated median:
+
+      STT              in full — the whole question is transcribed after the stop
+      SLM prefill      the WARM figure; the cold prefill runs during recording
+      SLM decode       only as far as the first complete sentence, not all 60 tokens
+      TTS              one sentence, which is the unit production synthesises
+
+    Vision is absent because it runs when the photo is taken. Anything that could not
+    be measured is named rather than silently dropped, since a missing stage makes the
+    total an underestimate.
+    """
+    print("=" * 72)
+    print(" 4. CRITICAL PATH  (visitor stops speaking -> first audio)")
+    print("=" * 72)
+
+    missing: list[str] = []
+
+    stt = results.get("stt", {}).get("samples") or []
+    stt_s = statistics.median(stt) if stt else None
+    if stt_s is None:
+        missing.append("stt")
+
+    tts_detail = results.get("tts", {}).get("detail") or {}
+    tts_s = tts_detail.get("first_sentence_s")
+    if tts_s is None:
+        missing.append("tts")
+
+    per_personality = (results.get("slm", {}).get("detail") or {}).get("per_personality") or {}
+    if not per_personality:
+        missing.append("slm")
+
+    if not per_personality:
+        print(f"  Not enough measurements — missing: {', '.join(missing)}.\n")
+        return
+
+    print(
+        f"  {'personality':<12}{'stt':>9}{'prefill':>9}{'decode>1st':>12}"
+        f"{'tts 1st':>9}{'TOTAL':>10}"
+    )
+    print("  " + "-" * 61)
+
+    def cell(value):
+        return f"{value:.2f}s" if value is not None else "-"
+
+    for name, row in per_personality.items():
+        warm = row.get("warm_prefill_s")
+        decode_first = row.get("decode_to_first_sentence_s")
+        parts = [stt_s, warm, decode_first, tts_s]
+        subtotal = sum(v for v in parts if v is not None)
+        print(
+            f"  {name:<12}{cell(stt_s):>9}{cell(warm):>9}{cell(decode_first):>12}"
+            f"{cell(tts_s):>9}{subtotal:>9.2f}s"
+        )
+
+    print("  " + "-" * 61)
+    if missing:
+        print(
+            f"  UNDERESTIMATE — no measurement for: {', '.join(missing)}. "
+            "Those stages count as zero above."
+        )
+    print(
+        "  Excludes vision (runs at photo time), the cold prefill (overlapped with\n"
+        "  recording), and the decode after the first sentence (overlapped with\n"
+        "  playback). Also excludes the aplay spawn and any Bridge RPC, which this\n"
+        "  benchmark does not exercise — expect the board to be somewhat slower."
+    )
+    print()
 
 
 def print_summary(results: dict, loads: dict, reps: int) -> None:
@@ -606,7 +722,13 @@ def print_summary(results: dict, loads: dict, reps: int) -> None:
     for name, med, lo, hi in rows:
         print(f"  {name:<14}{med:>9.2f}s{lo:>9.2f}s{hi:>9.2f}s{med / total:>8.1%}")
     print("  " + "-" * 53)
-    print(f"  {'TOTAL':<14}{total:>9.2f}s")
+    print(f"  {'SERIAL SUM':<14}{total:>9.2f}s")
+    print(
+        "  Every stage in isolation, added up. This is NOT what the visitor waits\n"
+        "  through: vision runs at photo time, prefill is overlapped with recording,\n"
+        "  and Piper synthesises while llama.cpp is still decoding. Treat it as an\n"
+        "  upper bound, and use the critical path below for before/after comparison."
+    )
 
     if loads:
         cold = sum(v for v in loads.values() if v)
@@ -617,6 +739,8 @@ def print_summary(results: dict, loads: dict, reps: int) -> None:
     print(f"    freq (MHz)  {_cpu_freqs_mhz() or 'unknown'}")
     print(f"    temp (C)    {[round(t, 1) for t in _temps_c()] or 'unknown'}")
     print()
+
+    print_critical_path(results)
 
 
 # --------------------------------------------------------------------------

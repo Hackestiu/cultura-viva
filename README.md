@@ -183,6 +183,16 @@ python3 benchmark.py --json results.json
 | `--photo PATH` / `--audio PATH` | Provide specific test fixtures |
 | `--json PATH` | Export benchmark metrics to a JSON file |
 
+### Reading the output
+
+The report has four sections: **0** the board's capabilities (CPU features, governor, thermal zones, whether llama.cpp has a GPU backend), **1** model preload, **2** per-stage timings, **3** the stage breakdown, and **4** the critical path.
+
+Use **section 4**, not section 3, for before/after comparison. Section 3's `SERIAL SUM` adds every stage in isolation, but the pipeline no longer runs them in sequence — vision happens at photo time, prefill is overlapped with recording, and Piper synthesizes while llama.cpp is still decoding — so that figure is an upper bound, not a latency.
+
+Section 4 reports **time to first audio**: from the moment the visitor stops speaking to the first word they hear. It counts only the stages still on that path, each with the figure that applies there — STT in full, the *warm* prefill rather than the cold one, decode only as far as the first complete sentence, and one sentence of Piper rather than the whole answer. Any stage that could not be measured is named, and the total flagged as an underestimate, rather than being silently dropped.
+
+It excludes the `aplay` spawn and Bridge RPC round-trips, which the benchmark does not exercise, so the board will be somewhat slower than the number printed.
+
 ### Latency Optimization Mechanisms
 1. **Asynchronous Prefill Overlap**: Once a photo is confirmed, the static prompt prefix (system instructions + monument facts) is prefilled into the SLM KV-cache on a background thread while the visitor speaks. When recording ends, only the new user question requires prefill.
 2. **RMS Silence Detection**: The recording ends by itself once the visitor stops talking, and the remaining silence is cropped off both ends before the samples reach Whisper. The encoder pads every window to a fixed length, so room tone between the last word and the stop is encoded at the same price as speech — cropping it removes that cost entirely from the critical path. Thresholds adapt to the room noise floor measured at the start of each recording (`SILENCE_*` in `python/config.py`); in a room too loud to judge, detection backs off and D7 stops the recording as before.

@@ -80,6 +80,28 @@ _CORRECTIONS = {
 }
 
 
+def as_int16(audio: np.ndarray) -> np.ndarray:
+    """Normalizes a captured buffer to flat 16-bit PCM, accepting the unsigned 8-bit,
+    floating-point and signed 16-bit layouts the different capture backends produce.
+
+    Shared by save() and transcribe() so the samples the model hears are bit-identical
+    to the samples on disk: a recording that produced a strange transcription can be
+    replayed and will reproduce it.
+    """
+    audio = np.asarray(audio).reshape(-1)
+    if len(audio) == 0:
+        return audio.astype(np.int16)
+
+    if audio.dtype == np.uint8:
+        return (audio.astype(np.int16) - 128) << 8
+    if np.issubdtype(audio.dtype, np.floating):
+        peak = float(np.max(np.abs(audio)))
+        if peak <= 1.5:  # already normalised to [-1, 1]
+            return (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
+        return np.clip(audio, -32768, 32767).astype(np.int16)
+    return audio.astype(np.int16)
+
+
 def build_hotwords() -> str:
     """Returns the domain keyword aliases joined into a single space-separated string for Whisper hotword biasing."""
     return " ".join(DOMAIN_KEYWORD_ALIASES)
@@ -240,28 +262,16 @@ class MicrophoneManager:
 
         audio = np.asarray(audio).reshape(-1)
 
-        min_v = float(np.min(audio)) if len(audio) > 0 else 0.0
-        max_v = float(np.max(audio)) if len(audio) > 0 else 0.0
-        mean_v = float(np.mean(audio)) if len(audio) > 0 else 0.0
         logger.debug(
             "Mic buffer: dtype={}, length={}, min={:.2f}, max={:.2f}, mean={:.2f}",
             audio.dtype,
             len(audio),
-            min_v,
-            max_v,
-            mean_v,
+            float(np.min(audio)) if len(audio) > 0 else 0.0,
+            float(np.max(audio)) if len(audio) > 0 else 0.0,
+            float(np.mean(audio)) if len(audio) > 0 else 0.0,
         )
 
-        # Handle various audio formats
-        if audio.dtype == np.uint8:
-            samples = (audio.astype(np.int16) - 128) << 8
-        elif np.issubdtype(audio.dtype, np.floating):
-            if max(abs(min_v), abs(max_v)) <= 1.5:
-                samples = (np.clip(audio, -1.0, 1.0) * 32767.0).astype(np.int16)
-            else:
-                samples = np.clip(audio, -32768, 32767).astype(np.int16)
-        else:
-            samples = audio.astype(np.int16)
+        samples = as_int16(audio)
 
         max_sample = int(np.max(np.abs(samples))) if len(samples) > 0 else 0
         with wave.open(str(out_file), "wb") as wf:
@@ -329,8 +339,21 @@ class MicrophoneManager:
         transcribe() still loads on demand if this was never called or failed."""
         return self._ensure_whisper() is not None
 
-    def transcribe(self, audio_path) -> str:
-        """Transcribes a WAV file to text with faster-whisper, biasing recognition toward Gaudí domain vocabulary via an initial prompt and hotwords, and canonicalizing known misspellings in the result. Lazily loads the WhisperModel on first call. Returns the transcribed text, or an empty string if the model file is missing, faster-whisper isn't installed, or transcription fails."""
+    def transcribe(self, audio) -> str:
+        """Transcribes a question to text with faster-whisper, biasing recognition toward
+        Gaudí domain vocabulary via an initial prompt and hotwords, and canonicalizing
+        known misspellings in the result. Lazily loads the WhisperModel on first call.
+
+        Accepts either the captured samples as a numpy array or a path to a WAV file.
+        Prefer the array: given a path, faster-whisper imports PyAV, opens the container,
+        decodes the PCM and resamples it — rebuilding, on the critical path between the
+        user finishing their question and hearing an answer, the very array the caller
+        already holds at the right rate and layout. The path form stays for fixtures and
+        for re-running a saved recording offline.
+
+        Returns the transcribed text, or an empty string if the model file is missing,
+        faster-whisper isn't installed, or transcription fails.
+        """
         from config import STT_MODEL_PATH
 
         if not STT_MODEL_PATH.exists():
@@ -345,9 +368,17 @@ class MicrophoneManager:
         if self._ensure_whisper() is None:
             return ""
 
+        # float32 in [-1, 1] at 16 kHz is what faster-whisper decodes a file down to,
+        # so handing it that directly skips the decode entirely.
+        source = (
+            as_int16(audio).astype(np.float32) / 32768.0
+            if isinstance(audio, np.ndarray)
+            else str(audio)
+        )
+
         try:
             segments, _ = self._whisper.transcribe(
-                str(audio_path),
+                source,
                 language="en",
                 beam_size=1,
                 temperature=0.0,
@@ -378,6 +409,8 @@ class MicrophoneManager:
             return text
         except Exception as exc:
             logger.exception(
-                "faster-whisper failed transcribing {}: {}", audio_path, exc
+                "faster-whisper failed transcribing {}: {}",
+                audio if not isinstance(audio, np.ndarray) else f"{len(audio)} samples",
+                exc,
             )
             return ""

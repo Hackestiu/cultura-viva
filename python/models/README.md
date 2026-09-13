@@ -106,6 +106,8 @@ huggingface-cli download Systran/faster-whisper-base.en \
 | `hotwords` | Domain keyword list | Boosts recognition of proper nouns |
  
 Post-transcription, `canonicalize_domain_entities()` further corrects common ASR misspellings (e.g. "gaudy" → "Gaudí", "trencadis" → "trencadís").
+
+`transcribe()` takes the captured samples as a numpy array, not a path. Given a path, faster-whisper imports PyAV, opens the container, decodes the PCM and resamples it — rebuilding the array the caller already holds, on the critical path between the user finishing their question and hearing an answer. The recording is still written to `data/recordings/` for traceability (a few hundred KB, off the read path); `as_int16()` is shared by both so the samples on disk and the samples the model hears are identical. The path form still works, for fixtures and for re-running a saved recording offline.
  
 ---
  

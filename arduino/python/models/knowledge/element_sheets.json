@@ -314,6 +314,7 @@
         "Storeys": "9 (basement, ground floor, mezzanine, main/noble floor, four upper floors, attic)"
       },
       "inspiration": "Gaudí designed the house as 'a constant curve, both outside and inside,' combining ruled geometry with naturalistic form. There is no agreement on which mountain inspired the facade -- candidates proposed by different contemporaries include the rocks of Fray Guerau in the Prades mountains, St. Miquel del Fai, the Torrent de Pareis cliffs in Menorca, Uçhisar in Cappadocia, and Mola Gallifa.",
+      "purpose": "Built as a mixed-use apartment block: the Milà family lived on the noble floor and the four upper floors were let as rental apartments, over a ground floor and basement designed for vehicle access. It stopped being a private residence when it was taken over for other uses, and since 2013 it has served as a cultural centre and the headquarters of the Fundació Catalunya La Pedrera, open to visitors.",
       "materials": [
         "limestone (Garraf Massif, lower floor; Villefranche quarry, upper floors)",
         "wrought iron",
@@ -354,6 +355,7 @@
         "Arch spacing": "about 80 cm apart"
       },
       "inspiration": "The rippling roofline is widely compared to the ribs of a huge animal or the fronds of a palm; the space, now called Espai Gaudí, is often described as feeling like walking through the inside of a whale's ribcage.",
+      "purpose": "The attic was built as the building's shared laundry and drying floor, and its arches carry the undulating roof and rooftop terrace above the apartments. It now houses the Espai Gaudí exhibition on Gaudí's work.",
       "materials": [
         "brick (volta catalana / timbrel vaulting)"
       ],
@@ -393,6 +395,7 @@
         "Discharge domes": 4
       },
       "inspiration": "Nicknamed the 'garden of warriors' by poet Pere Gimferrer, since the grouped chimneys look like helmeted sentinels standing guard over the skylight/staircase exits; their helmet-like silhouettes are sometimes linked to Gaudí's interest in medieval fortress architecture.",
+      "purpose": "Every piece on the roof does a job: the chimneys extract smoke from the apartments below, the vents renew the building's air, the discharge domes handle drainage, the skylight towers are the exits of the staircases, and some of those towers also house the water tanks. Their sculptural treatment is applied to elements that are functional first.",
       "materials": [
         "brick",
         "lime coating",
@@ -433,6 +436,7 @@
       "timeline": "Built during the main 1906-1910 construction phase; restored from 1987 onward, including rejoining fallen stone pieces sourced from the Villefranche quarry.",
       "technical_figures": {},
       "inspiration": "Viewed from outside, the building reads in three parts: the main six-storey block with winding stone floors, two set-back floors with a smoother, whiter, wave-like curve, and the body of the roof.",
+      "purpose": "The facade carries only its own weight, so it works as a self-supporting envelope rather than as structure: with the loads taken by the iron beams behind it, the front can open into large windows and balconies and the interior partitions can be moved freely without touching the building's stability.",
       "materials": [
         "limestone (Garraf Massif, first floor)",
         "limestone (Villefranche quarry, higher levels)",
@@ -473,6 +477,7 @@
         "Courtyard beam diameter": "12 feet"
       },
       "inspiration": "The floor-support beam structure was interpreted by Josep Maria Carandell, who built the centerpiece at a shipyard, as representing the helm of a ship -- 'the soul of the building,' with a resemblance to Gothic crypts. The iron entrance gate's non-symmetrical structure evokes soap bubbles formed between the hands, or the structure of a plant cell.",
+      "purpose": "The two courtyards exist to bring daylight and ventilation down to the nine storeys of apartments that have no street frontage. The wrought-iron gate was the building's entrance for both people and cars, giving access to the basement garage that is now an auditorium.",
       "materials": [
         "cast iron (pillars, beams)",
         "wrought iron (gate)"
@@ -752,6 +757,7 @@
         "Catenary arches in the attic": 60
       },
       "inspiration": "Commissioned at the height of the rivalry between the bourgeois families of Passeig de Gràcia (the 'Illa de la Discòrdia', the Block of Discord): the textile industrialist Josep Batlló wanted a house that would put the neighbouring buildings by Puig i Cadafalch and Domènech i Montaner in their place.",
+      "purpose": "A remodelling rather than a new build: Josep Batlló wanted the 1877 apartment block turned into a home for his family on the noble floor with rental flats above, and into a showpiece that would outshine its neighbours on the Illa de la Discòrdia. It has been open to the public as a house-museum since 2002.",
       "materials": [
         "Montjuïc sandstone",
         "trencadís (ceramic mosaic)",
@@ -796,6 +802,7 @@
         "Polychrome ceramic pieces": 330
       },
       "inspiration": "The central section evokes the surface of a lake with water lilies, recalling Monet's Water Lilies, through the rippling effect of the glass and ceramic mosaic.",
+      "purpose": "The street facade is the building's public face, the part that had to win the rivalry of the Illa de la Discòrdia, and it works as display as much as enclosure. It is also functional: the galleries and balconies light and ventilate the front rooms, and the upper crown is a gable built to hide the old water tank.",
       "materials": [
         "Montjuïc sandstone (ground floor and first-floor galleries)",
         "coloured glass discs",
@@ -836,6 +843,7 @@
         "Noble floor area": "over 700 m²"
       },
       "inspiration": "The ground floor is the most striking part of the building, with unusual tracery, irregular oval windows and stone carved into sinuous shapes, almost without straight lines.",
+      "purpose": "The ground floor holds the entrance and the private hall that leads up to the noble floor; the noble floor itself was the Batlló family's own home, laid out as living rooms, Batlló's study and a dining room. Both levels are now the main route of the house-museum, open to visitors since 2002.",
       "materials": [
         "carved sandstone",
         "stained glass"

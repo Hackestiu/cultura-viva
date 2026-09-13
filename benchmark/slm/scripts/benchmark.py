@@ -128,9 +128,17 @@ class GaudiKnowledgeStore:
     def _render_sheet(sheet: dict) -> str:
         materials = ", ".join(sheet.get("materials", []))
         facts = " ".join(sheet.get("technical_facts", []) + sheet.get("artistic_facts", []))
-        return (
-            f"{sheet.get('name')} (part of {sheet.get('parent', sheet.get('name'))}). "
-            f"Materials: {materials}. {sheet.get('inspiration', '')} {facts}"
+        purpose = sheet.get("purpose", "")
+        return " ".join(
+            part
+            for part in (
+                f"{sheet.get('name')} (part of {sheet.get('parent', sheet.get('name'))}).",
+                purpose,
+                f"Materials: {materials}.",
+                sheet.get("inspiration", ""),
+                facts,
+            )
+            if part
         ).strip()
 
     @staticmethod

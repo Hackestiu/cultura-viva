@@ -369,6 +369,8 @@ class ModelRegistry:
             lines.append(f"Creator: {sheet['creator']}")
         if sheet.get("timeline"):
             lines.append(f"Timeline: {sheet['timeline']}")
+        if sheet.get("purpose"):
+            lines.append(f"Purpose: {sheet['purpose']}")
         if sheet.get("inspiration"):
             lines.append(f"Inspiration: {sheet['inspiration']}")
 

@@ -1,0 +1,74 @@
+dataset:
+  name: culturaviva/image_1080
+  val_size: 0.15
+  test_size: 0.15
+  seed: 42
+
+# ── Inference-time OOD detection ─────────────────────────────────────────────
+# Applied to every checkpoint unless overridden at the monument or model level.
+# entropy_threshold: null means auto = 0.5 * ln(num_classes).
+inference:
+  entropy_threshold: null       # float or null (auto: 0.5 * ln(N))
+  confidence_threshold: 0.50   # reject if max(softmax) < this value
+  not_sure_label: "not_sure"   # label emitted for OOD inputs
+
+
+# defaults applied to every (monument, model) run, unless overridden
+training_defaults:
+  num_epochs: 8
+  batch_size: 16
+  learning_rate: 2e-5
+
+wandb:
+  project: cultura-viva
+
+# one entry per monument. data_dir is the subfolder under dataset.name
+# (culturaviva/gaudi_image/<data_dir>). Classes ("elements") are auto-detected
+# per monument from its own subfolders, so N can differ between monuments:
+#   - casa_batllo (2 classes): pla_frontal, pla_inferior
+#   - park_guell (7 classes): 3_viaductes, casa_museu, escalinata_drac, pavellons_consergeria, placa_natura, sala_hipostila, turo_3_creus
+#   - pedrera (3 classes): facana_1, facana_2, facana_3
+#   - sagrada_familia (6 classes): cupula, facana_naixement, facana_passio, laterals, posterior, torres
+#
+# Per-monument inference overrides (optional):
+#   Paste the values suggested by calibrate_thresholds.py to override the global
+#   inference block. inference.py merges: global → monument → model (highest wins).
+#   Example:
+#     - name: sagrada_familia
+#       data_dir: sagrada_familia
+#       inference:
+#         entropy_threshold: 0.8120    # from calibrate_thresholds.py
+#         confidence_threshold: 0.62
+monuments:
+  - name: casa_batllo
+    data_dir: casa_batllo
+
+  - name: park_guell
+    data_dir: park_guell
+
+  - name: pedrera
+    data_dir: pedrera
+
+  - name: sagrada_familia
+    data_dir: sagrada_familia
+
+# one entry per model to train. Only "name" and "vision_model_name" are
+# required -- everything else falls back to training_defaults, and
+# output_dir/run_name are auto-derived from "<monument>-<model>" if omitted.
+# Per-model inference overrides (optional):
+#   Takes precedence over both the global and monument-level inference blocks.
+#   Example:
+#     - name: mobilenetv2
+#       vision_model_name: google/mobilenet_v2_1.0_224
+#       inference:
+#         entropy_threshold: 0.6500    # MobileNet tends to be less confident
+models:
+  - name: mobilenetv2
+    vision_model_name: google/mobilenet_v2_1.0_224
+
+  - name: vit
+    vision_model_name: google/vit-base-patch16-224
+    learning_rate: 2e-5
+
+  # - name: resnet50
+  #   vision_model_name: microsoft/resnet-50

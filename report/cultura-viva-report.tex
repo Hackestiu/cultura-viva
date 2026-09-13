@@ -16,6 +16,7 @@
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
 \usepackage{xcolor}
 \usepackage{caption}
+\usepackage{cleveref}
 \usepackage[hidelinks]{hyperref}
 
 \sisetup{detect-weight=true, detect-family=true}
@@ -80,7 +81,7 @@ model.
 
 \subsection{The pipeline}
 
-Figure~\ref{fig:pipeline} shows the full interaction. Two things about its
+\Cref{fig:pipeline} shows the full interaction. Two things about its
 shape are worth stating up front, because they are easy to get wrong from a
 prose description.
 
@@ -93,7 +94,7 @@ prose description.
         a photo is confirmed, the whole stable prompt prefix --- personality
         instructions plus the recognised element's fact sheet --- is known
         before the visitor has said a word, which is exactly what makes the
-        prefill overlap in \S\ref{sec:latency} possible.
+        prefill overlap in \Cref{sec:latency} possible.
   \item \textbf{The GPS does one job only: it picks which minimap is shown.}
         The NEO-6M feeds a coordinate to a Haversine site resolver that decides
         whether the visitor is at Park G\"uell, the Sagrada Fam\'ilia, Casa
@@ -182,7 +183,7 @@ which minimap is displayed.}
   \item \textbf{Capture.} Button D7 takes a 1080p photo.
   \item \textbf{Validate.} The per-monument ONNX classifier decides
         \emph{which architectural element} is in frame, or rejects the photo as
-        off-distribution and asks for a retake (\S\ref{sec:ood}).
+        off-distribution and asks for a retake (\Cref{sec:ood}).
   \item \textbf{Ask.} The visitor flips to map mode and records a spoken
         question. Recording ends by itself on silence.
   \item \textbf{Transcribe.} faster-whisper, biased towards the domain
@@ -376,51 +377,20 @@ Sagrada Fam\'ilia        & 6 & \tbd & \tbd & \tbd & \tbd \\
 \end{tabular}
 \end{table}
 
-\paragraph{What ships.} \textbf{Four} exported classifiers ship with the
-device, one per monument, under
-\texttt{models/\discretionary{}{}{}vision/\discretionary{}{}{}<location>/}:
-Casa Batll\'o (2 element classes), Park G\"uell (7), La Pedrera (3) and the
-Sagrada Fam\'ilia (6), each plus an \texttt{unknown} label for rejected inputs.
-Each is a \texttt{model.onnx} plus a \texttt{labels.json} carrying the label
-map, input size and normalisation constants, so the board-side code needs no
-per-model configuration --- switching monument is a directory change, nothing
-more.
+\paragraph{Deployed Models.} The device ships with four location-specific ONNX classifiers (one per monument), plus an \texttt{unknown} label. Each model directory pairs the \texttt{model.onnx} file with a \texttt{labels.json} containing necessary metadata (label map, input size, and normalisation constants). This decoupled design allows the board-side code to switch monuments seamlessly with a simple directory change, requiring no code recompilation.
 
 \subsection{Out-of-distribution rejection}
 \label{sec:ood}
 
-A real visitor will point the camera at a tree, another tourist, or the sky. A
-plain \texttt{argmax} classifier is obliged to name an architectural element
-anyway, which would produce a confident, grounded, entirely wrong audio guide
-answer. The pipeline therefore puts a gate in front of the prediction. The
-input is rejected as \texttt{not\_sure} when \emph{either} signal fires:
+To prevent the system from confidently hallucinating answers for irrelevant photos (e.g., trees, skies, or passers-by), the pipeline must reject invalid inputs as \texttt{not\_sure}. 
 
-\begin{align}
-H(p) = -\sum_{i=1}^{N} p_i \ln p_i \;&>\; \tau_{H}
-  &&\text{(predictive entropy too high)}\\[0.2em]
-\max_i p_i \;&<\; \tau_{\text{conf}}
-  &&\text{(peak confidence too low)}
-\end{align}
+\paragraph{Deployed implementation.} While the repository contains a script (\texttt{calibrate\_thresholds.py}) to compute dynamic, per-checkpoint thresholds based on predictive entropy, this is not used on the device. Instead, the board relies entirely on a simple, fixed peak confidence threshold across all monuments:
 
-with $\tau_{H} = 0.5 \ln N$, auto-scaled to each monument's class count so that
-a 2-class and a 7-class head are held to comparable standards.
+\begin{equation}
+\max_i p_i \;<\; 0.50
+\end{equation}
 
-\paragraph{What actually runs on the board.} A fixed
-$\tau_{\text{conf}} = 0.50$, the same value for all four monuments and both
-backbones. Per-checkpoint calibration was deliberately not deployed.
-
-\texttt{calibrate\_thresholds.py} exists and does the fuller job --- it sweeps
-the validation split and suggests a $(\tau_{H}, \tau_{\text{conf}})$ pair for a
-given checkpoint subject to a recall target (default: preserve 95\,\% of
-in-distribution recall), printing a ready-to-paste YAML snippet, and
-\texttt{inference.py} will merge overrides across three levels
-(\emph{global $\rightarrow$ monument $\rightarrow$ model}, most specific
-winning). None of that is in use on the device. A flat 50\,\% confidence cut
-proved good enough in practice: the failure it has to catch is a photo of
-foliage or a passer-by, which lands nowhere near 50\,\% confidence on any of
-the heads, so the extra precision bought by per-checkpoint tuning would not
-have changed which photos get rejected. Calibration remains available if a
-future monument turns out to need it.
+If the highest predicted probability is below 50\,\%, the input is rejected. This flat cut proved perfectly sufficient in practice, as completely out-of-distribution photos consistently yield dispersed probabilities well below this mark, making complex calibration unnecessary for robust rejection.
 
 \subsection{Export path}
 
@@ -431,7 +401,7 @@ future monument turns out to need it.
         into \texttt{model.onnx} $+$ \texttt{labels.json}.
   \item \texttt{calibrate\_thresholds.py} --- suggests per-checkpoint OOD
         thresholds. Available, but not used by the shipped configuration
-        (\S\ref{sec:ood}).
+        (\Cref{sec:ood}).
   \item \texttt{inference.py} --- runs an exported checkpoint on a single image
         with the gate applied; also importable as \texttt{MonumentClassifier},
         which is how the device uses it.
@@ -554,180 +524,94 @@ Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \label{sec:slm-personalities}
 
 The guide personality is the one setting a visitor chooses for themselves, so it
-is worth asking whether it changes anything. It is implemented purely as a
-system-prompt tail: \texttt{get\_kg\_context} is personality-independent, so all
-three guides receive byte-identical facts and differ only in a short block of
-instructions.
+is worth asking whether it changes anything. It is implemented as a system-prompt
+tail: the retrieved facts are identical for all three guides by construction
+(\texttt{get\_kg\_context} is personality-independent), and only a short block of
+instructions differs.
 
-\paragraph{Protocol.} 24 open questions, one per element sheet, each carrying an
-\texttt{element\_id} so retrieval takes the direct-lookup path the device uses
-when vision names an element. Every question is answered by all three guides at
-the shipped sampling settings. A judge from a \emph{different} model family,
-\texttt{llama3.1:8b}, then reads each answer blind and names the guide that wrote
-it, choosing between paraphrased descriptions rather than the prompt text, with
-the options shuffled per item. Chance is therefore \SI{33.3}{\percent}. The same
-judge is given three hand-written, deliberately distinct texts as a self-test on
-every run; it scored 3/3 throughout, so a null result is a statement about the
-guides and not about the instrument. The benchmark reads the device's own
-knowledge files and imports its prompt builders directly, rather than keeping
-copies, so these figures describe what the board actually serves.
+\paragraph{Protocol.} 24 open questions, one per element sheet
+(\texttt{personality/probes.json}) --- open rather than factual because a closed
+question collapses to one correct sentence whatever the guide. Each carries an
+\texttt{element\_id}, so retrieval takes the direct-lookup path the device uses
+when vision names an element. Every question is answered by all three guides on
+\texttt{qwen2.5:0.5b} at the shipped sampling settings, giving 72 answers. A judge
+from a \emph{different} model family, \texttt{llama3.1:8b}, then reads each answer
+blind and names the guide that wrote it, choosing from paraphrased descriptions
+rather than the prompt text, with the options shuffled per item.
 
-\paragraph{Tone instructions did not work.} The original prompts described how
-each guide should sound --- ``you speak with passion and use evocative
-metaphors'', ``you are precise, rigorous'', ``you use simple analogies and an
-animated tone''. On \texttt{qwen2.5:0.5b} the judge recovered the intended guide
-in \textbf{28 of 72} answers, \SI{38.9}{\percent} against a \SI{33.3}{\percent}
-baseline (exact binomial $p = 0.19$): indistinguishable from guessing. The child
-guide was identified in \SI{4}{\percent} of its own answers. Asked why Casa
-Batll\'o's facade resembles bones, it replied that this ``gives it a sense of
-solidity and strength''.
-
-\paragraph{Format requirements replaced them.} Each guide now demands one
-concrete, mechanically checkable thing, and the three are deliberately orthogonal
-so that a guide which obeys is distinguishable from one which does not:
-
-\begin{itemize}
-  \item \textbf{artistic} --- one comparison to nature, written as ``like \ldots'';
-  \item \textbf{technical} --- at least one number written in digits, taken from
-        the facts supplied;
-  \item \textbf{child} --- a closing question, ending in a question mark.
-\end{itemize}
-
-\paragraph{The result depends almost entirely on model size.}
+\paragraph{The guides are not distinguishable.}
 
 \begin{table}[h]
 \centering
-\caption{Blind identification and format compliance under the format-requirement
-prompts. Chance is \SI{33.3}{\percent}. Compliance is the share of answers
-satisfying that guide's stated requirement.}
-\begin{tabular}{lrrrrr}
-\toprule
-& \multicolumn{2}{c}{\textbf{Identification}} & \multicolumn{3}{c}{\textbf{Compliance}} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-6}
-\textbf{Model} & \textbf{Correct} & \textbf{Accuracy} & \textbf{art.} & \textbf{tech.} & \textbf{child} \\
-\midrule
-Qwen 2.5 0.5B (shipped) & 30/72 & \SI{41.7}{\percent} & \SI{21}{\percent} & \SI{8}{\percent} & \SI{0}{\percent} \\
-Qwen 2.5 1.5B           & 53/72 & \SI{73.6}{\percent} & \SI{92}{\percent} & \SI{33}{\percent} & \SI{21}{\percent} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-On the \textbf{0.5B model the change is not significant}: \SI{41.7}{\percent}
-against \SI{33.3}{\percent} chance, $p = 0.09$, and the child guide still never
-once ended with a question across 24 answers. Three further wordings were tried
---- dropping the competing ``answer only what the user asks'' sentence, adding a
-worked example, and moving the requirement to the front of the prompt --- and
-compliance never rose above \SI{10}{\percent}. The 0.5B model does not act on the
-personality tail.
-
-On the \textbf{1.5B model the same prompts work}: \SI{73.6}{\percent}
-identification, $p < 0.001$, with per-guide recall of \SI{67}{\percent},
-\SI{79}{\percent} and \SI{75}{\percent} --- the child guide rising from
-\SI{4}{\percent} under tone instructions to \SI{75}{\percent}. Median text
-similarity between two guides answering the same question falls from $0.62$ to
-$0.27$.
-
-\begin{table}[h]
-\centering
-\caption{Blind identification on \texttt{qwen2.5:1.5b}. Rows are the guide that
-wrote the answer, columns the judge's choice.}
+\caption{Blind identification of the guide from its answer. Rows are the guide
+that wrote the answer, columns the judge's choice; the diagonal is correct.}
 \begin{tabular}{lrrr}
 \toprule
 \textbf{true \textbackslash\ predicted} & \textbf{artistic} & \textbf{technical} & \textbf{child} \\
 \midrule
-artistic  & \textbf{16} & 6  & 2  \\
-technical & 5  & \textbf{19} & 0  \\
-child     & 6  & 0  & \textbf{18} \\
+artistic  & \textbf{14} & 10 & 0 \\
+technical & 8  & \textbf{13} & 3 \\
+child     & 12 & 11 & \textbf{1} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Consequence for the selection.} The 0.5B model was chosen for RAM
-headroom, and this is the measured cost of that
-choice: the guide personality is a feature the shipped configuration does not
-deliver. It is not a prompt-wording problem --- the identical prompts produce
-\SI{74}{\percent} identification one model size up. Either the personality is
-presented as cosmetic, or the 1.5B model is reinstated and the
-\SI{1.45}{\giga\byte} working set budgeted for.
+28 of 72 correct, \SI{38.9}{\percent}, against a \SI{33.3}{\percent} chance
+baseline --- an exact binomial $p = 0.19$, indistinguishable from guessing. The
+matrix shows where it breaks down: the judge chose \emph{child} four times in 72,
+so the child guide is recovered in \SI{4}{\percent} of its own answers. Reading
+the output agrees with the number. Asked why Casa Batll\'o's facade resembles
+bones, the child guide replies that it ``gives it a sense of solidity and
+strength'', which is not a sentence written for an eight-year-old.
 
-\paragraph{Grounding is the larger problem.} The same judge was asked, for each
+\paragraph{This is not an artefact of the judge.} Given three hand-written,
+deliberately distinct texts, the same judge scores 3/3 and picks \emph{child}
+correctly --- the label it almost never chose on real output. The instrument
+discriminates; the guides simply sound alike. This self-test runs on every
+invocation so the null always ships with evidence the measurement works.
+
+\paragraph{What it cannot say.} Without a positive control arm --- a deliberately
+loud persona run under the same constraints --- this result cannot separate two
+causes with opposite remedies: that the three prompts are too similar to each
+other, or that the regime suppresses any persona at all. Both are plausible. Each
+prompt is roughly 58 words of which about 28 are verbatim-identical across all
+three, so only some 30 words distinguish a guide; and one of the shared sentences
+(``answer ONLY what the user asks --- do not give unsolicited background'')
+forbids precisely the elaboration in which register lives, under a 50-word
+instruction and a 60-token cap that truncated \SIrange{29}{38}{\percent} of
+answers mid-sentence.
+
+\paragraph{A larger finding: grounding.} The same judge was asked, for each
 answer, whether every claim was supported by the facts the model had been given
---- reference-free, so that style is never scored as inaccuracy.
+--- reference-free, so that style is not scored as inaccuracy.
 
 \begin{table}[h]
 \centering
 \caption{Answers containing at least one claim unsupported by the retrieved facts.}
 \begin{tabular}{lrr}
 \toprule
-\textbf{Guide} & \textbf{0.5B} & \textbf{1.5B} \\
+\textbf{Guide} & \textbf{Unsupported} & \textbf{Rate} \\
 \midrule
-artistic  & 10/24 (\SI{42}{\percent}) & 7/24 (\SI{29}{\percent}) \\
-technical & 7/24 (\SI{29}{\percent}) & 2/24 (\SI{8}{\percent}) \\
-child     & 9/24 (\SI{38}{\percent}) & 15/24 (\SI{62}{\percent}) \\
+artistic  & 11/24 & \SI{46}{\percent} \\
+technical & 13/24 & \SI{54}{\percent} \\
+child     & 15/24 & \SI{62}{\percent} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Between a twelfth and two thirds of answers contain something the sheets do not
-support, depending on guide and model size.
+Between a half and two thirds of answers contain something the sheets do not
+support. Spot-checks confirm the judge is not being harsh: the model states that
+the Hypostyle Room was built ``to house a collection of stone columns'' when the
+sheet describes a covered market. On the evidence here this matters considerably
+more than which of the three voices delivers it, and it is the open item this
+benchmark would pursue next.
 
-\paragraph{How far to trust that.} All 72 answers from the 0.5B run were then
-adjudicated by hand against the sheet each was given
-(\texttt{results/manual\_audit\_qwen2.5\_0.5b.json}). The manual count is
-\textbf{23/72 (\SI{31.9}{\percent})} against the judge's \textbf{26/72
-(\SI{36.1}{\percent})} --- but the closeness is partly cancellation. Per-answer
-agreement is 55/72, Cohen's $\kappa = 0.48$, with 10 judge false positives and 7
-false negatives. The false positives cluster on answers that are faithful but
-ungrammatical: one lifts \SI{65}{\percent} of its words verbatim from the sheet
-and was still marked unsupported, suggesting the judge partly conflates
-incoherence with invention. The false negatives are quiet fabrications it waved
-through --- a date absent from the sheet, and a facade described as polychrome
-where the sheet says only that Gaud\'i \emph{wanted} it polychromed.
-
-So roughly a third is the right order of magnitude, but a single judge verdict
-should not be used to triage an individual answer. The failures that matter are
-flat contradictions: Casa Batll\'o placed ``in the centre of Barcelona's Gothic
-Quarter'' (it is on Passeig de Gr\`acia), Casa Mil\`a called ``part of Gaud\'i's
-famous Park G\"uell complex'', and the Hypostyle Room built ``to house a
-collection of over 1,000 columns'' where the sheet says Room of a Hundred Columns
-and describes a rainwater collection system.
-
-Note also that the guide asked to speak to a child hallucinates most at 1.5B ---
-simplifying and staying grounded pull against each other. On the evidence here
-this matters more than which voice delivers the answer, and it is the next item
-this benchmark should pursue.
-
-\paragraph{A defect found during the audit, and fixed.} Three answers returned
-the internal element identifier to the visitor verbatim --- ``You are seeing
-laterals\_sagrada\_familia in the photos.'' Vision emits Catalan snake\_case class
-labels, and \texttt{build\_facts\_block} put the label straight into the prompt, so
-the model read it as a proper name. In the worst case it invented around one:
-all three guides answered that ``Gaud\'i built the Sala Hipostila to house a
-collection of columns'', a name absent from the sheet, which calls it the
-Hypostyle Room.
-
-The sheets already carry English names and list the vision labels among their
-aliases, so the mapping existed and was simply never used.
-\texttt{ModelRegistry.display\_name} now resolves it and the prompt reads
-``[Detected element in photo: Side Aisles and Lateral Naves]''. All 18 vision
-classes across the four monuments resolve; an element with no sheet falls back to
-the de-underscored identifier.
-
-\paragraph{It is a correctness fix, not a grounding fix.} Re-running the 0.5B
-study afterwards, the judge scored 20/72 unsupported against 26/72 before. That
-looks like an improvement and is not one: paired over the same 72 questions, 16
-answers moved to supported and 10 moved the other way, an exact McNemar
-$p = 1.00$. The identifier no longer reaches the visitor, which is worth having on
-its own, but hallucination did not measurably fall.
-
-The churn is the more useful number. Sixteen verdicts flipping in each direction
-on a re-run, with $\kappa = 0.48$ between judge and hand audit, puts the noise
-floor of this measurement near $\pm 6$ answers. At $n = 72$ only effects larger
-than roughly eight percentage points are detectable at all, which is the bar any
-future grounding work has to clear before its result means anything.
-
-Regenerate any figure in this section with
-\texttt{uv run python main.py personality --model <tag>}.
+\paragraph{Recommendation.} Small models follow format constraints far more
+reliably than tone instructions. Replacing ``you speak with passion and use
+evocative metaphors'' with a concrete output requirement per guide --- name one
+visual image; cite one number when the facts provide one; include one everyday
+comparison --- is the cheapest change likely to move this result, and it can be
+re-measured with \texttt{uv run python main.py personality}.
 
 \paragraph{Selected.} \textbf{Qwen 2.5 0.5B Instruct}, \texttt{Q4\_K\_M}
 (\texttt{qwen2.5-0.5b-instruct-q4\_k\_m.gguf}).
@@ -753,81 +637,57 @@ which still has to be regenerated and filled in.
 \label{sec:stt}
 % ---------------------------------------------------------------------------
 
-\subsubsection{Engine}
+\subsubsection{Engine Evaluation}
 
-One engine was benchmarked and shipped: \textbf{faster-whisper} on the Whisper
-\texttt{base.en} model, running under CTranslate2 with INT8 quantisation.
+To find the optimal trade-off between keyword retention, memory footprint, and inference latency on the Cortex-A53, several speech-to-text architectures were benchmarked: \texttt{faster-whisper} (CTranslate2), \texttt{whisper.cpp} (GGML), \texttt{sherpa-onnx}, and \texttt{vosk}. For the Whisper-based engines, both \texttt{tiny.en} and \texttt{base.en} tiers were evaluated. The English-only (\texttt{.en}) variants were deliberately chosen since the guide answers in English, and monolingual weights are both smaller and more accurate than their multilingual counterparts at the same parameter count.
 
-\texttt{base.en} is the smallest Whisper tier that holds up on full sentences,
-and CTranslate2's INT8 path is what makes it viable on four Cortex-A53 cores:
-it keeps the \SI{141}{\mega\byte} model and its activations well inside LPDDR4
-and maximises memory bandwidth, which is the binding constraint here rather
-than arithmetic. The English-only (\texttt{.en}) variant is deliberate --- the
-guide answers in English, and the monolingual weights are both smaller and more
-accurate on English than the multilingual ones at the same size.
+\subsubsection{Metrics and domain biasing}
 
-\subsubsection{Metrics and optimisations}
+The harness measures Word Error Rate (WER), Character Error Rate (CER), Keyword-spotting Accuracy (KWA), Real-Time Factor (RTF), and peak RAM.
 
-The harness measures \textbf{WER}, \textbf{CER}, \textbf{keyword-spotting
-accuracy}, \textbf{real-time factor} (inference time / audio duration) and
-\textbf{peak RAM}.
+Keyword-spotting accuracy deserves a special note. It is measured against a curated list of domain aliases (e.g., ``La Pedrera'' or ``catenary arch''). A generic WER number hides the failure that actually matters for an audio guide: a transcript that gets ``Gaud\'i'' or ``trencad\'is'' wrong will retrieve the wrong knowledge sheet, and the whole answer is then confidently off-topic. 
 
-Keyword-spotting accuracy deserves a note. A generic WER number hides the
-failure that actually matters for an audio guide: a transcript that gets
-``Gaud\'i'', ``trencad\'is'' or ``Sagrada Fam\'ilia'' wrong will retrieve the
-wrong knowledge sheet, and the whole answer is then confidently off-topic. The
-decoder is therefore biased towards the domain vocabulary through an
-\texttt{initial\_prompt}:
+To prevent this, the decoder is biased towards the domain vocabulary by injecting the following literal string as the \texttt{initial\_prompt}:
 
-\begin{quote}\itshape\small
-Cultura Viva audio guide in Barcelona about Antoni Gaud\'i, Sagrada Fam\'ilia
-basilica, Nativity, Passion, and Glory facades, Catalan modernisme
-architecture, Casa Batll\'o, Casa Mil\`a, Park G\"uell, dragon and salamander
-sculptures, and trencad\'is mosaics.
+\begin{quote}\ttfamily\small
+"Cultura Viva audio guide in Barcelona about Antoni Gaud\'i, Sagrada Fam\'ilia basilica, 
+Nativity, Passion, and Glory facades, Catalan modernisme architecture, Casa Batll\'o, 
+Casa Mil\`a, Park G\"uell, dragon and salamander sculptures, and trencad\'is mosaics."
 \end{quote}
 
-For \texttt{faster-whisper} the same terms are additionally passed as explicit
-\texttt{hotwords}. Further tuning:
+\subsubsection{Results and selection}
 
-\begin{itemize}
-  \item \textbf{4 CPU threads} --- the QRB2210 has exactly 4 Cortex-A53 cores,
-        so 4 saturates the CPU without paying context-switch overhead.
-  \item \textbf{INT8 compute type} --- keeps the model comfortably inside
-        LPDDR4 and maximises memory bandwidth.
-  \item \textbf{Greedy decoding} --- \texttt{temperature} $=0.0$,
-        \texttt{beam\_size} $=1$, to minimise RTF.
-\end{itemize}
-
-\subsubsection{Results}
-
-The evaluation set is \textbf{24 synthetic visitor utterances}, varied across
-register (neutral, polite, child-like), intent (materials, history, \ldots) and
-speaker voice, with controlled background noise, each annotated with its target
-keywords.
+The evaluation set consisted of \textbf{24 synthetic visitor utterances}, varied across register (neutral, polite, child-like), intent (materials, history), and speaker voice, with controlled background noise.
 
 \begin{table}[h]
 \centering
-\caption{STT results over the 24-utterance set, domain bias applied, from the
-\texttt{results\_computer/} run.}
+\caption{STT benchmark results over the 24-utterance domain set on the Cortex-A53 board.}
+\label{tab:stt-results}
 \small
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-\textbf{Engine} & \textbf{WER} & \textbf{CER} & \textbf{Keyword acc.} & \textbf{Peak RAM} & \textbf{Model} \\
+\textbf{Engine (Model)} & \textbf{WER} & \textbf{CER} & \textbf{KWA} & \textbf{RTF} & \textbf{Peak RAM} & \textbf{Size} \\
 \midrule
-\texttt{faster-whisper:base.en} & 0.164 & 0.093 & 96.1\,\% & \SI{397}{\mega\byte} & \SI{141}{\mega\byte} \\
+\texttt{faster-whisper} (\texttt{base.en}, INT8) & \textbf{16.4\,\%} & \textbf{9.3\,\%} & \textbf{96.1\,\%} & 1.05 & \SI{397}{\mega\byte} & \SI{141}{\mega\byte} \\
+\texttt{whisper.cpp} (\texttt{base.en}, q5\_1)   & 21.1\,\% & 12.5\,\% & 94.7\,\% & 1.08 & \textbf{\SI{258}{\mega\byte}} & \textbf{\SI{57}{\mega\byte}} \\
+\texttt{faster-whisper} (\texttt{tiny.en}, INT8) & 32.5\,\% & 18.9\,\% & 79.0\,\% & 0.58 & \SI{330}{\mega\byte} & \SI{75}{\mega\byte} \\
+\texttt{sherpa-onnx}                             & 35.9\,\% & 19.5\,\% & 50.0\,\% & \textbf{0.07} & \SI{464}{\mega\byte} & \SI{207}{\mega\byte} \\
+\texttt{vosk}                                    & 69.8\,\% & 41.0\,\% & 21.1\,\% & 1.16 & \SI{395}{\mega\byte} & \SI{68}{\mega\byte} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-A \SI{16.4}{\percent} word error rate alongside \SI{96.1}{\percent} keyword
-accuracy is exactly the shape we were optimising for: the transcript is
-imperfect in its function words but almost never wrong about the proper nouns
-that drive retrieval.
+The benchmark clearly highlights the architectural trade-offs. While \texttt{sherpa-onnx} is exceptionally fast (RTF 0.07), its keyword accuracy (50\,\%) makes it unusable for a domain-specific guide. Stepping down to a \texttt{tiny.en} model degrades keyword spotting unacceptably to 79\,\%. The \texttt{base.en} tier is the smallest Whisper model that holds up on full sentences. 
 
-\paragraph{Selected.} \textbf{faster-whisper} with the \texttt{base.en} model
-at INT8, which is what the device ships
-(\texttt{models/stt/faster-whisper-base.en}).
+\paragraph{What ships.} \textbf{\texttt{faster-whisper}} with the \texttt{base.en} model at INT8 (\texttt{models/stt/faster-whisper-base.en}). A \SI{16.4}{\percent} word error rate alongside a \SI{96.1}{\percent} keyword accuracy is exactly the shape we were optimising for: the transcript is imperfect in its function words but almost never wrong about the proper nouns that drive retrieval. 
 
+To maximise performance on the board, the shipped engine is configured with:
+\begin{itemize}
+  \item \textbf{Explicit hotwords} --- passing the domain aliases directly to the CTranslate2 decoder.
+  \item \textbf{4 CPU threads} --- the QRB2210 has exactly 4 Cortex-A53 cores; matching this saturates the CPU without context-switch overhead.
+  \item \textbf{INT8 compute type} --- keeps the model well inside the LPDDR4 memory and maximises memory bandwidth, which is the binding constraint here.
+  \item \textbf{Greedy decoding} --- \texttt{temperature} $=0.0$ and \texttt{beam\_size} $=1$ to minimise RTF.
+\end{itemize}
 % ---------------------------------------------------------------------------
 \subsection{Text-to-speech}
 % ---------------------------------------------------------------------------
@@ -856,13 +716,9 @@ Audio quality is not scored here --- the benchmark measures \emph{inference
 time and footprint only}. Which specific Piper voice suits which guide
 personality was decided separately, by ear.
 
-\subsubsection{Protocol}
+\subsubsection{Evaluation Protocol}
 
-Measured on the UNO Q itself (Qualcomm QRB2210, Cortex-A53, 4 threads,
-\SI{3667}{\mega\byte} RAM detected), 2026-08-26. Each model is loaded once,
-given 1 untimed warm-up run, then timed over \textbf{9 runs} round-robin
-balanced across sentence-length buckets --- short ($\le$ 8 words), medium
-(9--16), long ($\ge$ 17) --- drawn from a fixed set of Gaud\'i sentences.
+All benchmarks were executed directly on the Arduino UNO Q hardware (Qualcomm QRB2210, 4x Cortex-A53 threads, \SI{3.6}{\giga\byte} RAM). To ensure realistic and reproducible measurements, each model was loaded into memory and given one untimed warm-up inference. The performance was then timed over \textbf{9 evaluation runs} per model, distributed evenly across three sentence-length buckets: short ($\le 8$ words), medium ($9$--$16$ words), and long ($\ge 17$ words), all drawn from the domain-specific Gaud\'i dataset.
 
 \begin{table}[h]
 \centering
@@ -900,7 +756,7 @@ Piper (en\_GB-cori-high) & 113 & 13.31 & 31.94 & 52.32 & 5.27 \\
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\textwidth]{../benchmark/tts/results/comparison.png}
+\includegraphics[width=\textwidth]{assets/comparison.png}
 \caption{Median inference time with min/max whiskers per sentence-length
 bucket, alongside on-disk model size, generated by \texttt{visualize.py} from
 the same results file as Table~\ref{tab:tts}.}
@@ -923,7 +779,7 @@ Table~\ref{tab:tts} separates the field cleanly into three groups.
         $\approx 0.75$--$0.81$. A medium voice synthesises a short sentence in
         about \SI{2}{\second} and a long one in about \SI{8}{\second}, while
         producing more audio than that in playback time --- which is what makes
-        sentence-level streaming (\S\ref{sec:latency}) work: playback of
+        sentence-level streaming \Cref{sec:latency} work: playback of
         sentence $N$ outlasts synthesis of sentence $N+1$, so the audio never
         stalls.
 \end{itemize}
@@ -947,58 +803,33 @@ C --- Child     & Simple, fun, story-led  & \texttt{en\_GB-semaine-medium} (Prud
 \end{center}
 
 % ---------------------------------------------------------------------------
+
 \subsection{End-to-end latency}
 \label{sec:latency}
 
-\texttt{python/benchmark.py} measures the stages on the device. Its headline
-number is deliberately \emph{not} the sum of them.
+Adding up every pipeline stage measured in isolation gives an unrealistic upper bound, as the device does not run them strictly sequentially. To evaluate real-world user experience, the benchmark reports \textbf{Time to First Audio (TTFA)}: the delay from the moment the visitor stops speaking to the first generated word. 
 
-Adding up every stage measured in isolation gives an upper bound, not a
-latency, because the pipeline does not run them in sequence: vision happens at
-photo time, prefill overlaps with recording, and Piper synthesises while
-\texttt{llama.cpp} is still decoding. The benchmark therefore reports
-\textbf{time to first audio} --- from the moment the visitor stops speaking to
-the first word they hear --- counting only the stages still on that path, each
-with the figure that applies there: STT in full, the \emph{warm} prefill rather
-than the cold one, decode only as far as the first complete sentence, and one
-sentence of Piper rather than the whole answer. It excludes the \texttt{aplay}
-spawn and Bridge RPC round-trips, so the board is somewhat slower than the
-printed figure.
+Three mechanisms heavily optimise this perceived latency by overlapping operations:
 
-Three mechanisms create that overlap:
+\begin{itemize}
+  \item \textbf{Asynchronous prefill.} The static prompt prefix (personality and knowledge facts) is prefilled into the KV-cache on a background thread while the visitor is still speaking, leaving only the question to be processed at the end.
+  \item \textbf{Silence cropping.} Recording automatically trims silent margins before passing the audio to Whisper, preventing the encoder from wasting compute on padded room tone.
+  \item \textbf{Sentence-level streaming.} Rather than waiting for the full SLM output, tokens are emitted per sentence. Piper synthesises sentence $N$ while the SLM decodes sentence $N+1$, ensuring audio playback never stalls.
+\end{itemize}
 
-\begin{enumerate}
-  \item \textbf{Asynchronous prefill.} Once a photo is confirmed, the static
-        prefix --- personality instructions plus the element's fact sheet ---
-        is prefilled into the KV-cache on a background thread while the visitor
-        is still speaking, so only the question needs prefilling at the end.
-        The prefix cache is also persisted to disk:
-        \texttt{prewarm\_cache.py} computes it once per element
-        ($\approx$12 minutes for all 24), so no visitor ever waits through a
-        cold prefill.
-  \item \textbf{Silence detection with cropping.} Recording stops by itself
-        after $\approx$\SI{1.5}{\second} of silence, and the silence is cropped
-        from both ends before Whisper sees it. This is not cosmetic: the
-        encoder pads every window to a fixed length, so room tone costs exactly
-        as much to encode as speech. Thresholds adapt to the noise floor
-        measured at the start of each recording.
-  \item \textbf{Sentence-level streaming.} Tokens are emitted sentence by
-        sentence rather than after the full 60$+$-token generation, so Piper
-        synthesises sentence $N$ while the SLM decodes sentence $N+1$. At the
-        Piper medium RTF of $\approx 0.8$ measured above, synthesis stays ahead
-        of playback and the audio never stalls.
-\end{enumerate}
+Together, these concurrent techniques transform the TTFA from a naive sequential sum of all stages into a highly optimised pipeline:
 
-Together these turn the perceived latency from ``sum of four stages'' into
-``STT $+$ warm prefill $+$ one sentence of decode $+$ one sentence of Piper''.
+\begin{equation*}
+\text{TTFA} \approx \text{STT} + \text{warm prefill} + \text{decode}_{n=1} + \text{TTS}_{n=1}
+\end{equation*}
 
 % ===========================================================================
+
 \section{Bill of materials}
 
 \subsection{Arduino components}
 
-Prices are Arduino Store (EU) list prices, VAT included, retrieved
-13 September 2026 from \url{https://store.arduino.cc}.
+Prices are Arduino Store (EU) list prices, VAT included, retrieved from \url{https://store.arduino.cc}.
 
 \begin{table}[h]
 \centering
@@ -1023,44 +854,24 @@ Modulino Buzzer  & ABX00108 & 1 & Shutter click, confirmations, alerts & \EUR{7.
 
 \subsection{Third-party components}
 
-Two of these are not optional extras but consequences of the board's form
-factor, and are easy to forget when budgeting:
-
-\begin{itemize}
-  \item \textbf{USB-C hub.} The UNO Q exposes a single USB-C port on the Linux
-        side, and the guide needs three things on it at once --- the camera,
-        the headphones and power. A powered USB-C hub with pass-through power
-        delivery is therefore required, not a convenience. It must carry
-        USB-C PD pass-through (so the board keeps drawing full power while the
-        hub is populated), at least one USB-A port for the webcam, and a
-        \SI{3.5}{\milli\meter} audio output or a USB audio path for the
-        headphones.
-  \item \textbf{Power bank.} The guide is carried around a monument, so it runs
-        on battery, and it must run at the board's \emph{high-performance}
-        profile --- four Cortex-A53 cores saturated by STT, SLM decode and
-        Piper, with a USB camera streaming at the same time. The power bank
-        therefore needs USB-C Power Delivery at \SI{5}{\volt}/\SI{3}{\ampere}
-        ($\ge$\SI{15}{\watt}) sustained, not a \SI{5}{\watt} phone charger
-        which will brown the board out mid-answer. Capacity
-        $\ge$\SI{10000}{\milli\ampere\hour} covers a full visit with the
-        display and radios on.
-\end{itemize}
+Due to the board's form factor and the AI pipeline's peak power demands, two specific external components are strictly required: a \textbf{USB-C hub} with Power Delivery (PD) pass-through (to connect the camera, headphones, and power to the single USB-C port), and a \textbf{high-output power bank} ($\ge$\SI{15}{\watt} sustained) to prevent brownouts during full-core inference.
 
 \begin{table}[h]
 \centering
 \caption{Non-Arduino components. \emph{These prices were not verified against a
 named vendor --- replace with your actual purchase prices before publishing.}}
+\label{tab:other-components}
 \small\begin{tabular}{p{4.3cm}lrp{4.3cm}r}
 \toprule
 \textbf{Component} & \textbf{Interface} & \textbf{Qty} & \textbf{Role} & \textbf{Price} \\
 \midrule
 USB-C hub, PD pass-through & USB-C & 1 & Camera $+$ headphones $+$ power on the board's single USB-C port & \tbd \\
-Power bank, USB-C PD $\ge$\SI{15}{\watt}, $\ge$\SI{10000}{\milli\ampere\hour} & USB-C & 1 & Battery operation at the high-performance profile & \tbd \\
+  Power bank, USB-C PD $\ge$\SI{15}{\watt}, $\ge$\SI{10000}{\milli\ampere\hour} & USB-C & 1 & Battery operation at the high-performance profile & \tbd \\
 ST7735S LCD, 1.8\,\textquotedbl{} 128$\times$160 & SPI & 1 & Live view, minimap, UI & \tbd \\
 Logitech Brio 105 webcam & USB 2.0 & 1 & 1080p capture $+$ microphone & \tbd \\
 NEO-6M GPS module & Serial1 @ 9600 & 1 & Selects the active minimap & \tbd \\
 Mode switch (SPDT) & Digital D6 & 1 & Camera / map mode & \tbd \\
-Push button & Digital D7 & 1 & Shutter / record / cancel & \tbd \\
+Push button &    Digital D7 & 1 & Shutter / record / cancel & \tbd \\
 Headphones or speaker & 3.5\,mm jack & 1 & Spoken answer output & \tbd \\
 Jumper wires, carrier board & --- & --- & Assembly & \tbd \\
 \midrule

@@ -24,9 +24,9 @@ candidates:
 
   - name: "SmolLM2-360M-Instruct"
     ollama_tag: "smollm2:360m"
-    gguf_repo: "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
-    gguf_file: "smollm2-360m-instruct-q4_k_m.gguf"
-    gguf_url: "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q4_k_m.gguf"
+    gguf_repo: "bartowski/SmolLM2-360M-Instruct-GGUF"
+    gguf_file: "SmolLM2-360M-Instruct-Q4_K_M.gguf"
+    gguf_url: "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf"
 
   - name: "Qwen2.5-0.5B-Instruct"
     ollama_tag: "qwen2.5:0.5b"

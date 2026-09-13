@@ -22,7 +22,7 @@ An end-to-end evaluation, benchmarking, and embedded deployment pipeline for **C
 | **Llama 3.2 1B Instruct** | `llama3.2:1b` | `Q4_K_M` (~0.8 GB) | ~1.10 GB | ARM Cortex-A53 / PC |
 | **Gemma 3 1B IT** | `gemma3:1b` | `Q4_K_M` (~0.85 GB) | ~1.15 GB | ARM Cortex-A53 / PC |
 | **SmolLM2 1.7B Instruct** | `smollm2:1.7b` | `Q4_K_M` (~1.15 GB) | ~1.50 GB | ARM Cortex-A53 / PC |
-| **SmolLM2 360M Instruct** | `smollm2:360m` | `Q4_K_M` (~0.27 GB) | ~0.45 GB | ARM Cortex-A53 / PC |
+| **SmolLM2 360M Instruct** | `smollm2:360m` | `Q4_K_M` (~0.23 GB) | ~0.45 GB | ARM Cortex-A53 / PC |
 | **Qwen 2.5 0.5B Instruct** | `qwen2.5:0.5b` | `Q4_K_M` (~0.39 GB) | ~0.65 GB | ARM Cortex-A53 / PC |
 
 ---

@@ -250,6 +250,19 @@ def run_app() -> None:
                         if element and element != VISION_UNKNOWN_LABEL:
                             minimap.mark_detected(site, element)
 
+                        # Prefill the SLM prompt now, on a background thread. Everything
+                        # it needs — personality, element, facts — is already known, and
+                        # the board is otherwise idle from here until the user finishes
+                        # speaking. Doing it later, after STT, would put those ~20s of
+                        # Cortex-A53 prefill squarely in the user's wait.
+                        try:
+                            warm_personality = models.name_for(
+                                "ABC"[Bridge.call("get_personality_index")]
+                            )
+                            models.warm_prefix_async(element, warm_personality)
+                        except Exception as exc:
+                            logger.warning("Could not start SLM prefill: {}", exc)
+
                         # Wait for the "Photo validated!" hold screen (~2.2s) then stream high-res photo
                         time.sleep(2.2)
                         camera.send_photo_preview(
@@ -297,6 +310,11 @@ def run_app() -> None:
                         "press D7 to stop...",
                         model_name,
                     )
+                    # No-op when the photo already warmed this exact prompt. It only does
+                    # work if the user switched personality after taking the photo, and
+                    # then it overlaps the recording instead of the answer.
+                    if last_detected_element:
+                        models.warm_prefix_async(last_detected_element, model_name)
                     audio = microphone.record_until_stopped(
                         is_recording=lambda: Bridge.call("is_recording_active")
                     )
@@ -331,24 +349,69 @@ def run_app() -> None:
                                 if element
                                 else ""
                             )
-                            answer = models.generate_response(
-                                question=question_text,
-                                element=element,
+
+                            # The answer is spoken sentence by sentence as it decodes, so
+                            # the first words are heard after one sentence instead of all
+                            # sixty tokens.
+                            speaking = False
+
+                            def on_first_audio():
+                                # Sound is starting: hand the UI over from the generating
+                                # overlay to the speaking one, exactly as the non-streamed
+                                # path used to at the same moment.
+                                nonlocal speaking
+                                speaking = True
+                                try:
+                                    Bridge.call("set_processing_active", False)
+                                    Bridge.call("set_playback_active", True)
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to flip bridge state at first audio: {}",
+                                        exc,
+                                    )
+
+                            def still_active():
+                                # Once playback has begun the sketch clears the processing
+                                # flag and D7 no longer cancels, so polling it would abort
+                                # the decode that is feeding the speaker.
+                                if speaking:
+                                    return True
+                                return Bridge.call("is_processing_active")
+
+                            speaker = player.stream(
                                 personality=model_name,
-                                kg_context=kg_context,
-                                is_active_fn=lambda: Bridge.call("is_processing_active"),
+                                bridge=Bridge,
+                                on_first_audio=on_first_audio,
                             )
-
-                            if answer is None:
-                                # Cancelled mid-generation via streaming — skip TTS
-                                logger.info(
-                                    "Generation cancelled by user during SLM streaming."
+                            try:
+                                answer = models.generate_response(
+                                    question=question_text,
+                                    element=element,
+                                    personality=model_name,
+                                    kg_context=kg_context,
+                                    is_active_fn=still_active,
+                                    on_sentence=speaker.feed,
                                 )
-                                return
 
-                            player.synthesize_and_play(
-                                answer, personality=model_name, bridge=Bridge
-                            )
+                                if answer is None:
+                                    # Cancelled mid-generation — drop whatever is queued
+                                    logger.info(
+                                        "Generation cancelled by user during SLM streaming."
+                                    )
+                                    speaker.cancel()
+                                    return
+                            except BaseException:
+                                speaker.cancel()
+                                raise
+
+                            spoke = speaker.close()
+                            if not spoke and answer:
+                                # Nothing was streamed (an answer with no sentence
+                                # boundary at all, or a synthesis failure): fall back to
+                                # speaking it in one piece rather than staying silent.
+                                player.synthesize_and_play(
+                                    answer, personality=model_name, bridge=Bridge
+                                )
                         finally:
                             try:
                                 Bridge.call("set_processing_active", False)

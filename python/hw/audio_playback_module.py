@@ -17,7 +17,9 @@ Uses 'aplay' (alsa-utils) and 'amixer' via subprocess for playback and volume.
 """
 
 import os
+import queue
 import subprocess
+import threading
 import time
 import wave
 from io import BytesIO
@@ -144,10 +146,14 @@ class AudioPlayer:
             return False
 
     @staticmethod
-    def save_response(audio_bytes: bytes) -> Path:
-        """Writes raw WAV bytes to a timestamped file in RESPONSES_DIR and returns the resulting path."""
+    def save_response(audio_bytes: bytes, index: int | None = None) -> Path:
+        """Writes raw WAV bytes to a timestamped file in RESPONSES_DIR and returns the
+        resulting path. An index is appended when given: a streamed answer produces one
+        file per sentence, and the timestamp alone has only second resolution, so
+        consecutive chunks would otherwise overwrite each other."""
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        out_file = RESPONSES_DIR / f"response_{timestamp}.wav"
+        suffix = "" if index is None else f"_{index:02d}"
+        out_file = RESPONSES_DIR / f"response_{timestamp}{suffix}.wav"
         out_file.write_bytes(audio_bytes)
         logger.success("TTS response saved to: {}", out_file)
         return out_file
@@ -197,6 +203,22 @@ class AudioPlayer:
                     bridge.call("set_playback_active", False)
                 except Exception:
                     pass
+
+    def stream(
+        self, personality: str | None = None, bridge=None, on_first_audio=None
+    ) -> "SentenceSpeaker":
+        """Opens a speaker that synthesises and plays sentences as they are fed to it.
+
+        Use this instead of synthesize_and_play when the text arrives incrementally from
+        the SLM: playback of the first sentence starts while the rest is still decoding,
+        which is most of the wait the user actually perceives.
+
+        on_first_audio is called once, just before the first chunk starts playing, so the
+        caller can flip the UI from "generating" to "speaking" at the moment sound begins.
+        """
+        return SentenceSpeaker(
+            self, personality=personality, bridge=bridge, on_first_audio=on_first_audio
+        )
 
     def _synthesize(self, text: str, voice_key: str) -> Optional[bytes]:
         """Runs Piper synthesis for the given text using the voice identified by voice_key, applying that voice's configured speaker id and prosody settings. Returns the resulting WAV bytes, or None if the voice cannot be loaded, synthesis produces no usable audio, or an error occurs."""
@@ -321,3 +343,82 @@ class AudioPlayer:
         except Exception as exc:
             logger.exception("Failed to load voice {!r}: {}", voice_key, exc)
             return None
+
+
+class SentenceSpeaker:
+    """Plays an answer sentence by sentence while the rest of it is still being generated.
+
+    Synthesis and playback run on one background thread fed by a queue, so feed() returns
+    immediately and the SLM decode loop is never blocked waiting on Piper or aplay. Chunks
+    are spoken strictly in the order fed, which is what keeps the answer intelligible.
+
+    Created via AudioPlayer.stream(); not meant to be instantiated directly.
+    """
+
+    def __init__(self, player, personality=None, bridge=None, on_first_audio=None):
+        self._player = player
+        self._personality = personality
+        self._bridge = bridge
+        self._on_first_audio = on_first_audio
+        self._queue: "queue.Queue[Optional[str]]" = queue.Queue()
+        self._cancelled = threading.Event()
+        self._spoke_anything = False
+        self._index = 0
+        self._worker = threading.Thread(
+            target=self._run, name="tts-stream", daemon=True
+        )
+        self._worker.start()
+
+    def feed(self, sentence: str) -> None:
+        """Queues one finished sentence for synthesis and playback. Returns at once."""
+        if sentence and sentence.strip() and not self._cancelled.is_set():
+            self._queue.put(sentence.strip())
+
+    def close(self) -> bool:
+        """Signals that no more sentences are coming and waits for everything queued to
+        finish playing. Returns True if at least one chunk was actually spoken."""
+        self._queue.put(None)
+        self._worker.join()
+        return self._spoke_anything
+
+    def cancel(self) -> None:
+        """Drops anything not yet spoken. The chunk already playing finishes, which is
+        bounded by one sentence of audio."""
+        self._cancelled.set()
+        self._queue.put(None)
+
+    def _run(self) -> None:
+        while True:
+            sentence = self._queue.get()
+            if sentence is None or self._cancelled.is_set():
+                return
+            try:
+                self._speak(sentence)
+            except Exception as exc:
+                # One bad sentence must not silence the rest of the answer.
+                logger.exception("Streaming TTS failed on a sentence: {}", exc)
+
+    def _speak(self, sentence: str) -> None:
+        voice_key = (
+            PERSONALITY_VOICE.get(self._personality, DEFAULT_VOICE)
+            if self._personality
+            else DEFAULT_VOICE
+        )
+        wav_bytes = self._player._synthesize(sentence, voice_key)
+        if wav_bytes is None:
+            return
+        if self._cancelled.is_set():
+            return
+
+        out_file = self._player.save_response(wav_bytes, index=self._index)
+        self._index += 1
+
+        if not self._spoke_anything:
+            self._spoke_anything = True
+            if self._on_first_audio is not None:
+                try:
+                    self._on_first_audio()
+                except Exception as exc:
+                    logger.warning("on_first_audio callback failed: {}", exc)
+
+        self._player.play(out_file, bridge=self._bridge)

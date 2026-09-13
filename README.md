@@ -34,7 +34,21 @@ Fixtures are auto-discovered: the newest file in `data/photos/` and the newest i
    - Governor, max vs. current clock, and thermal zones — to catch throttling.
    - `cgroup cpu.max` — see the caveat below.
 2. **Model preload** — times each model's `preload()`, the startup cost `main.py` pays up front so the first user does not absorb it.
-3. **Stage breakdown** — vision, STT, SLM and TTS with each stage's share of total latency. The SLM row is split into **prefill** (time to first token, scales with prompt length) and **decode** (the rest, scales with answer length), broken out per personality with prompt token counts. A single end-to-end number cannot tell you which of the two to attack; `artistic` builds a much larger prompt than `child`, and the table makes that cost visible.
+3. **Stage breakdown** — vision, STT, SLM and TTS with each stage's share of total latency. The SLM row is split into **prefill** (time to first token, scales with prompt length) and **decode** (the rest, scales with answer length), broken out per personality with prompt token counts. A single end-to-end number cannot tell you which of the two to attack; `artistic` builds a much larger prompt than `child`, and the table makes that cost visible. The **warm** column is the same prefill with the prompt prefix already in the KV cache — see *Latency: what the pipeline overlaps* below.
+
+### Latency: what the pipeline overlaps
+
+Prefill and decode are both slow on four Cortex-A53 cores, and neither got faster by tuning. Instead the pipeline hides them behind time the user is already spending.
+
+**Prefill runs during recording, not after it.** Only the question changes between one query and the next about the same photo — the personality instructions, the detected element and the retrieved facts do not. So `build_system_prompt()` puts all of that in the system message, leaving the user turn holding nothing but the question. That makes the expensive part of the prompt a stable prefix, and llama.cpp reuses the longest common prefix of its KV cache.
+
+`ModelRegistry.warm_prefix_async()` evaluates that prefix on a background thread the moment the photo is validated — several seconds before the user even starts speaking, on a board that is otherwise idle. By the time `generate_response()` runs, it only has to prefill the question itself. The `warm` column in the benchmark measures exactly this: cold prefill versus prefill with the prefix already cached.
+
+A lock around the llama.cpp context keeps the warm-up thread and generation from entering it at once; if the user speaks faster than the prefill finishes, generation simply waits, which is no worse than doing the prefill inline. If the personality changes after the photo, the warm-up is redone when recording starts.
+
+**The answer is spoken sentence by sentence as it decodes.** `generate_response(on_sentence=...)` emits each sentence the instant it is complete, and `AudioPlayer.stream()` synthesises and plays it on a background thread while the rest is still decoding. At roughly three tokens a second, waiting for all sixty before any sound comes out was most of the perceived wait. Total work is unchanged — time to first audio is not.
+
+The UI flips from the generating overlay to the speaking one when the first chunk starts playing, which is also the point where D7 stops cancelling (the sketch only honours cancel while `processingActive`), so the decode loop stops polling that flag once playback has begun.
 
 > **Caveat — host shell vs. App Lab container.** App Lab runs `main.py` in a sandboxed container (see *Issue 4* below), while the command above runs on the host Debian. The packages are the same, but CPU allocation may not be. If `cgroup cpu.max` reports a quota on the host, production is capped too; if it reports none, confirm once by comparing a stage timing against a real App Lab run.
 

@@ -373,8 +373,7 @@ def bench_slm(models, reps: int) -> dict:
     would otherwise reuse the shared prefix and report a misleadingly fast
     second run.
     """
-    from core.model_module import PERSONALITY_PROMPTS
-    from config import VISION_UNKNOWN_LABEL
+    from core.model_module import build_messages
 
     # Preloaded in section 1; drive the Llama object directly so we can stream
     # token-by-token and time the first one, which generate_response does not expose.
@@ -390,13 +389,11 @@ def bench_slm(models, reps: int) -> dict:
     for personality in BENCH_PERSONALITIES:
         kg_context = models.get_kg_context(BENCH_ELEMENT, personality=personality)
 
-        # Mirrors the message assembly in ModelRegistry.generate_response.
-        system_prompt = PERSONALITY_PROMPTS[personality]
-        user_content = BENCH_QUESTION
-        if BENCH_ELEMENT != VISION_UNKNOWN_LABEL:
-            user_content += f"\n\n[Detected element in photo: {BENCH_ELEMENT}]"
-        if kg_context:
-            user_content += f"\n\n[Factual information about the element:\n{kg_context}]"
+        # The same builder generate_response uses, so the prompt measured here is the
+        # prompt production sends — including which half of it is the cacheable prefix.
+        messages = build_messages(
+            BENCH_QUESTION, BENCH_ELEMENT, personality, kg_context
+        )
 
         prefills, decodes, totals, prompt_tokens, decoded_counts = [], [], [], [], []
 
@@ -407,10 +404,7 @@ def bench_slm(models, reps: int) -> dict:
             n_prompt = None
 
             stream = llm.create_chat_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+                messages=messages,
                 max_tokens=60,
                 temperature=0.1,
                 repeat_penalty=1.1,
@@ -447,6 +441,32 @@ def bench_slm(models, reps: int) -> dict:
             if n_prompt:
                 prompt_tokens.append(n_prompt)
 
+        # Same prompt, but with the photo-dependent prefix already evaluated — what
+        # production sees once warm_prefix() has run during the recording window. The
+        # gap between this and the cold prefill above is what the overlap buys.
+        warm_prefills: list[float] = []
+        for _ in range(reps):
+            llm.reset()
+            models._warm_key = None
+            if not models.warm_prefix(BENCH_ELEMENT, personality, kg_context):
+                break
+            start = time.perf_counter()
+            stream = llm.create_chat_completion(
+                messages=messages,
+                max_tokens=60,
+                temperature=0.1,
+                repeat_penalty=1.1,
+                stop=["\n\n", "<|im_end|>"],
+                stream=True,
+            )
+            for chunk in stream:
+                if chunk["choices"][0].get("delta", {}).get("content"):
+                    warm_prefills.append(time.perf_counter() - start)
+                    break
+            # Only the time to first token matters here; the decode is unchanged by
+            # warming, and letting it run would triple the benchmark's wall time.
+            stream.close()
+
         if not totals:
             continue
 
@@ -462,6 +482,7 @@ def bench_slm(models, reps: int) -> dict:
             "prefill_s": med_prefill,
             "decode_s": med_decode,
             "total_s": statistics.median(totals),
+            "warm_prefill_s": statistics.median(warm_prefills) if warm_prefills else None,
             "prefill_tok_s": (med_prompt / med_prefill) if med_prompt else None,
             "decode_tok_s": (med_decoded / med_decode) if med_decode else None,
         }
@@ -471,15 +492,22 @@ def bench_slm(models, reps: int) -> dict:
 
     print(
         f"     {'personality':<12}{'prompt tok':>11}{'prefill':>10}{'tok/s':>8}"
-        f"{'out tok':>9}{'decode':>9}{'tok/s':>8}"
+        f"{'warm':>9}{'out tok':>9}{'decode':>9}{'tok/s':>8}"
     )
     for name, row in per_personality.items():
+        warm = row.get("warm_prefill_s")
         print(
             f"     {name:<12}{row['prompt_tokens'] or 0:>11.0f}"
             f"{row['prefill_s']:>9.2f}s{row['prefill_tok_s'] or 0:>8.1f}"
+            f"{(f'{warm:.2f}s' if warm is not None else '-'):>9}"
             f"{row['decoded_tokens']:>9.0f}{row['decode_s']:>8.2f}s"
             f"{row['decode_tok_s'] or 0:>8.1f}"
         )
+    print(
+        "     'prefill' is cold (empty KV cache); 'warm' is time to first token with\n"
+        "     the prompt prefix already evaluated, as warm_prefix() leaves it in\n"
+        "     production. The difference is what overlapping the prefill removes."
+    )
 
     return {
         "samples": all_totals,

@@ -9,6 +9,9 @@ llama-cpp-python).
 """
 
 import json
+import re
+import threading
+import time
 
 try:
     from logging_setup import logger
@@ -54,11 +57,75 @@ PERSONALITY_PROMPTS: dict[str, str] = {
 }
 
 
+# Sentence boundary: terminal punctuation followed by whitespace or end of text.
+# The lookahead keeps "1.5 metres" and "Gaudi's" from splitting, which matters
+# because every emitted chunk is spoken aloud immediately.
+_SENTENCE_END = re.compile(r"""[.!?…]['"\)\]]*(?=\s|$)""")
+
+# Below this, a chunk is too short to be worth a separate Piper invocation and
+# its prosody sounds clipped; it is held back and merged into the next one.
+MIN_SENTENCE_CHARS = 12
+
+
+def build_system_prompt(
+    element: str | None, personality: str, kg_context: str
+) -> str:
+    """Assembles the system message: the personality instructions, what vision detected,
+    and the retrieved facts.
+
+    Everything that depends on the photo rather than on the question lives here, so the
+    rendered prompt up to the user turn is identical for every question asked about the
+    same photo. llama.cpp reuses the longest common prefix of its KV cache, which makes
+    that stable block a cache hit once warm_prefix() has evaluated it — see
+    ModelRegistry.warm_prefix for why that matters on a Cortex-A53.
+    """
+    parts = [
+        PERSONALITY_PROMPTS.get(
+            personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
+        )
+    ]
+
+    if element == VISION_UNKNOWN_LABEL:
+        parts.append(
+            "[Visual recognition: The photo does not match any architectural element of this monument. "
+            "Politely and concisely tell the user (in your assigned guide personality) that the photo does not seem "
+            "to show a recognized monument element, and invite them to capture an architectural element if they'd like details.]"
+        )
+    elif element:
+        parts.append(f"[Detected element in photo: {element}]")
+
+    if kg_context:
+        parts.append(f"[Factual information about the element:\n{kg_context}]")
+
+    return "\n\n".join(parts)
+
+
+def build_messages(
+    question: str, element: str | None, personality: str, kg_context: str
+) -> list[dict]:
+    """Builds the chat messages for one question. The user turn holds nothing but the
+    question, so it is the only part of the rendered prompt that changes between
+    questions about the same photo."""
+    return [
+        {
+            "role": "system",
+            "content": build_system_prompt(element, personality, kg_context),
+        },
+        {"role": "user", "content": question or "(no question provided)"},
+    ]
+
+
 class ModelRegistry:
     def __init__(self):
         """Initializes the button-to-personality mapping from defaults, then applies any overrides found in models/models.json."""
         self._names = dict(_DEFAULT_NAMES)
         self._load_overrides()
+        # llama.cpp holds one KV cache per context and is not reentrant, so the
+        # background prefill thread and the foreground generation must never be
+        # inside it at once. Whichever starts first runs to completion; the other
+        # waits, which is no worse than doing the prefill inline.
+        self._llm_lock = threading.RLock()
+        self._warm_key: tuple | None = None
 
     def _load_overrides(self) -> None:
         """Applies personality-name overrides from models/models.json onto the default A/B/C mapping, ignoring unrecognized keys or malformed entries and leaving defaults untouched if the file is absent or unreadable."""
@@ -320,6 +387,74 @@ class ModelRegistry:
         self._load_kg_base()
         return self._ensure_llm() is not None
 
+    def warm_prefix(
+        self, element: str | None, personality: str, kg_context: str | None = None
+    ) -> bool:
+        """Evaluates the photo-dependent part of the prompt into llama.cpp's KV cache
+        before the question exists, so generate_response only has to prefill the question
+        itself.
+
+        On the UNO Q's Cortex-A53 cores a ~500-token prompt costs upwards of 20 seconds to
+        prefill, and it is prefilled after the user has finished speaking — dead time they
+        sit through. But the element is known the moment the photo is validated, which is
+        several seconds before recording even starts, and the board is idle in between.
+        Doing that work there makes it free.
+
+        Returns True if the cache was warmed. Retrieves the KG context itself when not
+        supplied, so callers can fire this off knowing only the element and personality.
+        """
+        llm = self._ensure_llm()
+        if llm is None:
+            return False
+
+        if kg_context is None:
+            kg_context = self.get_kg_context(element, personality=personality) if element else ""
+
+        key = (element, personality)
+        with self._llm_lock:
+            if self._warm_key == key:
+                return True
+            try:
+                started = time.perf_counter()
+                # An empty question: the rendered prompt then shares every token up to
+                # the user turn with the real call, which is all of the expensive part.
+                # max_tokens=1 is the cheapest way to make llama.cpp evaluate it.
+                llm.create_chat_completion(
+                    messages=build_messages("", element, personality, kg_context),
+                    max_tokens=1,
+                    temperature=0.1,
+                )
+                self._warm_key = key
+                logger.info(
+                    "SLM prefix warmed for element={!r} personality={!r} in {:.1f}s",
+                    element,
+                    personality,
+                    time.perf_counter() - started,
+                )
+                return True
+            except Exception as exc:
+                # Warming is an optimisation: a failure here must not stop the answer,
+                # it only means generate_response pays the full prefill as before.
+                logger.warning("SLM prefix warm-up failed: {}", exc)
+                return False
+
+    def warm_prefix_async(
+        self, element: str | None, personality: str
+    ) -> "threading.Thread | None":
+        """Runs warm_prefix() on a daemon thread and returns immediately, so the caller
+        can keep serving the UI loop while the prompt prefills. Returns the thread, or
+        None if there is nothing to warm."""
+        if not element:
+            return None
+        thread = threading.Thread(
+            target=self.warm_prefix,
+            args=(element, personality),
+            name="slm-prefill",
+            daemon=True,
+        )
+        thread.start()
+        return thread
+
     def generate_response(
         self,
         question: str,
@@ -327,6 +462,7 @@ class ModelRegistry:
         personality: str,
         kg_context: str,
         is_active_fn=None,
+        on_sentence=None,
     ) -> str | None:
         """Generates a spoken audio-guide reply from the on-device SLM using token streaming,
         adopting the given personality and conditioning on the user's question, the detected
@@ -336,6 +472,13 @@ class ModelRegistry:
         If is_active_fn is provided, it is called between each generated token: if it returns
         False the generation loop is interrupted immediately and None is returned, allowing the
         caller to skip TTS and reset the pipeline without waiting for the full response.
+
+        If on_sentence is provided, it is called with each complete sentence as soon as that
+        sentence is finished rather than only at the end, so the caller can start speaking the
+        first sentence while the rest is still decoding. Decode runs at roughly three tokens a
+        second on this board, so waiting for all of them before any sound comes out costs the
+        user most of the perceived latency. The trailing fragment, if the model stops without
+        terminal punctuation, is emitted as a final chunk.
 
         Returns the generated answer string, None if cancelled mid-generation, or a descriptive
         fallback string if the model file or the llama-cpp-python dependency is missing, or if
@@ -354,59 +497,63 @@ class ModelRegistry:
         if self._ensure_llm() is None:
             return "(llama-cpp-python not installed — install it to get responses)"
 
-        system_prompt = PERSONALITY_PROMPTS.get(
-            personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
-        )
-
-        user_content = question or "(no question provided)"
-        if element == VISION_UNKNOWN_LABEL:
-            user_content += (
-                "\n\n[Visual recognition: The photo does not match any architectural element of this monument. "
-                "Politely and concisely tell the user (in your assigned guide personality) that the photo does not seem "
-                "to show a recognized monument element, and invite them to capture an architectural element if they'd like details.]"
-            )
-        elif element:
-            user_content += f"\n\n[Detected element in photo: {element}]"
-        if kg_context:
-            user_content += (
-                f"\n\n[Factual information about the element:\n{kg_context}]"
-            )
+        messages = build_messages(question, element, personality, kg_context)
 
         try:
-            # stream=True lets us check for cancellation between each token so the
-            # generation loop can be interrupted immediately when the user presses
-            # the cancel button, instead of blocking for the full synchronous call.
-            stream = self._llm.create_chat_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
-                max_tokens=60,  # fewer decode steps → faster
-                temperature=0.1,  # low temperature = more factual
-                repeat_penalty=1.1,  # slight penalty helps model hit <eos> sooner
-                stop=[
-                    "\n\n",
-                    "<|im_end|>",
-                ],  # early-stop on double newline or chat end token
-                stream=True,
-            )
+            # The lock makes a still-running warm_prefix finish first; the prompt it
+            # left in the KV cache is this call's prefix, so llama.cpp re-evaluates
+            # only the question.
+            with self._llm_lock:
+                # stream=True lets us check for cancellation between each token so the
+                # generation loop can be interrupted immediately when the user presses
+                # the cancel button, instead of blocking for the full synchronous call,
+                # and lets us hand finished sentences to TTS while decoding continues.
+                stream = self._llm.create_chat_completion(
+                    messages=messages,
+                    max_tokens=60,  # fewer decode steps → faster
+                    temperature=0.1,  # low temperature = more factual
+                    repeat_penalty=1.1,  # slight penalty helps model hit <eos> sooner
+                    stop=[
+                        "\n\n",
+                        "<|im_end|>",
+                    ],  # early-stop on double newline or chat end token
+                    stream=True,
+                )
 
-            tokens: list[str] = []
-            for chunk in stream:
-                # Check cancellation between every generated token
-                if is_active_fn is not None and not is_active_fn():
-                    logger.info(
-                        "SLM generation cancelled by user after {} token(s).",
-                        len(tokens),
-                    )
-                    return None
+                tokens: list[str] = []
+                pending = ""  # text generated but not yet handed to on_sentence
+                # Whatever happens below — completion, cancellation, an exception —
+                # the KV cache no longer ends at the warmed prefix, so the next
+                # question must warm again rather than trust a stale flag.
+                self._warm_key = None
+                for chunk in stream:
+                    # Check cancellation between every generated token
+                    if is_active_fn is not None and not is_active_fn():
+                        logger.info(
+                            "SLM generation cancelled by user after {} token(s).",
+                            len(tokens),
+                        )
+                        return None
 
-                delta = chunk["choices"][0].get("delta", {})
-                token_text = delta.get("content", "")
-                if token_text:
+                    delta = chunk["choices"][0].get("delta", {})
+                    token_text = delta.get("content", "")
+                    if not token_text:
+                        continue
+
                     tokens.append(token_text)
+                    if on_sentence is None:
+                        continue
+
+                    pending += token_text
+                    ready, pending = _split_ready_sentences(pending)
+                    for sentence in ready:
+                        on_sentence(sentence)
 
             answer = "".join(tokens).strip()
+
+            if on_sentence is not None and pending.strip():
+                on_sentence(pending.strip())
+
             logger.success(
                 "SLM response generated ({} characters).", len(answer)
             )
@@ -414,3 +561,23 @@ class ModelRegistry:
         except Exception as exc:
             logger.exception("SLM failed to generate response: {}", exc)
             return "(error generating response)"
+
+
+def _split_ready_sentences(text: str) -> tuple[list[str], str]:
+    """Splits off every complete sentence at the front of text, returning them along with
+    the unterminated remainder to carry into the next token.
+
+    A boundary that would produce a chunk shorter than MIN_SENTENCE_CHARS is skipped
+    rather than abandoned, so a brief opener ("Yes.") is merged into the sentence after
+    it instead of stalling every later split behind it.
+    """
+    sentences: list[str] = []
+    last_cut = 0
+    for match in _SENTENCE_END.finditer(text):
+        cut = match.end()
+        candidate = text[last_cut:cut].strip()
+        if len(candidate) < MIN_SENTENCE_CHARS:
+            continue
+        sentences.append(candidate)
+        last_cut = cut
+    return sentences, text[last_cut:].lstrip()

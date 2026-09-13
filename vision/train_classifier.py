@@ -19,185 +19,62 @@ Usage:
     export HF_TOKEN=hf_xxxx
     python train_classifier.py
     python train_classifier.py --models vit --monuments sagrada_familia
-    CONFIG_PATH=other_config.yaml python train_classifier.py
+    python train_classifier.py --config other_config.yaml
 """
+
+from __future__ import annotations
 
 import argparse
 import os
-import time
+import sys
+from functools import lru_cache
+
+import evaluate
 import numpy as np
 import torch
 import wandb
-import evaluate
-import yaml
-import datasets
-from datasets import ClassLabel, DatasetDict, load_dataset
+from datasets import DatasetDict
+from torchvision.transforms import (
+    CenterCrop,
+    ColorJitter,
+    Compose,
+    Normalize,
+    RandomHorizontalFlip,
+    RandomResizedCrop,
+    RandomRotation,
+    Resize,
+    ToTensor,
+)
 from transformers import (
     AutoImageProcessor,
     AutoModelForImageClassification,
-    TrainingArguments,
     Trainer,
-)
-from torchvision.transforms import (
-    Compose,
-    RandomResizedCrop,
-    RandomHorizontalFlip,
-    RandomRotation,
-    ColorJitter,
-    ToTensor,
-    Normalize,
-    Resize,
-    CenterCrop,
+    TrainingArguments,
 )
 
-CONFIG_PATH = os.environ.get("CONFIG_PATH", "config.yaml")
-with open(CONFIG_PATH) as f:
-    config = yaml.safe_load(f)
+from common import (
+    CONFIG_PATH,
+    DEFAULT_BATCH_SIZE,
+    DEFAULT_LEARNING_RATE,
+    DEFAULT_NUM_EPOCHS,
+    IMAGENET_MEAN,
+    IMAGENET_STD,
+    get_processor_size,
+    load_config,
+)
+from dataset import load_monument_dataset
 
-HF_DATASET_NAME = config["dataset"]["name"]
-HF_TOKEN = os.environ.get("HF_TOKEN")  # export HF_TOKEN=hf_xxxx or rely on huggingface-cli login
-VAL_SIZE = config["dataset"]["val_size"]
-TEST_SIZE = config["dataset"]["test_size"]
-SEED = config["dataset"]["seed"]  # for reproducibility
-
-TRAINING_DEFAULTS = config.get("training_defaults", {})
-WANDB_PROJECT = config.get("wandb", {}).get("project", "cultura-viva")
-
-MONUMENT_FILTER = os.environ.get("MONUMENT")
-MODEL_FILTER = os.environ.get("MODEL")
-
-MONUMENT_CONFIGS = [m for m in config["monuments"] if not MONUMENT_FILTER or m["name"] == MONUMENT_FILTER]
-MODEL_CONFIGS = [m for m in config["models"] if not MODEL_FILTER or m["name"] == MODEL_FILTER]
-
-accuracy_metric = evaluate.load("accuracy")
-f1_metric = evaluate.load("f1")
-
-
-def _is_offline_error(err_str: str) -> bool:
-    """Returns True if the error indicates that the Hub couldn't be reached due to offline mode
-    or that a cached version of the dataset was not found."""
-    err_lower = err_str.lower()
-    return (
-        "couldn't find cache" in err_lower
-        or "offlinemodeisenabledvalue" in err_lower
-        or "offlinemodeisdenabled" in err_lower
-        or "offlinemodeisen" in err_lower
-        or "OfflineModeIsEnabled" in err_str  # exact-case match too
-        or ("couldn't reach" in err_lower and "offline" in err_lower)
-    )
-
-
-def _try_load(load_kwargs: dict) -> "datasets.DatasetDict":
-    """Calls load_dataset with retry logic for 429 rate limits.
-    Re-raises immediately on offline / cache-miss errors so the caller can try fallbacks."""
-    max_retries = 5
-    backoff_factor = 30
-    for attempt in range(1, max_retries + 1):
-        try:
-            return load_dataset(HF_DATASET_NAME, **load_kwargs)
-        except Exception as e:
-            err_str = str(e)
-            is_rate_limit = "429" in err_str or "too many requests" in err_str.lower() or "rate limit" in err_str.lower()
-            if _is_offline_error(err_str):
-                # Re-raise immediately so the caller can try the fallback strategy
-                raise
-            if is_rate_limit and attempt < max_retries:
-                wait_time = attempt * backoff_factor
-                print(f"\n[Warning] Hit Hugging Face rate limit (429) on attempt {attempt}/{max_retries}.")
-                print(f"Waiting {wait_time} seconds before retrying...")
-                time.sleep(wait_time)
-            else:
-                raise
-
-
-def load_monument_dataset(monument_name: str, data_dir: str) -> DatasetDict:
-    """Loads and splits one monument's dataset (train/validation/test).
-
-    Strategy:
-      1. Try loading with data_dir (monument-specific subset).
-      2. If offline and only the full-dataset cache exists, load the whole
-         dataset and filter rows whose class label path starts with data_dir,
-         then remap labels so class indices are monument-local (0-based).
-    """
-    base_kwargs = {}
-    if HF_TOKEN:
-        base_kwargs["token"] = HF_TOKEN
-
-    is_offline = bool(os.environ.get("HF_DATASETS_OFFLINE") or os.environ.get("HF_HUB_OFFLINE"))
-
-    # --- Attempt 1: load the per-monument subset directly ---
-    try:
-        raw_dataset = _try_load({**base_kwargs, "data_dir": data_dir})
-    except Exception as e:
-        err_str = str(e)
-
-        if _is_offline_error(err_str):
-            # --- Fallback: load full cached dataset and filter by monument ---
-            print(f"\n[Info] Per-monument cache not found for '{data_dir}'.")
-            print(f"[Info] Loading full cached dataset and filtering for '{monument_name}'...")
-            full_dataset = _try_load({**base_kwargs})
-
-            # The 'label' feature names encode the subfolder path.
-            # We keep only rows whose label name starts with the monument's data_dir prefix.
-            all_label_names = full_dataset["train"].features["label"].names
-
-            # Find which label indices belong to this monument
-            monument_label_indices = [
-                i for i, name in enumerate(all_label_names)
-                if name.startswith(data_dir + "/") or name.startswith(data_dir + "\\")
-                or f"/{data_dir}/" in name or f"\\{data_dir}\\" in name
-                or name.split("/")[0] == data_dir or name.split("\\")[0] == data_dir
-            ]
-
-            if not monument_label_indices:
-                raise ValueError(
-                    f"Could not find any labels for monument '{monument_name}' (data_dir='{data_dir}') "
-                    f"in the full cached dataset. Available labels: {all_label_names}"
-                )
-
-            # Build a local label mapping: original_index -> local_index
-            local_label_names = [all_label_names[i].split("/")[-1].split("\\")[-1] for i in monument_label_indices]
-            old_to_new = {old: new for new, old in enumerate(monument_label_indices)}
-
-            def filter_and_remap(split):
-                filtered = split.filter(lambda ex: ex["label"] in monument_label_indices)
-                filtered = filtered.map(lambda ex: {"label": old_to_new[ex["label"]]})
-                new_features = filtered.features.copy()
-                new_features["label"] = ClassLabel(names=local_label_names)
-                return filtered.cast(new_features)
-
-            raw_dataset = DatasetDict({k: filter_and_remap(v) for k, v in full_dataset.items()})
-            print(f"[Info] Filtered to {len(monument_label_indices)} classes for '{monument_name}': {local_label_names}")
-        else:
-            print(f"\n[Error] Failed to load dataset: {e}")
-            print("\nTip: If you already have the dataset cached locally, you can run in offline mode by setting:")
-            print("  $env:HF_DATASETS_OFFLINE=1  (PowerShell)  or  export HF_DATASETS_OFFLINE=1  (Bash)")
-            raise
-
-    if "test" not in raw_dataset and "validation" not in raw_dataset:
-        split1 = raw_dataset["train"].train_test_split(
-            test_size=VAL_SIZE + TEST_SIZE, seed=SEED, stratify_by_column="label"
-        )
-        train_split = split1["train"]
-        val_test_pool = split1["test"]
-
-        split2 = val_test_pool.train_test_split(
-            test_size=TEST_SIZE / (VAL_SIZE + TEST_SIZE), seed=SEED, stratify_by_column="label"
-        )
-        return DatasetDict(
-            {
-                "train": train_split,
-                "validation": split2["train"],
-                "test": split2["test"],
-            }
-        )
-    return raw_dataset
+@lru_cache(maxsize=None)
+def _metrics():
+    """Accuracy and macro-F1, loaded on first use (both need scikit-learn)."""
+    return evaluate.load("accuracy"), evaluate.load("f1")
 
 
 def make_compute_metrics(labels):
     """Returns a compute_metrics function bound to the current run's labels."""
 
     def compute_metrics(eval_pred) -> dict:
+        accuracy_metric, f1_metric = _metrics()
         predictions = np.argmax(eval_pred.predictions, axis=1)
         acc = accuracy_metric.compute(predictions=predictions, references=eval_pred.label_ids)
         f1 = f1_metric.compute(predictions=predictions, references=eval_pred.label_ids, average="macro")
@@ -212,10 +89,7 @@ def make_compute_metrics(labels):
                 )
             })
 
-        return {
-            "accuracy": acc["accuracy"],
-            "f1": f1["f1"],
-        }
+        return {"accuracy": acc["accuracy"], "f1": f1["f1"]}
 
     return compute_metrics
 
@@ -227,46 +101,60 @@ def collate_fn(batch) -> dict:
     return {"pixel_values": pixel_values, "labels": labels_tensor}
 
 
-def get_processor_size(processor) -> int:
-    """Different backbones expose the target resolution under different keys
-    (MobileNetV2/ConvNeXt use "shortest_edge", ViT/Swin/EfficientNet use
-    "height"/"width", etc.), so check the common variants generically."""
-    if hasattr(processor, "size"):
-        if isinstance(processor.size, dict):
-            if "shortest_edge" in processor.size:
-                return processor.size["shortest_edge"]
-            elif "height" in processor.size:
-                return processor.size["height"]
-            return list(processor.size.values())[0]
-        elif isinstance(processor.size, (int, float)):
-            return int(processor.size)
-    return 224
+def build_transforms(processor) -> tuple[Compose, Compose]:
+    """Training transforms (augmented) and eval transforms (deterministic).
+
+    Augmentation applies to training only; validation and test get a plain
+    resize + center crop so their metrics stay comparable across epochs.
+    """
+    size = get_processor_size(processor)
+    normalize = Normalize(
+        mean=getattr(processor, "image_mean", IMAGENET_MEAN),
+        std=getattr(processor, "image_std", IMAGENET_STD),
+    )
+
+    train_transforms = Compose([
+        RandomResizedCrop(size, scale=(0.7, 1.0)),
+        RandomHorizontalFlip(p=0.5),
+        RandomRotation(degrees=15),
+        ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
+        ToTensor(),
+        normalize,
+    ])
+    eval_transforms = Compose([
+        Resize(size),
+        CenterCrop(size),
+        ToTensor(),
+        normalize,
+    ])
+    return train_transforms, eval_transforms
 
 
-def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None:
+def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict, cfg: dict) -> None:
     """Fine-tunes one (monument, model) combination with a fresh head."""
     monument_name = monument_cfg["name"]
     model_name = model_cfg["name"]
     vision_model_name = model_cfg["vision_model_name"]
+    defaults = cfg.get("training_defaults", {})
 
     run_id = f"{monument_name}-{model_name}"
     output_dir = model_cfg.get("output_dir") or monument_cfg.get("output_dir")
-    if output_dir:
-        output_dir = output_dir.format(monument=monument_name, model=model_name)
-    else:
-        output_dir = f"./outputs/{run_id}-finetuned"
+    output_dir = (
+        output_dir.format(monument=monument_name, model=model_name)
+        if output_dir
+        else f"./outputs/{run_id}-finetuned"
+    )
 
     run_name = model_cfg.get("run_name")
-    if run_name:
-        run_name = run_name.format(monument=monument_name, model=model_name)
-    else:
-        run_name = run_id
+    run_name = run_name.format(monument=monument_name, model=model_name) if run_name else run_id
 
-    num_epochs = model_cfg.get("num_epochs", TRAINING_DEFAULTS.get("num_epochs", 100))
-    batch_size = model_cfg.get("batch_size", TRAINING_DEFAULTS.get("batch_size", 8))
-    learning_rate = float(model_cfg.get("learning_rate", TRAINING_DEFAULTS.get("learning_rate", 3e-5)))
+    num_epochs = model_cfg.get("num_epochs", defaults.get("num_epochs", DEFAULT_NUM_EPOCHS))
+    batch_size = model_cfg.get("batch_size", defaults.get("batch_size", DEFAULT_BATCH_SIZE))
+    learning_rate = float(
+        model_cfg.get("learning_rate", defaults.get("learning_rate", DEFAULT_LEARNING_RATE))
+    )
 
-    # Auto-detect element classes for this monument
+    # Element classes are whatever this monument's subfolders contained.
     labels = dataset["train"].features["label"].names
     id2label = {i: name for i, name in enumerate(labels)}
     label2id = {name: i for i, name in enumerate(labels)}
@@ -280,52 +168,20 @@ def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None
     print(f"W&B Run: {run_name}")
     print("=" * 70)
 
-    # Process images + data augmentation, specific to this backbone's processor
     processor = AutoImageProcessor.from_pretrained(vision_model_name)
-    image_mean = getattr(processor, "image_mean", [0.485, 0.456, 0.406]) #standard ImageNet mean across the Red, Green, and Blue channels
-    image_std = getattr(processor, "image_std", [0.229, 0.224, 0.225]) #standard ImageNet standard deviation across the Red, Green, and Blue channels
-    size = get_processor_size(processor)
-    normalize = Normalize(mean=image_mean, std=image_std)
+    train_transforms, eval_transforms = build_transforms(processor)
 
-    # Augmentation ONLY for training: resize + crop + flip + rotation + color jitter + normalization
-    train_transforms = Compose(
-        [
-            RandomResizedCrop(size, scale=(0.7, 1.0)),
-            RandomHorizontalFlip(p=0.5),
-            RandomRotation(degrees=15),
-            ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
-            ToTensor(),
-            normalize,
-        ]
-    )
+    def apply(transforms):
+        def _apply(examples) -> dict:
+            examples["pixel_values"] = [transforms(img.convert("RGB")) for img in examples["image"]]
+            return examples
+        return _apply
 
-    # Validation & test without augmentation: resize + center crop + normalization
-    val_transforms = Compose(
-        [
-            Resize(size),
-            CenterCrop(size),
-            ToTensor(),
-            normalize,
-        ]
-    )
+    dataset["train"].set_transform(apply(train_transforms))
+    dataset["validation"].set_transform(apply(eval_transforms))
+    dataset["test"].set_transform(apply(eval_transforms))
 
-    def apply_train_transforms(examples) -> dict:
-        examples["pixel_values"] = [
-            train_transforms(img.convert("RGB")) for img in examples["image"]
-        ]
-        return examples
-
-    def apply_val_transforms(examples) -> dict:
-        examples["pixel_values"] = [
-            val_transforms(img.convert("RGB")) for img in examples["image"]
-        ]
-        return examples
-
-    dataset["train"].set_transform(apply_train_transforms)
-    dataset["validation"].set_transform(apply_val_transforms)
-    dataset["test"].set_transform(apply_val_transforms)
-
-    # Instantiate fresh vision backbone head with num_labels=len(monument_classes)
+    # Fresh classification head sized to this monument's class count.
     model = AutoModelForImageClassification.from_pretrained(
         vision_model_name,
         num_labels=num_classes,
@@ -334,9 +190,8 @@ def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None
         ignore_mismatched_sizes=True,
     )
 
-    # Initialize separate W&B run for this monument-model combination
     wandb.init(
-        project=WANDB_PROJECT,
+        project=cfg.get("wandb", {}).get("project", "cultura-viva"),
         name=run_name,
         reinit=True,
         config={
@@ -381,7 +236,6 @@ def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None
 
     trainer.train()
 
-    # Evaluate on test set
     test_metrics = trainer.evaluate(eval_dataset=dataset["test"], metric_key_prefix="test")
     print(f"\nTest Metrics for {run_id}: {test_metrics}")
 
@@ -393,87 +247,55 @@ def train_one(monument_cfg: dict, model_cfg: dict, dataset: DatasetDict) -> None
     wandb.finish()
 
 
-def _normalize_filter_args(items):
-    """Normalizes a list of filter strings which may contain comma-separated values."""
+def _parse_filters(items) -> set | None:
+    """Flattens repeated and comma-separated --monuments/--models values."""
     if not items:
         return None
-    res = set()
-    for item in items:
-        for piece in str(item).split(","):
-            cleaned = piece.strip()
-            if cleaned:
-                res.add(cleaned)
-    return res
+    names = {piece.strip() for item in items for piece in str(item).split(",")}
+    return {name for name in names if name} or None
 
 
-if __name__ == "__main__":
+def _select(entries: list, filters: set | None, kind: str) -> list:
+    """Entries matching the filter, or all of them when no filter was given."""
+    selected = [e for e in entries if not filters or e["name"] in filters]
+    if not selected:
+        available = [e["name"] for e in entries]
+        sys.exit(f"[Error] No {kind} matched {sorted(filters)}. Available {kind}: {available}")
+    return selected
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Train monument classifiers.")
     parser.add_argument(
-        "--config",
-        type=str,
-        default=CONFIG_PATH,
+        "--config", default=CONFIG_PATH,
         help="Path to the config.yaml file (default: config.yaml or $CONFIG_PATH)",
     )
     parser.add_argument(
-        "--monuments",
-        "-m",
-        nargs="+",
+        "--monuments", "-m", nargs="+",
         help="Specific monument name(s) to train on (e.g. --monuments sagrada_familia casa_batllo)",
     )
     parser.add_argument(
-        "--models",
-        "-M",
-        nargs="+",
+        "--models", "-M", nargs="+",
         help="Specific model name(s) to train (e.g. --models vit mobilenetv2)",
     )
     args = parser.parse_args()
 
-    # If --config is passed and differs from default CONFIG_PATH, reload config
-    if args.config != CONFIG_PATH:
-        with open(args.config) as f:
-            config = yaml.safe_load(f)
-        HF_DATASET_NAME = config["dataset"]["name"]
-        VAL_SIZE = config["dataset"]["val_size"]
-        TEST_SIZE = config["dataset"]["test_size"]
-        SEED = config["dataset"]["seed"]
-        TRAINING_DEFAULTS = config.get("training_defaults", {})
-        WANDB_PROJECT = config.get("wandb", {}).get("project", "cultura-viva")
+    cfg = load_config(args.config)
+    monuments = _select(cfg["monuments"], _parse_filters(args.monuments), "monuments")
+    models = _select(cfg["models"], _parse_filters(args.models), "models")
 
-    monument_filters = _normalize_filter_args(args.monuments) or (
-        _normalize_filter_args([MONUMENT_FILTER]) if MONUMENT_FILTER else None
-    )
-    model_filters = _normalize_filter_args(args.models) or (
-        _normalize_filter_args([MODEL_FILTER]) if MODEL_FILTER else None
-    )
+    print("\n[Run Plan]")
+    print(f"  Monuments ({len(monuments)}): {[m['name'] for m in monuments]}")
+    print(f"  Models ({len(models)}): {[m['name'] for m in models]}\n")
 
-    monuments_to_run = [
-        m for m in config["monuments"]
-        if not monument_filters or m["name"] in monument_filters
-    ]
-    models_to_run = [
-        m for m in config["models"]
-        if not model_filters or m["name"] in model_filters
-    ]
-
-    if not monuments_to_run:
-        available = [m["name"] for m in config.get("monuments", [])]
-        print(f"[Error] No monuments matched filter '{args.monuments}'. Available monuments: {available}")
-        exit(1)
-
-    if not models_to_run:
-        available = [m["name"] for m in config.get("models", [])]
-        print(f"[Error] No models matched filter '{args.models}'. Available models: {available}")
-        exit(1)
-
-    print(f"\n[Run Plan]")
-    print(f"  Monuments ({len(monuments_to_run)}): {[m['name'] for m in monuments_to_run]}")
-    print(f"  Models ({len(models_to_run)}): {[m['name'] for m in models_to_run]}\n")
-
-    for monument_cfg in monuments_to_run:
+    for monument_cfg in monuments:
         # Load + split this monument's dataset ONCE, reuse across all models
-        monument_dataset = load_monument_dataset(monument_cfg["name"], monument_cfg["data_dir"])
-
-        for model_cfg in models_to_run:
-            train_one(monument_cfg, model_cfg, monument_dataset)
+        monument_dataset = load_monument_dataset(cfg, monument_cfg["name"], monument_cfg["data_dir"])
+        for model_cfg in models:
+            train_one(monument_cfg, model_cfg, monument_dataset, cfg)
 
     print("\nAll (monument, model) classifiers finished training successfully.")
+
+
+if __name__ == "__main__":
+    main()

@@ -23,7 +23,7 @@ wandb:
   project: cultura-viva
 
 # one entry per monument. data_dir is the subfolder under dataset.name
-# (culturaviva/gaudi_image/<data_dir>). Classes ("elements") are auto-detected
+# (culturaviva/image_1080/<data_dir>). Classes ("elements") are auto-detected
 # per monument from its own subfolders, so N can differ between monuments:
 #   - casa_batllo (2 classes): pla_frontal, pla_inferior
 #   - park_guell (7 classes): 3_viaductes, casa_museu, escalinata_drac, pavellons_consergeria, placa_natura, sala_hipostila, turo_3_creus

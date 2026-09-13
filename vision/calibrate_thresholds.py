@@ -1,8 +1,9 @@
 """
 Calibrate OOD thresholds for a gaudi-vision ONNX checkpoint.
 
-Loads the validation split of the specified monument from Hugging Face (using the
-same splitting logic as train_classifier.py), runs inference on every validation
+Loads the validation split of the specified monument from Hugging Face (via the
+same `dataset.load_monument_dataset` the training script uses, so the images are
+exactly the ones the model was *not* fit to), runs inference on every validation
 image, then:
   - Prints a calibration summary table.
   - Suggests entropy and confidence thresholds that keep >= recall_target of
@@ -25,136 +26,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
-import sys
-import time
 from pathlib import Path
 
 import numpy as np
-import yaml
+from PIL import Image
 
-# Reuse the inference helpers; inference.py must be in the same directory.
-sys.path.insert(0, str(Path(__file__).parent))
-from inference import MonumentClassifier, shannon_entropy
-
-CONFIG_PATH = os.environ.get("CONFIG_PATH", "config.yaml")
-
-
-# -- Config / dataset helpers --------------------------------------------------
-
-
-def _load_config(config_path: str) -> dict:
-    with open(config_path) as fh:
-        return yaml.safe_load(fh) or {}
-
-
-def _monument_data_dir(cfg: dict, monument_name: str, config_path: str) -> str:
-    for m in cfg.get("monuments", []):
-        if m.get("name") == monument_name:
-            return m["data_dir"]
-    raise ValueError(
-        f"Monument '{monument_name}' not found in {config_path}. "
-        f"Available: {[m['name'] for m in cfg.get('monuments', [])]}"
-    )
-
-
-def _is_offline_error(err_str: str) -> bool:
-    err_lower = err_str.lower()
-    return (
-        "couldn't find cache" in err_lower
-        or "offlinemodeisenabledvalue" in err_lower
-        or "offlinemodeisdenabled" in err_lower
-        or "offlinemodeisen" in err_lower
-        or "OfflineModeIsEnabled" in err_str
-        or ("couldn't reach" in err_lower and "offline" in err_lower)
-    )
-
-
-def _try_load(hf_dataset_name: str, load_kwargs: dict):
-    from datasets import load_dataset
-    max_retries = 5
-    backoff_factor = 30
-    for attempt in range(1, max_retries + 1):
-        try:
-            return load_dataset(hf_dataset_name, **load_kwargs)
-        except Exception as e:
-            err_str = str(e)
-            is_rate_limit = "429" in err_str or "too many requests" in err_str.lower() or "rate limit" in err_str.lower()
-            if _is_offline_error(err_str):
-                raise
-            if is_rate_limit and attempt < max_retries:
-                wait_time = attempt * backoff_factor
-                print(f"\n[Warning] Hit Hugging Face rate limit (429) on attempt {attempt}/{max_retries}.")
-                print(f"Waiting {wait_time} seconds before retrying...")
-                time.sleep(wait_time)
-            else:
-                raise
-
-
-def _load_val_split(cfg: dict, monument_name: str, data_dir: str):
-    """Load the HF dataset and return the validation split, replicating train_classifier.py logic."""
-    from datasets import ClassLabel, DatasetDict
-
-    hf_dataset_name = cfg["dataset"]["name"]
-    hf_token = os.environ.get("HF_TOKEN")
-    seed = cfg["dataset"]["seed"]
-    val_size = cfg["dataset"]["val_size"]
-    test_size = cfg["dataset"]["test_size"]
-
-    base_kwargs: dict = {}
-    if hf_token:
-        base_kwargs["token"] = hf_token
-
-    is_offline = bool(os.environ.get("HF_DATASETS_OFFLINE") or os.environ.get("HF_HUB_OFFLINE"))
-
-    print(f"Loading HF dataset  : {hf_dataset_name} / {data_dir}")
-    try:
-        raw = _try_load(hf_dataset_name, {**base_kwargs, "data_dir": data_dir})
-    except Exception as e:
-        err_str = str(e)
-        if _is_offline_error(err_str):
-            print(f"\n[Info] Per-monument cache not found for '{data_dir}'.")
-            print(f"[Info] Loading full cached dataset and filtering for '{monument_name}'...")
-            full_dataset = _try_load(hf_dataset_name, {**base_kwargs})
-            all_label_names = full_dataset["train"].features["label"].names
-            monument_label_indices = [
-                i for i, name in enumerate(all_label_names)
-                if name.startswith(data_dir + "/") or name.startswith(data_dir + "\\")
-                or f"/{data_dir}/" in name or f"\\{data_dir}\\" in name
-                or name.split("/")[0] == data_dir or name.split("\\")[0] == data_dir
-            ]
-            if not monument_label_indices:
-                raise ValueError(
-                    f"Could not find any labels for monument '{monument_name}' (data_dir='{data_dir}') "
-                    f"in the full cached dataset. Available labels: {all_label_names}"
-                )
-            local_label_names = [all_label_names[i].split("/")[-1].split("\\")[-1] for i in monument_label_indices]
-            old_to_new = {old: new for new, old in enumerate(monument_label_indices)}
-
-            def filter_and_remap(split):
-                filtered = split.filter(lambda ex: ex["label"] in monument_label_indices)
-                filtered = filtered.map(lambda ex: {"label": old_to_new[ex["label"]]})
-                new_features = filtered.features.copy()
-                new_features["label"] = ClassLabel(names=local_label_names)
-                return filtered.cast(new_features)
-
-            raw = DatasetDict({k: filter_and_remap(v) for k, v in full_dataset.items()})
-        else:
-            raise
-
-    if "validation" in raw:
-        return raw["validation"]
-    if "test" in raw:
-        return raw["test"]
-
-    # Replicate train_classifier.py stratified splitting
-    split1 = raw["train"].train_test_split(
-        test_size=val_size + test_size, seed=seed, stratify_by_column="label"
-    )
-    split2 = split1["test"].train_test_split(
-        test_size=test_size / (val_size + test_size), seed=seed, stratify_by_column="label"
-    )
-    return split2["train"]
+from common import CONFIG_PATH, load_config, monument_data_dir
+from dataset import validation_split
+from inference import MonumentClassifier
 
 
 # -- Inference sweep -----------------------------------------------------------
@@ -165,27 +44,27 @@ def _collect_results(classifier: MonumentClassifier, val_split) -> dict:
     label_names = val_split.features["label"].names
     n = len(val_split)
 
-    entropies    = np.empty(n, dtype=np.float32)
-    confidences  = np.empty(n, dtype=np.float32)
-    correct      = np.empty(n, dtype=bool)
+    entropies = np.empty(n, dtype=np.float32)
+    confidences = np.empty(n, dtype=np.float32)
+    correct = np.empty(n, dtype=bool)
 
     print(f"Running inference on {n} validation images...")
     for i, example in enumerate(val_split):
         if i % 50 == 0:
             print(f"  [{i + 1:>{len(str(n))}}/{n}]", end="\r", flush=True)
 
-        from PIL import Image as PILImage
         img = example["image"]
         if not hasattr(img, "convert"):
-            img = PILImage.fromarray(img)
+            img = Image.fromarray(img)
 
-        result = classifier.predict(img.convert("RGB"))
-        true_label = label_names[example["label"]]
-        top_pred   = max(result.probabilities, key=result.probabilities.get)
+        result = classifier.predict(img)
+        # Compare the raw top class, not result.label, which is masked to
+        # not_sure once the OOD gate fires -- we are calibrating that gate.
+        top_pred = max(result.probabilities, key=result.probabilities.get)
 
-        entropies[i]   = result.entropy
+        entropies[i] = result.entropy
         confidences[i] = result.confidence
-        correct[i]     = top_pred == true_label
+        correct[i] = top_pred == label_names[example["label"]]
 
     print(f"  [{n}/{n}] done.       ")
     return {"entropies": entropies, "confidences": confidences, "correct": correct}
@@ -304,9 +183,9 @@ def main() -> None:
     if not 0.0 < args.recall_target < 1.0:
         parser.error("--recall-target must be strictly between 0 and 1.")
 
-    cfg      = _load_config(args.config)
-    data_dir = _monument_data_dir(cfg, args.monument_name, args.config)
-    out_dir  = Path(args.output_dir) if args.output_dir else Path(args.checkpoint_dir) / "calibration"
+    cfg = load_config(args.config)
+    data_dir = monument_data_dir(cfg, args.monument_name, args.config)
+    out_dir = Path(args.output_dir) if args.output_dir else Path(args.checkpoint_dir) / "calibration"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Load classifier WITHOUT any threshold override -- we are calibrating
@@ -320,24 +199,21 @@ def main() -> None:
     print(f"Recall target       : {args.recall_target * 100:.1f}%")
     print(f"Output dir          : {out_dir}")
 
-    # Load HF validation split
-    val_split = _load_val_split(cfg, args.monument_name, data_dir)
+    print(f"Loading HF dataset  : {cfg['dataset']['name']} / {data_dir}")
+    val_split = validation_split(cfg, args.monument_name, data_dir)
     print(f"Validation split size: {len(val_split)} images\n")
 
-    # Run inference sweep
-    results     = _collect_results(classifier, val_split)
-    entropies   = results["entropies"]
+    results = _collect_results(classifier, val_split)
+    entropies = results["entropies"]
     confidences = results["confidences"]
 
-    # Suggest thresholds
-    entropy_thresh    = _suggest_entropy_threshold(entropies,   args.recall_target)
+    entropy_thresh = _suggest_entropy_threshold(entropies, args.recall_target)
     confidence_thresh = _suggest_confidence_threshold(confidences, args.recall_target)
 
-    # Compute recall at suggested thresholds
-    recall_entropy    = float((entropies   <= entropy_thresh).mean())
+    recall_entropy = float((entropies <= entropy_thresh).mean())
     recall_confidence = float((confidences >= confidence_thresh).mean())
-    recall_combined   = float(((entropies  <= entropy_thresh) & (confidences >= confidence_thresh)).mean())
-    accuracy          = float(results["correct"].mean())
+    recall_combined = float(((entropies <= entropy_thresh) & (confidences >= confidence_thresh)).mean())
+    accuracy = float(results["correct"].mean())
 
     w = 58
     print(f"\n{'=' * w}")
@@ -359,7 +235,6 @@ def main() -> None:
     print(f"  {'ID recall -- combined gates':<40} {recall_combined:>11.1%}")
     print(f"{'=' * w}\n")
 
-    # Config.yaml snippet
     print("Paste this under the matching monument or model entry in config.yaml:")
     print(f"""
       inference:
@@ -367,7 +242,6 @@ def main() -> None:
         confidence_threshold: {confidence_thresh:.4f}
 """)
 
-    # Save JSON summary
     summary = {
         "monument": args.monument_name,
         "checkpoint_dir": str(args.checkpoint_dir),
@@ -382,17 +256,17 @@ def main() -> None:
         "id_recall_confidence_gate": recall_confidence,
         "id_recall_combined_gates": recall_combined,
         "entropy_stats": {
-            "mean":  float(entropies.mean()),
-            "std":   float(entropies.std()),
-            "p50":   float(np.percentile(entropies, 50)),
-            "p95":   float(np.percentile(entropies, 95)),
-            "p99":   float(np.percentile(entropies, 99)),
+            "mean": float(entropies.mean()),
+            "std": float(entropies.std()),
+            "p50": float(np.percentile(entropies, 50)),
+            "p95": float(np.percentile(entropies, 95)),
+            "p99": float(np.percentile(entropies, 99)),
         },
         "confidence_stats": {
-            "mean":  float(confidences.mean()),
-            "std":   float(confidences.std()),
-            "p05":   float(np.percentile(confidences,  5)),
-            "p50":   float(np.percentile(confidences, 50)),
+            "mean": float(confidences.mean()),
+            "std": float(confidences.std()),
+            "p05": float(np.percentile(confidences, 5)),
+            "p50": float(np.percentile(confidences, 50)),
         },
     }
     json_path = out_dir / "calibration_results.json"
@@ -400,7 +274,6 @@ def main() -> None:
         json.dump(summary, fh, indent=2)
     print(f"Results saved to    : {json_path}")
 
-    # Plot
     _plot_distributions(
         entropies, confidences,
         entropy_thresh, confidence_thresh, auto_entropy_thresh,
@@ -410,4 +283,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

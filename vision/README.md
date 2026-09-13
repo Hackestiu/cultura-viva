@@ -1,38 +1,75 @@
-# Training per-monument, per-model classifiers
+# gaudi-vision
 
-`train_classifier.py` trains one classifier for every combination of
-**monument** x **model**, each as a fully separate run: separate dataset
-split, separate model instance, separate output directory, separate W&B run.
+Trains the element classifiers that let the device recognise *what* a visitor
+photographed, and exports them to ONNX for the Arduino UNO Q.
 
-With 4 monuments and 6 models in the default `config.yaml`, that's 24
-trained versions from a single `python train_classifier.py`.
+One classifier is trained per **(monument, model)** pair — each monument has its
+own element classes, so they can't share a head. Every run gets its own dataset
+split, model instance, output directory, and W&B run.
 
-## config.yaml structure
+## The four scripts
+
+| Script | Does |
+| --- | --- |
+| `train_classifier.py` | Fine-tunes every (monument, model) combination in `config.yaml`. |
+| `export_to_onnx.py` | Turns one finetuned checkpoint into `model.onnx` + `labels.json` for the board. |
+| `calibrate_thresholds.py` | Sweeps the validation split to suggest OOD thresholds for a checkpoint. |
+| `inference.py` | Runs an exported checkpoint on one image, with the OOD gate applied. Also importable as `MonumentClassifier`. |
+
+`common.py` (config + processor helpers) and `dataset.py` (HF loading and
+splitting) are shared internals, not entry points. `dataset.py` matters:
+training and calibration both go through it, so calibration is guaranteed to run
+on images the model was never fit to.
+
+## Pipeline
+
+```bash
+export HF_TOKEN=hf_xxxx
+
+# 1. Train. Omit the filters to run the full cross product.
+uv run python train_classifier.py --monuments sagrada_familia --models vit
+
+# 2. Export the checkpoint the board will run.
+uv run python export_to_onnx.py \
+    ./outputs/sagrada_familia-vit-finetuned ./onnx_export/sagrada_familia-vit
+
+# 3. Pick OOD thresholds from the validation split.
+uv run python calibrate_thresholds.py ./onnx_export/sagrada_familia-vit sagrada_familia
+
+# 4. Spot-check a photo.
+uv run python inference.py ./onnx_export/sagrada_familia-vit photo.jpg --verbose
+```
+
+Step 3 prints an `inference:` snippet to paste under the matching monument or
+model entry in `config.yaml`. Step 2's two output files are what get copied to
+the board, under `models/vision/<location>/`.
+
+## config.yaml
+
+Currently 4 monuments x 2 active models = **8 runs** per full pass (a third
+model, `resnet50`, is commented out).
 
 ```yaml
 dataset:
-  name: culturaviva/gaudi_image
+  name: culturaviva/image_1080
   val_size: 0.15
   test_size: 0.15
   seed: 42
 
-training_defaults:       # applied to every run unless overridden
-  num_epochs: 100
-  batch_size: 8
-  learning_rate: 3e-5
+training_defaults:        # applied to every run unless a model overrides it
+  num_epochs: 8
+  batch_size: 16
+  learning_rate: 2e-5
 
-wandb:
-  project: cultura-viva
-
-monuments:                # each is culturaviva/gaudi_image/<data_dir>
-  - name: sagrada_familia
-    data_dir: sagrada_familia
-  - name: casa_batllo
+monuments:                # each is culturaviva/image_1080/<data_dir>
+  - name: casa_batllo     #   2 classes
     data_dir: casa_batllo
-  - name: park_guell
+  - name: park_guell      #   7 classes
     data_dir: park_guell
-  - name: casa_mila
-    data_dir: casa_mila
+  - name: pedrera         #   3 classes
+    data_dir: pedrera
+  - name: sagrada_familia #   6 classes
+    data_dir: sagrada_familia
 
 models:
   - name: mobilenetv2
@@ -42,47 +79,44 @@ models:
     learning_rate: 2e-5   # per-model override
 ```
 
-Each monument's classes ("elements") are auto-detected from that monument's
-own subfolders, so the number of classes can differ freely between
-monuments -- the script doesn't assume they match.
-
-## How it runs
-
-For each monument, the dataset is loaded and split **once**, then every
-model in `models:` is trained on that same split before moving to the next
-monument. This avoids re-downloading/re-splitting the dataset once per
-model.
+Element classes are auto-detected from each monument's own subfolders, so class
+counts differ freely between monuments — nothing assumes they match. Adding a
+monument or a model extends the cross product on the next run; no code changes.
 
 Output directory and W&B run name both default to `<monument>-<model>`
-(e.g. `sagrada_familia-vit`, `casa_mila-resnet50`), so nothing overwrites
-anything else. You can override either per model with `output_dir:` /
-`run_name:` if you want a custom naming scheme.
+(e.g. `sagrada_familia-vit`), so runs never overwrite each other. Override per
+model with `output_dir:` / `run_name:`.
 
-## Run it
+## OOD detection
+
+A visitor will point the camera at a tree, a tourist, or the sky. The gate
+rejects a prediction as `not_sure` when either signal says the input is
+off-distribution:
+
+- **entropy** `H(p) = -Σ p·ln(p)` exceeds `entropy_threshold`
+  (default `0.5 · ln(N)`, auto-scaled to the monument's class count), or
+- **confidence** `max(p)` falls below `confidence_threshold` (default `0.50`).
+
+Thresholds merge global → monument → model → CLI flag, highest wins, so a
+backbone that runs less confident can be loosened on its own without touching
+the others. `calibrate_thresholds.py --recall-target` sets how much
+in-distribution recall to preserve when suggesting values (default 95%).
+
+## Offline runs
+
+If the per-monument subset isn't cached but the full dataset is,
+`dataset.py` loads the whole thing and filters it down by label prefix:
 
 ```bash
-export HF_TOKEN=hf_xxxx
-python train_classifier.py
+export HF_DATASETS_OFFLINE=1
+uv run python train_classifier.py
 ```
 
-## Train a subset
-
-Filter models and monuments dynamically via command-line flags:
+## Setup
 
 ```bash
-uv run python train_classifier.py --models vit --monuments sagrada_familia
-# Or train multiple:
-uv run python train_classifier.py --models vit mobilenetv2 --monuments sagrada_familia casa_batllo
+uv sync
 ```
 
-Or point at a smaller config file / comment out entries:
-
-```bash
-CONFIG_PATH=config_quick_test.yaml python train_classifier.py
-```
-
-## Add a monument or a model
-
-Just add a new entry under `monuments:` (with its `data_dir`) or `models:`
-(with its `vision_model_name`) -- the script automatically covers the full
-cross product on the next run.
+Requires Python >= 3.10. Training wants a GPU; `inference.py` and
+`export_to_onnx.py` run fine on CPU.

@@ -1,5 +1,2 @@
-\wandb
-\outputs
-\__pycache__
-\.venv
-\onnx_export
+outputs/
+onnx_export/

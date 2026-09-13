@@ -35,7 +35,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -44,10 +43,17 @@ import numpy as np
 import onnxruntime as ort
 from PIL import Image
 
+from common import (
+    CONFIG_PATH,
+    DEFAULT_IMAGE_SIZE,
+    IMAGENET_MEAN,
+    IMAGENET_STD,
+    load_config,
+)
+
 # -- Constants -----------------------------------------------------------------
 
 DEFAULT_CONFIDENCE_THRESHOLD = 0.50
-CONFIG_PATH = os.environ.get("CONFIG_PATH", "config.yaml")
 
 # -- Data types ----------------------------------------------------------------
 
@@ -82,7 +88,7 @@ class PredictionResult:
 
 
 def softmax(logits: np.ndarray) -> np.ndarray:
-    """Numerically stable row-wise softmax."""
+    """Numerically stable softmax over a single 1-D logit vector."""
     shifted = logits - logits.max()
     exp = np.exp(shifted)
     return exp / exp.sum()
@@ -97,14 +103,22 @@ def shannon_entropy(probs: np.ndarray) -> float:
 # -- Config helpers ------------------------------------------------------------
 
 
-def _load_config(config_path: str = CONFIG_PATH) -> dict:
-    """Load config.yaml; return empty dict if file is missing."""
-    try:
-        import yaml
-        with open(config_path) as fh:
-            return yaml.safe_load(fh) or {}
-    except FileNotFoundError:
-        return {}
+def _apply_overrides(entries: list, name: str, current: tuple) -> tuple:
+    """Fold the `inference:` block of the named config entry over the current
+    (entropy, confidence, not_sure_label) triple. Absent keys are left alone."""
+    entropy_thresh, confidence_thresh, not_sure_label = current
+    for entry in entries:
+        if entry.get("name") != name:
+            continue
+        overrides = entry.get("inference", {})
+        if "entropy_threshold" in overrides:
+            entropy_thresh = overrides["entropy_threshold"]
+        if "confidence_threshold" in overrides:
+            confidence_thresh = float(overrides["confidence_threshold"])
+        if "not_sure_label" in overrides:
+            not_sure_label = overrides["not_sure_label"]
+        break
+    return entropy_thresh, confidence_thresh, not_sure_label
 
 
 def _resolve_thresholds(
@@ -121,41 +135,25 @@ def _resolve_thresholds(
 
     Returns (entropy_threshold, confidence_threshold, not_sure_label).
     """
-    cfg = _load_config(config_path)
+    cfg = load_config(config_path, missing_ok=True)
 
-    # 1 -- global defaults
+    # 1 -- global defaults  (entropy None means "auto", resolved at the end)
     global_inf = cfg.get("inference", {})
-    entropy_thresh = global_inf.get("entropy_threshold")       # None = auto
-    confidence_thresh = float(global_inf.get("confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD))
-    not_sure_label = global_inf.get("not_sure_label", "not_sure")
+    resolved = (
+        global_inf.get("entropy_threshold"),
+        float(global_inf.get("confidence_threshold", DEFAULT_CONFIDENCE_THRESHOLD)),
+        global_inf.get("not_sure_label", "not_sure"),
+    )
 
-    # 2 -- monument-level override
+    # 2, 3 -- monument-level, then model-level overrides
     if monument_name:
-        for m in cfg.get("monuments", []):
-            if m.get("name") == monument_name:
-                m_inf = m.get("inference", {})
-                if "entropy_threshold" in m_inf:
-                    entropy_thresh = m_inf["entropy_threshold"]
-                if "confidence_threshold" in m_inf:
-                    confidence_thresh = float(m_inf["confidence_threshold"])
-                if "not_sure_label" in m_inf:
-                    not_sure_label = m_inf["not_sure_label"]
-                break
-
-    # 3 -- model-level override
+        resolved = _apply_overrides(cfg.get("monuments", []), monument_name, resolved)
     if model_name:
-        for m in cfg.get("models", []):
-            if m.get("name") == model_name:
-                m_inf = m.get("inference", {})
-                if "entropy_threshold" in m_inf:
-                    entropy_thresh = m_inf["entropy_threshold"]
-                if "confidence_threshold" in m_inf:
-                    confidence_thresh = float(m_inf["confidence_threshold"])
-                if "not_sure_label" in m_inf:
-                    not_sure_label = m_inf["not_sure_label"]
-                break
+        resolved = _apply_overrides(cfg.get("models", []), model_name, resolved)
 
-    # 4 -- CLI flag (highest priority)
+    entropy_thresh, confidence_thresh, not_sure_label = resolved
+
+    # 4 -- CLI flags (highest priority)
     if cli_entropy is not None:
         entropy_thresh = cli_entropy
     if cli_confidence is not None:
@@ -220,9 +218,9 @@ class MonumentClassifier:
 
         self.id2label: dict = {int(k): v for k, v in meta["id2label"].items()}
         self.num_classes: int = meta.get("num_classes", len(self.id2label))
-        self.image_size: int = meta.get("image_size", 224)
-        self.image_mean: list = meta.get("image_mean", [0.485, 0.456, 0.406])
-        self.image_std: list = meta.get("image_std", [0.229, 0.224, 0.225])
+        self.image_size: int = meta.get("image_size", DEFAULT_IMAGE_SIZE)
+        self.image_mean: list = meta.get("image_mean", IMAGENET_MEAN)
+        self.image_std: list = meta.get("image_std", IMAGENET_STD)
 
         # Resolve thresholds through the full priority chain
         resolved_entropy, resolved_confidence, resolved_label = _resolve_thresholds(
@@ -374,7 +372,7 @@ def main() -> None:
     print(f"\n{'=' * width}")
     print(f"  Image      : {Path(args.image).name}")
     print(f"  Prediction : {result.label}")
-    ood_tag = "YES -> not_sure" if result.is_ood else "NO  -> in-distribution"
+    ood_tag = f"YES -> {result.label}" if result.is_ood else "NO  -> in-distribution"
     print(f"  OOD flag   : {ood_tag}")
     print(f"  {'-' * (width - 2)}")
     c_ok = "OK" if result.confidence >= result.confidence_threshold else "FAIL"

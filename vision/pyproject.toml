@@ -14,6 +14,7 @@ dependencies = [
     "onnxscript",
     "pillow",
     "pyyaml",
+    "scikit-learn",
     "torch",
     "torchvision",
     "transformers",

@@ -20,6 +20,8 @@ import sys
 import torch
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 
+from common import IMAGENET_MEAN, IMAGENET_STD, get_processor_size
+
 
 def export(checkpoint_dir: str, output_dir: str) -> None:
     os.makedirs(output_dir, exist_ok=True)
@@ -29,15 +31,10 @@ def export(checkpoint_dir: str, output_dir: str) -> None:
     processor = AutoImageProcessor.from_pretrained(checkpoint_dir)
     model.eval()
 
-    # Figure out the input resolution the same way train_classifier.py does
-    size = 224
-    if hasattr(processor, "size") and isinstance(processor.size, dict):
-        size = processor.size.get("shortest_edge") or processor.size.get("height") or 224
-    elif hasattr(processor, "size") and isinstance(processor.size, (int, float)):
-        size = int(processor.size)
-
-    image_mean = getattr(processor, "image_mean", [0.485, 0.456, 0.406])
-    image_std = getattr(processor, "image_std", [0.229, 0.224, 0.225])
+    # Same resolution the model was trained at, resolved the same way
+    size = get_processor_size(processor)
+    image_mean = getattr(processor, "image_mean", IMAGENET_MEAN)
+    image_std = getattr(processor, "image_std", IMAGENET_STD)
 
     dummy_input = torch.randn(1, 3, size, size)
 

@@ -2,9 +2,9 @@
   "benchmark_meta": {
     "device": "CPU (4 threads)",
     "board": "Arduino UNO Q (Qualcomm QRB2210, Cortex-A53, Linux)",
-    "board_ram_mb_detected": 3667.2,
+    "board_ram_mb_detected": 3667.1,
     "cpu_threads": 4,
-    "timestamp_utc": "2026-08-26T13:22:19+00:00",
+    "timestamp_utc": "2026-09-13T12:24:51+00:00",
     "warmup_runs": 1,
     "timed_runs": 9,
     "sentences_file": "data/gaudi_sentences.json"
@@ -26,7 +26,7 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 12.9103,
+          "inference_time_sec": 8.9377,
           "audio_seconds": 3.216,
           "audio_file": "audios/mms-tts-eng-onnx/sample_01.wav"
         },
@@ -35,8 +35,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 20.8921,
-          "audio_seconds": 5.2,
+          "inference_time_sec": 14.4452,
+          "audio_seconds": 5.216,
           "audio_file": "audios/mms-tts-eng-onnx/sample_02.wav"
         },
         {
@@ -44,8 +44,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 30.4608,
-          "audio_seconds": 8.016,
+          "inference_time_sec": 21.367,
+          "audio_seconds": 7.856,
           "audio_file": "audios/mms-tts-eng-onnx/sample_03.wav"
         },
         {
@@ -53,8 +53,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 10.9121,
-          "audio_seconds": 2.544,
+          "inference_time_sec": 7.397,
+          "audio_seconds": 2.656,
           "audio_file": "audios/mms-tts-eng-onnx/sample_04.wav"
         },
         {
@@ -62,8 +62,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 27.2836,
-          "audio_seconds": 7.024,
+          "inference_time_sec": 18.9535,
+          "audio_seconds": 6.864,
           "audio_file": "audios/mms-tts-eng-onnx/sample_05.wav"
         },
         {
@@ -71,8 +71,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 41.7989,
-          "audio_seconds": 11.024,
+          "inference_time_sec": 29.5877,
+          "audio_seconds": 10.8,
           "audio_file": "audios/mms-tts-eng-onnx/sample_06.wav"
         },
         {
@@ -80,8 +80,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 13.0629,
-          "audio_seconds": 3.184,
+          "inference_time_sec": 9.0398,
+          "audio_seconds": 3.216,
           "audio_file": "audios/mms-tts-eng-onnx/sample_07.wav"
         },
         {
@@ -89,8 +89,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 21.9455,
-          "audio_seconds": 5.712,
+          "inference_time_sec": 15.4106,
+          "audio_seconds": 5.6,
           "audio_file": "audios/mms-tts-eng-onnx/sample_08.wav"
         },
         {
@@ -98,35 +98,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 40.9152,
-          "audio_seconds": 10.624,
+          "inference_time_sec": 30.3621,
+          "audio_seconds": 11.184,
           "audio_file": "audios/mms-tts-eng-onnx/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 12.9103,
-          "min_sec": 10.9121,
-          "max_sec": 13.0629
+          "median_sec": 8.9377,
+          "min_sec": 7.397,
+          "max_sec": 9.0398
         },
         "medium": {
           "n": 3,
-          "median_sec": 21.9455,
-          "min_sec": 20.8921,
-          "max_sec": 27.2836
+          "median_sec": 15.4106,
+          "min_sec": 14.4452,
+          "max_sec": 18.9535
         },
         "long": {
           "n": 3,
-          "median_sec": 40.9152,
-          "min_sec": 30.4608,
-          "max_sec": 41.7989
+          "median_sec": 29.5877,
+          "min_sec": 21.367,
+          "max_sec": 30.3621
         }
       },
-      "avg_inference_time_sec": 24.4646,
-      "std_inference_time_sec": 10.9609,
-      "min_inference_time_sec": 10.9121,
-      "max_inference_time_sec": 41.7989
+      "avg_inference_time_sec": 17.2778,
+      "std_inference_time_sec": 8.0886,
+      "min_inference_time_sec": 7.397,
+      "max_inference_time_sec": 30.3621
     },
     {
       "model_id": "kakao-enterprise/vits-ljs",
@@ -134,7 +134,7 @@
       "slug": "vits-ljs-onnx",
       "architecture": "vits-onnx",
       "params_millions": 83,
-      "disk_size_mb": 138.61,
+      "disk_size_mb": 332.1,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/vits-ljs-onnx",
@@ -144,8 +144,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 21.3508,
-          "audio_seconds": 5.328,
+          "inference_time_sec": 15.1749,
+          "audio_seconds": 5.552,
           "audio_file": "audios/vits-ljs-onnx/sample_01.wav"
         },
         {
@@ -153,8 +153,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 43.8907,
-          "audio_seconds": 11.952,
+          "inference_time_sec": 31.93,
+          "audio_seconds": 11.728,
           "audio_file": "audios/vits-ljs-onnx/sample_02.wav"
         },
         {
@@ -162,8 +162,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 42.5852,
-          "audio_seconds": 11.264,
+          "inference_time_sec": 30.839,
+          "audio_seconds": 11.616,
           "audio_file": "audios/vits-ljs-onnx/sample_03.wav"
         },
         {
@@ -171,8 +171,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 15.3921,
-          "audio_seconds": 3.664,
+          "inference_time_sec": 10.5109,
+          "audio_seconds": 3.84,
           "audio_file": "audios/vits-ljs-onnx/sample_04.wav"
         },
         {
@@ -180,8 +180,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 46.1134,
-          "audio_seconds": 12.288,
+          "inference_time_sec": 34.7512,
+          "audio_seconds": 12.752,
           "audio_file": "audios/vits-ljs-onnx/sample_05.wav"
         },
         {
@@ -189,8 +189,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 59.0361,
-          "audio_seconds": 15.888,
+          "inference_time_sec": 42.6868,
+          "audio_seconds": 15.68,
           "audio_file": "audios/vits-ljs-onnx/sample_06.wav"
         },
         {
@@ -198,8 +198,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 14.4449,
-          "audio_seconds": 3.472,
+          "inference_time_sec": 9.5305,
+          "audio_seconds": 3.456,
           "audio_file": "audios/vits-ljs-onnx/sample_07.wav"
         },
         {
@@ -207,8 +207,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 29.2043,
-          "audio_seconds": 7.424,
+          "inference_time_sec": 20.5541,
+          "audio_seconds": 7.472,
           "audio_file": "audios/vits-ljs-onnx/sample_08.wav"
         },
         {
@@ -216,35 +216,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 62.2345,
-          "audio_seconds": 16.816,
+          "inference_time_sec": 47.5842,
+          "audio_seconds": 17.312,
           "audio_file": "audios/vits-ljs-onnx/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 15.3921,
-          "min_sec": 14.4449,
-          "max_sec": 21.3508
+          "median_sec": 10.5109,
+          "min_sec": 9.5305,
+          "max_sec": 15.1749
         },
         "medium": {
           "n": 3,
-          "median_sec": 43.8907,
-          "min_sec": 29.2043,
-          "max_sec": 46.1134
+          "median_sec": 31.93,
+          "min_sec": 20.5541,
+          "max_sec": 34.7512
         },
         "long": {
           "n": 3,
-          "median_sec": 59.0361,
-          "min_sec": 42.5852,
-          "max_sec": 62.2345
+          "median_sec": 42.6868,
+          "min_sec": 30.839,
+          "max_sec": 47.5842
         }
       },
-      "avg_inference_time_sec": 37.1391,
-      "std_inference_time_sec": 16.8827,
-      "min_inference_time_sec": 14.4449,
-      "max_inference_time_sec": 62.2345
+      "avg_inference_time_sec": 27.0624,
+      "std_inference_time_sec": 13.027,
+      "min_inference_time_sec": 9.5305,
+      "max_inference_time_sec": 47.5842
     },
     {
       "model_id": "kakao-enterprise/vits-vctk",
@@ -252,7 +252,7 @@
       "slug": "vits-vctk-low-onnx",
       "architecture": "vits-onnx",
       "params_millions": 38,
-      "disk_size_mb": 151.5,
+      "disk_size_mb": 150.0,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/vits-vctk-low-onnx",
@@ -262,8 +262,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 21.0461,
-          "audio_seconds": 5.12,
+          "inference_time_sec": 13.4346,
+          "audio_seconds": 4.848,
           "audio_file": "audios/vits-vctk-low-onnx/sample_01.wav"
         },
         {
@@ -271,8 +271,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 34.4338,
-          "audio_seconds": 9.072,
+          "inference_time_sec": 24.2354,
+          "audio_seconds": 8.72,
           "audio_file": "audios/vits-vctk-low-onnx/sample_02.wav"
         },
         {
@@ -280,8 +280,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 31.9132,
-          "audio_seconds": 8.4,
+          "inference_time_sec": 21.6955,
+          "audio_seconds": 8.032,
           "audio_file": "audios/vits-vctk-low-onnx/sample_03.wav"
         },
         {
@@ -289,8 +289,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 12.1064,
-          "audio_seconds": 2.88,
+          "inference_time_sec": 8.1677,
+          "audio_seconds": 2.944,
           "audio_file": "audios/vits-vctk-low-onnx/sample_04.wav"
         },
         {
@@ -298,8 +298,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 35.5489,
-          "audio_seconds": 9.392,
+          "inference_time_sec": 25.4252,
+          "audio_seconds": 9.488,
           "audio_file": "audios/vits-vctk-low-onnx/sample_05.wav"
         },
         {
@@ -307,8 +307,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 54.4143,
-          "audio_seconds": 14.88,
+          "inference_time_sec": 40.9503,
+          "audio_seconds": 15.008,
           "audio_file": "audios/vits-vctk-low-onnx/sample_06.wav"
         },
         {
@@ -316,8 +316,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 13.6942,
-          "audio_seconds": 3.264,
+          "inference_time_sec": 9.0898,
+          "audio_seconds": 3.216,
           "audio_file": "audios/vits-vctk-low-onnx/sample_07.wav"
         },
         {
@@ -325,8 +325,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 22.4773,
-          "audio_seconds": 5.728,
+          "inference_time_sec": 15.7635,
+          "audio_seconds": 5.744,
           "audio_file": "audios/vits-vctk-low-onnx/sample_08.wav"
         },
         {
@@ -334,35 +334,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 49.4968,
-          "audio_seconds": 13.168,
+          "inference_time_sec": 37.1988,
+          "audio_seconds": 13.6,
           "audio_file": "audios/vits-vctk-low-onnx/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 13.6942,
-          "min_sec": 12.1064,
-          "max_sec": 21.0461
+          "median_sec": 9.0898,
+          "min_sec": 8.1677,
+          "max_sec": 13.4346
         },
         "medium": {
           "n": 3,
-          "median_sec": 34.4338,
-          "min_sec": 22.4773,
-          "max_sec": 35.5489
+          "median_sec": 24.2354,
+          "min_sec": 15.7635,
+          "max_sec": 25.4252
         },
         "long": {
           "n": 3,
-          "median_sec": 49.4968,
-          "min_sec": 31.9132,
-          "max_sec": 54.4143
+          "median_sec": 37.1988,
+          "min_sec": 21.6955,
+          "max_sec": 40.9503
         }
       },
-      "avg_inference_time_sec": 30.5701,
-      "std_inference_time_sec": 13.9451,
-      "min_inference_time_sec": 12.1064,
-      "max_inference_time_sec": 54.4143
+      "avg_inference_time_sec": 21.7734,
+      "std_inference_time_sec": 10.9379,
+      "min_inference_time_sec": 8.1677,
+      "max_inference_time_sec": 40.9503
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -370,7 +370,7 @@
       "slug": "piper-lessac-low",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 289.36,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-lessac-low",
@@ -380,8 +380,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.1126,
-          "audio_seconds": 3.056,
+          "inference_time_sec": 1.4686,
+          "audio_seconds": 2.992,
           "audio_file": "audios/piper-lessac-low/sample_01.wav"
         },
         {
@@ -389,8 +389,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 4.1217,
-          "audio_seconds": 6.64,
+          "inference_time_sec": 2.4456,
+          "audio_seconds": 6.592,
           "audio_file": "audios/piper-lessac-low/sample_02.wav"
         },
         {
@@ -398,8 +398,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 3.6806,
-          "audio_seconds": 6.464,
+          "inference_time_sec": 2.7867,
+          "audio_seconds": 6.528,
           "audio_file": "audios/piper-lessac-low/sample_03.wav"
         },
         {
@@ -407,8 +407,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.6137,
-          "audio_seconds": 2.208,
+          "inference_time_sec": 0.8566,
+          "audio_seconds": 2.224,
           "audio_file": "audios/piper-lessac-low/sample_04.wav"
         },
         {
@@ -416,8 +416,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 4.2948,
-          "audio_seconds": 7.2,
+          "inference_time_sec": 2.7375,
+          "audio_seconds": 7.024,
           "audio_file": "audios/piper-lessac-low/sample_05.wav"
         },
         {
@@ -425,8 +425,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 6.075,
-          "audio_seconds": 10.416,
+          "inference_time_sec": 4.189,
+          "audio_seconds": 10.72,
           "audio_file": "audios/piper-lessac-low/sample_06.wav"
         },
         {
@@ -434,8 +434,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.4737,
-          "audio_seconds": 2.304,
+          "inference_time_sec": 1.0036,
+          "audio_seconds": 2.272,
           "audio_file": "audios/piper-lessac-low/sample_07.wav"
         },
         {
@@ -443,8 +443,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 2.7699,
-          "audio_seconds": 4.16,
+          "inference_time_sec": 1.5916,
+          "audio_seconds": 4.272,
           "audio_file": "audios/piper-lessac-low/sample_08.wav"
         },
         {
@@ -452,35 +452,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 6.0043,
-          "audio_seconds": 10.768,
+          "inference_time_sec": 4.4132,
+          "audio_seconds": 10.752,
           "audio_file": "audios/piper-lessac-low/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.6137,
-          "min_sec": 1.4737,
-          "max_sec": 2.1126
+          "median_sec": 1.0036,
+          "min_sec": 0.8566,
+          "max_sec": 1.4686
         },
         "medium": {
           "n": 3,
-          "median_sec": 4.1217,
-          "min_sec": 2.7699,
-          "max_sec": 4.2948
+          "median_sec": 2.4456,
+          "min_sec": 1.5916,
+          "max_sec": 2.7375
         },
         "long": {
           "n": 3,
-          "median_sec": 6.0043,
-          "min_sec": 3.6806,
-          "max_sec": 6.075
+          "median_sec": 4.189,
+          "min_sec": 2.7867,
+          "max_sec": 4.4132
         }
       },
-      "avg_inference_time_sec": 3.5718,
-      "std_inference_time_sec": 1.634,
-      "min_inference_time_sec": 1.4737,
-      "max_inference_time_sec": 6.075
+      "avg_inference_time_sec": 2.388,
+      "std_inference_time_sec": 1.2189,
+      "min_inference_time_sec": 0.8566,
+      "max_inference_time_sec": 4.4132
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -488,7 +488,7 @@
       "slug": "piper-lessac-medium",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 289.36,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-lessac-medium",
@@ -498,8 +498,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.6013,
-          "audio_seconds": 3.088,
+          "inference_time_sec": 1.604,
+          "audio_seconds": 3.007,
           "audio_file": "audios/piper-lessac-medium/sample_01.wav"
         },
         {
@@ -507,8 +507,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 4.907,
-          "audio_seconds": 6.467,
+          "inference_time_sec": 3.6342,
+          "audio_seconds": 6.769,
           "audio_file": "audios/piper-lessac-medium/sample_02.wav"
         },
         {
@@ -516,8 +516,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 4.5966,
-          "audio_seconds": 6.188,
+          "inference_time_sec": 3.2782,
+          "audio_seconds": 6.397,
           "audio_file": "audios/piper-lessac-medium/sample_03.wav"
         },
         {
@@ -525,8 +525,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.8816,
-          "audio_seconds": 1.974,
+          "inference_time_sec": 1.2153,
+          "audio_seconds": 2.043,
           "audio_file": "audios/piper-lessac-medium/sample_04.wav"
         },
         {
@@ -534,8 +534,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 5.3834,
-          "audio_seconds": 7.024,
+          "inference_time_sec": 3.3869,
+          "audio_seconds": 6.792,
           "audio_file": "audios/piper-lessac-medium/sample_05.wav"
         },
         {
@@ -543,8 +543,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 7.2792,
-          "audio_seconds": 10.112,
+          "inference_time_sec": 5.4004,
+          "audio_seconds": 10.495,
           "audio_file": "audios/piper-lessac-medium/sample_06.wav"
         },
         {
@@ -552,8 +552,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.914,
-          "audio_seconds": 2.218,
+          "inference_time_sec": 1.2465,
+          "audio_seconds": 2.125,
           "audio_file": "audios/piper-lessac-medium/sample_07.wav"
         },
         {
@@ -561,8 +561,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.3151,
-          "audio_seconds": 4.168,
+          "inference_time_sec": 2.4376,
+          "audio_seconds": 4.307,
           "audio_file": "audios/piper-lessac-medium/sample_08.wav"
         },
         {
@@ -570,35 +570,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 7.8351,
-          "audio_seconds": 10.17,
+          "inference_time_sec": 5.0322,
+          "audio_seconds": 10.054,
           "audio_file": "audios/piper-lessac-medium/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.914,
-          "min_sec": 1.8816,
-          "max_sec": 2.6013
+          "median_sec": 1.2465,
+          "min_sec": 1.2153,
+          "max_sec": 1.604
         },
         "medium": {
           "n": 3,
-          "median_sec": 4.907,
-          "min_sec": 3.3151,
-          "max_sec": 5.3834
+          "median_sec": 3.3869,
+          "min_sec": 2.4376,
+          "max_sec": 3.6342
         },
         "long": {
           "n": 3,
-          "median_sec": 7.2792,
-          "min_sec": 4.5966,
-          "max_sec": 7.8351
+          "median_sec": 5.0322,
+          "min_sec": 3.2782,
+          "max_sec": 5.4004
         }
       },
-      "avg_inference_time_sec": 4.4126,
-      "std_inference_time_sec": 2.0625,
-      "min_inference_time_sec": 1.8816,
-      "max_inference_time_sec": 7.8351
+      "avg_inference_time_sec": 3.0261,
+      "std_inference_time_sec": 1.4545,
+      "min_inference_time_sec": 1.2153,
+      "max_inference_time_sec": 5.4004
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -606,7 +606,7 @@
       "slug": "piper-lessac-high",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 289.36,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-lessac-high",
@@ -616,8 +616,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 17.9185,
-          "audio_seconds": 3.228,
+          "inference_time_sec": 11.2565,
+          "audio_seconds": 2.961,
           "audio_file": "audios/piper-lessac-high/sample_01.wav"
         },
         {
@@ -625,8 +625,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 33.8219,
-          "audio_seconds": 6.583,
+          "inference_time_sec": 25.6443,
+          "audio_seconds": 6.734,
           "audio_file": "audios/piper-lessac-high/sample_02.wav"
         },
         {
@@ -634,8 +634,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 33.1807,
-          "audio_seconds": 6.397,
+          "inference_time_sec": 24.4879,
+          "audio_seconds": 6.513,
           "audio_file": "audios/piper-lessac-high/sample_03.wav"
         },
         {
@@ -643,8 +643,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 12.0733,
-          "audio_seconds": 2.101,
+          "inference_time_sec": 8.3852,
+          "audio_seconds": 2.183,
           "audio_file": "audios/piper-lessac-high/sample_04.wav"
         },
         {
@@ -652,8 +652,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 38.6501,
-          "audio_seconds": 7.477,
+          "inference_time_sec": 26.0284,
+          "audio_seconds": 7.163,
           "audio_file": "audios/piper-lessac-high/sample_05.wav"
         },
         {
@@ -661,8 +661,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 50.4502,
-          "audio_seconds": 9.915,
+          "inference_time_sec": 38.1436,
+          "audio_seconds": 10.252,
           "audio_file": "audios/piper-lessac-high/sample_06.wav"
         },
         {
@@ -670,8 +670,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 12.8649,
-          "audio_seconds": 2.287,
+          "inference_time_sec": 9.1804,
+          "audio_seconds": 2.403,
           "audio_file": "audios/piper-lessac-high/sample_07.wav"
         },
         {
@@ -679,8 +679,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 22.4093,
-          "audio_seconds": 4.214,
+          "inference_time_sec": 16.4431,
+          "audio_seconds": 4.342,
           "audio_file": "audios/piper-lessac-high/sample_08.wav"
         },
         {
@@ -688,35 +688,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 52.0094,
-          "audio_seconds": 10.124,
+          "inference_time_sec": 37.4023,
+          "audio_seconds": 9.938,
           "audio_file": "audios/piper-lessac-high/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 12.8649,
-          "min_sec": 12.0733,
-          "max_sec": 17.9185
+          "median_sec": 9.1804,
+          "min_sec": 8.3852,
+          "max_sec": 11.2565
         },
         "medium": {
           "n": 3,
-          "median_sec": 33.8219,
-          "min_sec": 22.4093,
-          "max_sec": 38.6501
+          "median_sec": 25.6443,
+          "min_sec": 16.4431,
+          "max_sec": 26.0284
         },
         "long": {
           "n": 3,
-          "median_sec": 50.4502,
-          "min_sec": 33.1807,
-          "max_sec": 52.0094
+          "median_sec": 37.4023,
+          "min_sec": 24.4879,
+          "max_sec": 38.1436
         }
       },
-      "avg_inference_time_sec": 30.3754,
-      "std_inference_time_sec": 14.2184,
-      "min_inference_time_sec": 12.0733,
-      "max_inference_time_sec": 52.0094
+      "avg_inference_time_sec": 21.8857,
+      "std_inference_time_sec": 10.6949,
+      "min_inference_time_sec": 8.3852,
+      "max_inference_time_sec": 38.1436
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -724,7 +724,7 @@
       "slug": "piper-ryan-low",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 289.36,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-ryan-low",
@@ -734,8 +734,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.3281,
-          "audio_seconds": 3.04,
+          "inference_time_sec": 1.2056,
+          "audio_seconds": 2.944,
           "audio_file": "audios/piper-ryan-low/sample_01.wav"
         },
         {
@@ -743,8 +743,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 3.8919,
-          "audio_seconds": 6.464,
+          "inference_time_sec": 2.7254,
+          "audio_seconds": 6.304,
           "audio_file": "audios/piper-ryan-low/sample_02.wav"
         },
         {
@@ -752,8 +752,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 3.6321,
-          "audio_seconds": 6.096,
+          "inference_time_sec": 2.4231,
+          "audio_seconds": 6.192,
           "audio_file": "audios/piper-ryan-low/sample_03.wav"
         },
         {
@@ -761,8 +761,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.2439,
-          "audio_seconds": 1.856,
+          "inference_time_sec": 0.9018,
+          "audio_seconds": 1.872,
           "audio_file": "audios/piper-ryan-low/sample_04.wav"
         },
         {
@@ -770,8 +770,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 4.2918,
-          "audio_seconds": 7.008,
+          "inference_time_sec": 2.7861,
+          "audio_seconds": 7.104,
           "audio_file": "audios/piper-ryan-low/sample_05.wav"
         },
         {
@@ -779,8 +779,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 5.9364,
-          "audio_seconds": 9.408,
+          "inference_time_sec": 3.7537,
+          "audio_seconds": 9.456,
           "audio_file": "audios/piper-ryan-low/sample_06.wav"
         },
         {
@@ -788,8 +788,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.5667,
-          "audio_seconds": 2.08,
+          "inference_time_sec": 0.832,
+          "audio_seconds": 2.144,
           "audio_file": "audios/piper-ryan-low/sample_07.wav"
         },
         {
@@ -797,8 +797,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 2.8303,
-          "audio_seconds": 4.16,
+          "inference_time_sec": 1.7989,
+          "audio_seconds": 4.144,
           "audio_file": "audios/piper-ryan-low/sample_08.wav"
         },
         {
@@ -806,7 +806,7 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 5.8748,
+          "inference_time_sec": 3.9255,
           "audio_seconds": 9.84,
           "audio_file": "audios/piper-ryan-low/sample_09.wav"
         }
@@ -814,27 +814,27 @@
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.5667,
-          "min_sec": 1.2439,
-          "max_sec": 2.3281
+          "median_sec": 0.9018,
+          "min_sec": 0.832,
+          "max_sec": 1.2056
         },
         "medium": {
           "n": 3,
-          "median_sec": 3.8919,
-          "min_sec": 2.8303,
-          "max_sec": 4.2918
+          "median_sec": 2.7254,
+          "min_sec": 1.7989,
+          "max_sec": 2.7861
         },
         "long": {
           "n": 3,
-          "median_sec": 5.8748,
-          "min_sec": 3.6321,
-          "max_sec": 5.9364
+          "median_sec": 3.7537,
+          "min_sec": 2.4231,
+          "max_sec": 3.9255
         }
       },
-      "avg_inference_time_sec": 3.5107,
-      "std_inference_time_sec": 1.5994,
-      "min_inference_time_sec": 1.2439,
-      "max_inference_time_sec": 5.9364
+      "avg_inference_time_sec": 2.2613,
+      "std_inference_time_sec": 1.0921,
+      "min_inference_time_sec": 0.832,
+      "max_inference_time_sec": 3.9255
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -842,7 +842,7 @@
       "slug": "piper-ryan-medium",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 349.64,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-ryan-medium",
@@ -852,8 +852,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.6773,
-          "audio_seconds": 2.926,
+          "inference_time_sec": 1.7075,
+          "audio_seconds": 2.879,
           "audio_file": "audios/piper-ryan-medium/sample_01.wav"
         },
         {
@@ -861,8 +861,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 5.3599,
-          "audio_seconds": 6.734,
+          "inference_time_sec": 3.4415,
+          "audio_seconds": 6.815,
           "audio_file": "audios/piper-ryan-medium/sample_02.wav"
         },
         {
@@ -870,8 +870,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 4.8084,
-          "audio_seconds": 6.084,
+          "inference_time_sec": 3.2045,
+          "audio_seconds": 6.142,
           "audio_file": "audios/piper-ryan-medium/sample_03.wav"
         },
         {
@@ -879,8 +879,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.7734,
-          "audio_seconds": 1.939,
+          "inference_time_sec": 1.0343,
+          "audio_seconds": 1.997,
           "audio_file": "audios/piper-ryan-medium/sample_04.wav"
         },
         {
@@ -888,8 +888,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 5.6603,
-          "audio_seconds": 7.454,
+          "inference_time_sec": 3.8102,
+          "audio_seconds": 7.175,
           "audio_file": "audios/piper-ryan-medium/sample_05.wav"
         },
         {
@@ -897,8 +897,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 7.429,
-          "audio_seconds": 9.625,
+          "inference_time_sec": 5.0021,
+          "audio_seconds": 9.636,
           "audio_file": "audios/piper-ryan-medium/sample_06.wav"
         },
         {
@@ -906,8 +906,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.9428,
-          "audio_seconds": 2.043,
+          "inference_time_sec": 1.094,
+          "audio_seconds": 2.125,
           "audio_file": "audios/piper-ryan-medium/sample_07.wav"
         },
         {
@@ -915,8 +915,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.4255,
-          "audio_seconds": 4.087,
+          "inference_time_sec": 2.4614,
+          "audio_seconds": 4.272,
           "audio_file": "audios/piper-ryan-medium/sample_08.wav"
         },
         {
@@ -924,35 +924,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 7.5927,
-          "audio_seconds": 10.112,
+          "inference_time_sec": 5.3032,
+          "audio_seconds": 10.124,
           "audio_file": "audios/piper-ryan-medium/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.9428,
-          "min_sec": 1.7734,
-          "max_sec": 2.6773
+          "median_sec": 1.094,
+          "min_sec": 1.0343,
+          "max_sec": 1.7075
         },
         "medium": {
           "n": 3,
-          "median_sec": 5.3599,
-          "min_sec": 3.4255,
-          "max_sec": 5.6603
+          "median_sec": 3.4415,
+          "min_sec": 2.4614,
+          "max_sec": 3.8102
         },
         "long": {
           "n": 3,
-          "median_sec": 7.429,
-          "min_sec": 4.8084,
-          "max_sec": 7.5927
+          "median_sec": 5.0021,
+          "min_sec": 3.2045,
+          "max_sec": 5.3032
         }
       },
-      "avg_inference_time_sec": 4.5188,
-      "std_inference_time_sec": 2.0756,
-      "min_inference_time_sec": 1.7734,
-      "max_inference_time_sec": 7.5927
+      "avg_inference_time_sec": 3.0065,
+      "std_inference_time_sec": 1.4781,
+      "min_inference_time_sec": 1.0343,
+      "max_inference_time_sec": 5.3032
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -960,7 +960,7 @@
       "slug": "piper-ryan-high",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 464.84,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-ryan-high",
@@ -970,8 +970,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 19.5975,
-          "audio_seconds": 3.529,
+          "inference_time_sec": 13.1362,
+          "audio_seconds": 3.46,
           "audio_file": "audios/piper-ryan-high/sample_01.wav"
         },
         {
@@ -979,8 +979,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 37.2428,
-          "audio_seconds": 7.094,
+          "inference_time_sec": 26.884,
+          "audio_seconds": 7.14,
           "audio_file": "audios/piper-ryan-high/sample_02.wav"
         },
         {
@@ -988,8 +988,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 35.5325,
-          "audio_seconds": 6.757,
+          "inference_time_sec": 24.9061,
+          "audio_seconds": 6.594,
           "audio_file": "audios/piper-ryan-high/sample_03.wav"
         },
         {
@@ -997,8 +997,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 12.5249,
-          "audio_seconds": 2.171,
+          "inference_time_sec": 7.6456,
+          "audio_seconds": 2.009,
           "audio_file": "audios/piper-ryan-high/sample_04.wav"
         },
         {
@@ -1006,8 +1006,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 37.8195,
-          "audio_seconds": 7.129,
+          "inference_time_sec": 26.7406,
+          "audio_seconds": 7.198,
           "audio_file": "audios/piper-ryan-high/sample_05.wav"
         },
         {
@@ -1015,8 +1015,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 51.7596,
-          "audio_seconds": 10.089,
+          "inference_time_sec": 37.7714,
+          "audio_seconds": 10.008,
           "audio_file": "audios/piper-ryan-high/sample_06.wav"
         },
         {
@@ -1024,8 +1024,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 12.3918,
-          "audio_seconds": 2.159,
+          "inference_time_sec": 8.3832,
+          "audio_seconds": 2.183,
           "audio_file": "audios/piper-ryan-high/sample_07.wav"
         },
         {
@@ -1033,8 +1033,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 25.138,
-          "audio_seconds": 4.679,
+          "inference_time_sec": 17.0329,
+          "audio_seconds": 4.481,
           "audio_file": "audios/piper-ryan-high/sample_08.wav"
         },
         {
@@ -1042,35 +1042,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 53.5803,
-          "audio_seconds": 10.333,
+          "inference_time_sec": 39.8915,
+          "audio_seconds": 10.565,
           "audio_file": "audios/piper-ryan-high/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 12.5249,
-          "min_sec": 12.3918,
-          "max_sec": 19.5975
+          "median_sec": 8.3832,
+          "min_sec": 7.6456,
+          "max_sec": 13.1362
         },
         "medium": {
           "n": 3,
-          "median_sec": 37.2428,
-          "min_sec": 25.138,
-          "max_sec": 37.8195
+          "median_sec": 26.7406,
+          "min_sec": 17.0329,
+          "max_sec": 26.884
         },
         "long": {
           "n": 3,
-          "median_sec": 51.7596,
-          "min_sec": 35.5325,
-          "max_sec": 53.5803
+          "median_sec": 37.7714,
+          "min_sec": 24.9061,
+          "max_sec": 39.8915
         }
       },
-      "avg_inference_time_sec": 31.7319,
-      "std_inference_time_sec": 14.5067,
-      "min_inference_time_sec": 12.3918,
-      "max_inference_time_sec": 53.5803
+      "avg_inference_time_sec": 22.4879,
+      "std_inference_time_sec": 11.1364,
+      "min_inference_time_sec": 7.6456,
+      "max_inference_time_sec": 39.8915
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1078,7 +1078,7 @@
       "slug": "piper-amy-low",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 525.02,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-amy-low",
@@ -1088,8 +1088,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.8325,
-          "audio_seconds": 4.032,
+          "inference_time_sec": 1.4504,
+          "audio_seconds": 3.84,
           "audio_file": "audios/piper-amy-low/sample_01.wav"
         },
         {
@@ -1097,8 +1097,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 4.376,
-          "audio_seconds": 7.456,
+          "inference_time_sec": 2.9833,
+          "audio_seconds": 7.44,
           "audio_file": "audios/piper-amy-low/sample_02.wav"
         },
         {
@@ -1106,7 +1106,7 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 4.1225,
+          "inference_time_sec": 2.7342,
           "audio_seconds": 6.976,
           "audio_file": "audios/piper-amy-low/sample_03.wav"
         },
@@ -1115,8 +1115,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.7883,
-          "audio_seconds": 2.624,
+          "inference_time_sec": 1.0063,
+          "audio_seconds": 2.608,
           "audio_file": "audios/piper-amy-low/sample_04.wav"
         },
         {
@@ -1124,8 +1124,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 4.2779,
-          "audio_seconds": 7.456,
+          "inference_time_sec": 2.911,
+          "audio_seconds": 7.264,
           "audio_file": "audios/piper-amy-low/sample_05.wav"
         },
         {
@@ -1133,8 +1133,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 5.9481,
-          "audio_seconds": 10.0,
+          "inference_time_sec": 4.0164,
+          "audio_seconds": 10.048,
           "audio_file": "audios/piper-amy-low/sample_06.wav"
         },
         {
@@ -1142,8 +1142,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.7511,
-          "audio_seconds": 2.736,
+          "inference_time_sec": 1.3546,
+          "audio_seconds": 2.768,
           "audio_file": "audios/piper-amy-low/sample_07.wav"
         },
         {
@@ -1151,8 +1151,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.0153,
-          "audio_seconds": 4.592,
+          "inference_time_sec": 1.7775,
+          "audio_seconds": 4.624,
           "audio_file": "audios/piper-amy-low/sample_08.wav"
         },
         {
@@ -1160,35 +1160,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 6.9352,
-          "audio_seconds": 11.28,
+          "inference_time_sec": 4.6099,
+          "audio_seconds": 11.184,
           "audio_file": "audios/piper-amy-low/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.7883,
-          "min_sec": 1.7511,
-          "max_sec": 2.8325
+          "median_sec": 1.3546,
+          "min_sec": 1.0063,
+          "max_sec": 1.4504
         },
         "medium": {
           "n": 3,
-          "median_sec": 4.2779,
-          "min_sec": 3.0153,
-          "max_sec": 4.376
+          "median_sec": 2.911,
+          "min_sec": 1.7775,
+          "max_sec": 2.9833
         },
         "long": {
           "n": 3,
-          "median_sec": 5.9481,
-          "min_sec": 4.1225,
-          "max_sec": 6.9352
+          "median_sec": 4.0164,
+          "min_sec": 2.7342,
+          "max_sec": 4.6099
         }
       },
-      "avg_inference_time_sec": 3.8941,
-      "std_inference_time_sec": 1.6608,
-      "min_inference_time_sec": 1.7511,
-      "max_inference_time_sec": 6.9352
+      "avg_inference_time_sec": 2.5382,
+      "std_inference_time_sec": 1.172,
+      "min_inference_time_sec": 1.0063,
+      "max_inference_time_sec": 4.6099
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1196,7 +1196,7 @@
       "slug": "piper-amy-medium",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 585.3,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-amy-medium",
@@ -1206,8 +1206,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 3.5412,
-          "audio_seconds": 4.122,
+          "inference_time_sec": 2.218,
+          "audio_seconds": 3.936,
           "audio_file": "audios/piper-amy-medium/sample_01.wav"
         },
         {
@@ -1215,8 +1215,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 5.8284,
-          "audio_seconds": 7.419,
+          "inference_time_sec": 3.7009,
+          "audio_seconds": 7.384,
           "audio_file": "audios/piper-amy-medium/sample_02.wav"
         },
         {
@@ -1224,8 +1224,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 5.5646,
-          "audio_seconds": 6.966,
+          "inference_time_sec": 3.5061,
+          "audio_seconds": 6.943,
           "audio_file": "audios/piper-amy-medium/sample_03.wav"
         },
         {
@@ -1233,8 +1233,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 2.2848,
-          "audio_seconds": 2.752,
+          "inference_time_sec": 1.2932,
+          "audio_seconds": 2.659,
           "audio_file": "audios/piper-amy-medium/sample_04.wav"
         },
         {
@@ -1242,8 +1242,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 6.0966,
-          "audio_seconds": 7.697,
+          "inference_time_sec": 4.1703,
+          "audio_seconds": 7.616,
           "audio_file": "audios/piper-amy-medium/sample_05.wav"
         },
         {
@@ -1251,8 +1251,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 8.228,
-          "audio_seconds": 10.809,
+          "inference_time_sec": 5.5712,
+          "audio_seconds": 10.786,
           "audio_file": "audios/piper-amy-medium/sample_06.wav"
         },
         {
@@ -1260,8 +1260,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.4386,
-          "audio_seconds": 2.786,
+          "inference_time_sec": 1.6452,
+          "audio_seconds": 2.798,
           "audio_file": "audios/piper-amy-medium/sample_07.wav"
         },
         {
@@ -1269,8 +1269,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.9728,
-          "audio_seconds": 4.934,
+          "inference_time_sec": 2.4497,
+          "audio_seconds": 4.981,
           "audio_file": "audios/piper-amy-medium/sample_08.wav"
         },
         {
@@ -1278,35 +1278,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 8.9141,
-          "audio_seconds": 11.61,
+          "inference_time_sec": 5.6402,
+          "audio_seconds": 11.482,
           "audio_file": "audios/piper-amy-medium/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 2.4386,
-          "min_sec": 2.2848,
-          "max_sec": 3.5412
+          "median_sec": 1.6452,
+          "min_sec": 1.2932,
+          "max_sec": 2.218
         },
         "medium": {
           "n": 3,
-          "median_sec": 5.8284,
-          "min_sec": 3.9728,
-          "max_sec": 6.0966
+          "median_sec": 3.7009,
+          "min_sec": 2.4497,
+          "max_sec": 4.1703
         },
         "long": {
           "n": 3,
-          "median_sec": 8.228,
-          "min_sec": 5.5646,
-          "max_sec": 8.9141
+          "median_sec": 5.5712,
+          "min_sec": 3.5061,
+          "max_sec": 5.6402
         }
       },
-      "avg_inference_time_sec": 5.2077,
-      "std_inference_time_sec": 2.228,
-      "min_inference_time_sec": 2.2848,
-      "max_inference_time_sec": 8.9141
+      "avg_inference_time_sec": 3.355,
+      "std_inference_time_sec": 1.4992,
+      "min_inference_time_sec": 1.2932,
+      "max_inference_time_sec": 5.6402
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1314,7 +1314,7 @@
       "slug": "piper-alan-low",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 645.49,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-alan-low",
@@ -1324,8 +1324,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.994,
-          "audio_seconds": 4.416,
+          "inference_time_sec": 1.7708,
+          "audio_seconds": 4.336,
           "audio_file": "audios/piper-alan-low/sample_01.wav"
         },
         {
@@ -1333,8 +1333,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 5.0698,
-          "audio_seconds": 8.224,
+          "inference_time_sec": 3.1244,
+          "audio_seconds": 8.272,
           "audio_file": "audios/piper-alan-low/sample_02.wav"
         },
         {
@@ -1342,8 +1342,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 4.5162,
-          "audio_seconds": 7.536,
+          "inference_time_sec": 3.008,
+          "audio_seconds": 7.472,
           "audio_file": "audios/piper-alan-low/sample_03.wav"
         },
         {
@@ -1351,8 +1351,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 1.7816,
-          "audio_seconds": 2.576,
+          "inference_time_sec": 0.9701,
+          "audio_seconds": 2.624,
           "audio_file": "audios/piper-alan-low/sample_04.wav"
         },
         {
@@ -1360,8 +1360,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 5.699,
-          "audio_seconds": 8.928,
+          "inference_time_sec": 3.291,
+          "audio_seconds": 8.752,
           "audio_file": "audios/piper-alan-low/sample_05.wav"
         },
         {
@@ -1369,8 +1369,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 7.3202,
-          "audio_seconds": 11.904,
+          "inference_time_sec": 4.6491,
+          "audio_seconds": 11.92,
           "audio_file": "audios/piper-alan-low/sample_06.wav"
         },
         {
@@ -1378,8 +1378,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.8541,
-          "audio_seconds": 2.816,
+          "inference_time_sec": 1.2267,
+          "audio_seconds": 2.784,
           "audio_file": "audios/piper-alan-low/sample_07.wav"
         },
         {
@@ -1387,8 +1387,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.0063,
-          "audio_seconds": 4.624,
+          "inference_time_sec": 1.7612,
+          "audio_seconds": 4.864,
           "audio_file": "audios/piper-alan-low/sample_08.wav"
         },
         {
@@ -1396,35 +1396,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 7.2967,
-          "audio_seconds": 12.992,
+          "inference_time_sec": 5.0563,
+          "audio_seconds": 13.072,
           "audio_file": "audios/piper-alan-low/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 1.8541,
-          "min_sec": 1.7816,
-          "max_sec": 2.994
+          "median_sec": 1.2267,
+          "min_sec": 0.9701,
+          "max_sec": 1.7708
         },
         "medium": {
           "n": 3,
-          "median_sec": 5.0698,
-          "min_sec": 3.0063,
-          "max_sec": 5.699
+          "median_sec": 3.1244,
+          "min_sec": 1.7612,
+          "max_sec": 3.291
         },
         "long": {
           "n": 3,
-          "median_sec": 7.2967,
-          "min_sec": 4.5162,
-          "max_sec": 7.3202
+          "median_sec": 4.6491,
+          "min_sec": 3.008,
+          "max_sec": 5.0563
         }
       },
-      "avg_inference_time_sec": 4.3931,
-      "std_inference_time_sec": 2.009,
-      "min_inference_time_sec": 1.7816,
-      "max_inference_time_sec": 7.3202
+      "avg_inference_time_sec": 2.762,
+      "std_inference_time_sec": 1.3682,
+      "min_inference_time_sec": 0.9701,
+      "max_inference_time_sec": 5.0563
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1432,7 +1432,7 @@
       "slug": "piper-alan-medium",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 705.76,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-alan-medium",
@@ -1442,8 +1442,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 3.6405,
-          "audio_seconds": 4.435,
+          "inference_time_sec": 2.1838,
+          "audio_seconds": 4.377,
           "audio_file": "audios/piper-alan-medium/sample_01.wav"
         },
         {
@@ -1451,8 +1451,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 6.1402,
-          "audio_seconds": 8.231,
+          "inference_time_sec": 4.2138,
+          "audio_seconds": 8.057,
           "audio_file": "audios/piper-alan-medium/sample_02.wav"
         },
         {
@@ -1460,8 +1460,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 5.3293,
-          "audio_seconds": 7.256,
+          "inference_time_sec": 3.7273,
+          "audio_seconds": 7.326,
           "audio_file": "audios/piper-alan-medium/sample_03.wav"
         },
         {
@@ -1469,8 +1469,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 2.1242,
-          "audio_seconds": 2.566,
+          "inference_time_sec": 1.3104,
+          "audio_seconds": 2.577,
           "audio_file": "audios/piper-alan-medium/sample_04.wav"
         },
         {
@@ -1478,8 +1478,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 6.4879,
-          "audio_seconds": 8.87,
+          "inference_time_sec": 4.3133,
+          "audio_seconds": 8.522,
           "audio_file": "audios/piper-alan-medium/sample_05.wav"
         },
         {
@@ -1487,7 +1487,7 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 8.6677,
+          "inference_time_sec": 5.5857,
           "audio_seconds": 11.668,
           "audio_file": "audios/piper-alan-medium/sample_06.wav"
         },
@@ -1496,8 +1496,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.3895,
-          "audio_seconds": 2.775,
+          "inference_time_sec": 1.4242,
+          "audio_seconds": 2.821,
           "audio_file": "audios/piper-alan-medium/sample_07.wav"
         },
         {
@@ -1505,8 +1505,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.908,
-          "audio_seconds": 5.027,
+          "inference_time_sec": 2.4275,
+          "audio_seconds": 5.271,
           "audio_file": "audios/piper-alan-medium/sample_08.wav"
         },
         {
@@ -1514,35 +1514,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 9.6063,
-          "audio_seconds": 13.398,
+          "inference_time_sec": 6.5422,
+          "audio_seconds": 13.317,
           "audio_file": "audios/piper-alan-medium/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 2.3895,
-          "min_sec": 2.1242,
-          "max_sec": 3.6405
+          "median_sec": 1.4242,
+          "min_sec": 1.3104,
+          "max_sec": 2.1838
         },
         "medium": {
           "n": 3,
-          "median_sec": 6.1402,
-          "min_sec": 3.908,
-          "max_sec": 6.4879
+          "median_sec": 4.2138,
+          "min_sec": 2.4275,
+          "max_sec": 4.3133
         },
         "long": {
           "n": 3,
-          "median_sec": 8.6677,
-          "min_sec": 5.3293,
-          "max_sec": 9.6063
+          "median_sec": 5.5857,
+          "min_sec": 3.7273,
+          "max_sec": 6.5422
         }
       },
-      "avg_inference_time_sec": 5.366,
-      "std_inference_time_sec": 2.4768,
-      "min_inference_time_sec": 2.1242,
-      "max_inference_time_sec": 9.6063
+      "avg_inference_time_sec": 3.5254,
+      "std_inference_time_sec": 1.7259,
+      "min_inference_time_sec": 1.3104,
+      "max_inference_time_sec": 6.5422
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1550,7 +1550,7 @@
       "slug": "piper-cori-medium",
       "architecture": "piper",
       "params_millions": null,
-      "disk_size_mb": 875.29,
+      "disk_size_mb": 766.36,
       "fits_2GB_ram": true,
       "fits_4GB_ram": true,
       "audio_dir": "audios/piper-cori-medium",
@@ -1560,8 +1560,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 2.8127,
-          "audio_seconds": 3.239,
+          "inference_time_sec": 1.7206,
+          "audio_seconds": 3.1,
           "audio_file": "audios/piper-cori-medium/sample_01.wav"
         },
         {
@@ -1569,8 +1569,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 4.5079,
-          "audio_seconds": 5.526,
+          "inference_time_sec": 2.9318,
+          "audio_seconds": 5.735,
           "audio_file": "audios/piper-cori-medium/sample_02.wav"
         },
         {
@@ -1578,8 +1578,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 4.6537,
-          "audio_seconds": 6.049,
+          "inference_time_sec": 3.4751,
+          "audio_seconds": 6.142,
           "audio_file": "audios/piper-cori-medium/sample_03.wav"
         },
         {
@@ -1587,8 +1587,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 2.2734,
-          "audio_seconds": 2.531,
+          "inference_time_sec": 1.4762,
+          "audio_seconds": 2.554,
           "audio_file": "audios/piper-cori-medium/sample_04.wav"
         },
         {
@@ -1596,8 +1596,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 5.4503,
-          "audio_seconds": 7.117,
+          "inference_time_sec": 3.7717,
+          "audio_seconds": 7.384,
           "audio_file": "audios/piper-cori-medium/sample_05.wav"
         },
         {
@@ -1605,8 +1605,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 8.3504,
-          "audio_seconds": 11.54,
+          "inference_time_sec": 5.727,
+          "audio_seconds": 11.215,
           "audio_file": "audios/piper-cori-medium/sample_06.wav"
         },
         {
@@ -1614,8 +1614,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 1.9583,
-          "audio_seconds": 2.264,
+          "inference_time_sec": 1.2351,
+          "audio_seconds": 2.461,
           "audio_file": "audios/piper-cori-medium/sample_07.wav"
         },
         {
@@ -1623,8 +1623,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 3.4622,
-          "audio_seconds": 4.261,
+          "inference_time_sec": 2.3854,
+          "audio_seconds": 4.365,
           "audio_file": "audios/piper-cori-medium/sample_08.wav"
         },
         {
@@ -1632,35 +1632,35 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 7.189,
-          "audio_seconds": 9.392,
+          "inference_time_sec": 5.0237,
+          "audio_seconds": 9.497,
           "audio_file": "audios/piper-cori-medium/sample_09.wav"
         }
       ],
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 2.2734,
-          "min_sec": 1.9583,
-          "max_sec": 2.8127
+          "median_sec": 1.4762,
+          "min_sec": 1.2351,
+          "max_sec": 1.7206
         },
         "medium": {
           "n": 3,
-          "median_sec": 4.5079,
-          "min_sec": 3.4622,
-          "max_sec": 5.4503
+          "median_sec": 2.9318,
+          "min_sec": 2.3854,
+          "max_sec": 3.7717
         },
         "long": {
           "n": 3,
-          "median_sec": 7.189,
-          "min_sec": 4.6537,
-          "max_sec": 8.3504
+          "median_sec": 5.0237,
+          "min_sec": 3.4751,
+          "max_sec": 5.727
         }
       },
-      "avg_inference_time_sec": 4.5175,
-      "std_inference_time_sec": 2.0635,
-      "min_inference_time_sec": 1.9583,
-      "max_inference_time_sec": 8.3504
+      "avg_inference_time_sec": 3.083,
+      "std_inference_time_sec": 1.4813,
+      "min_inference_time_sec": 1.2351,
+      "max_inference_time_sec": 5.727
     },
     {
       "model_id": "rhasspy/piper-voices",
@@ -1678,8 +1678,8 @@
           "sentence_id": 7,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 16.8541,
-          "audio_seconds": 3.007,
+          "inference_time_sec": 11.849,
+          "audio_seconds": 2.833,
           "audio_file": "audios/piper-cori-high/sample_01.wav"
         },
         {
@@ -1687,8 +1687,8 @@
           "sentence_id": 1,
           "word_count": 16,
           "length_bucket": "medium",
-          "inference_time_sec": 31.9425,
-          "audio_seconds": 6.06,
+          "inference_time_sec": 26.0863,
+          "audio_seconds": 6.374,
           "audio_file": "audios/piper-cori-high/sample_02.wav"
         },
         {
@@ -1696,8 +1696,8 @@
           "sentence_id": 5,
           "word_count": 17,
           "length_bucket": "long",
-          "inference_time_sec": 35.7589,
-          "audio_seconds": 6.931,
+          "inference_time_sec": 28.7519,
+          "audio_seconds": 7.024,
           "audio_file": "audios/piper-cori-high/sample_03.wav"
         },
         {
@@ -1705,8 +1705,8 @@
           "sentence_id": 8,
           "word_count": 7,
           "length_bucket": "short",
-          "inference_time_sec": 13.2709,
-          "audio_seconds": 2.31,
+          "inference_time_sec": 9.2981,
+          "audio_seconds": 2.194,
           "audio_file": "audios/piper-cori-high/sample_04.wav"
         },
         {
@@ -1714,8 +1714,8 @@
           "sentence_id": 2,
           "word_count": 14,
           "length_bucket": "medium",
-          "inference_time_sec": 39.1499,
-          "audio_seconds": 7.57,
+          "inference_time_sec": 32.0075,
+          "audio_seconds": 7.779,
           "audio_file": "audios/piper-cori-high/sample_05.wav"
         },
         {
@@ -1723,8 +1723,8 @@
           "sentence_id": 10,
           "word_count": 22,
           "length_bucket": "long",
-          "inference_time_sec": 56.8779,
-          "audio_seconds": 11.297,
+          "inference_time_sec": 46.5889,
+          "audio_seconds": 11.366,
           "audio_file": "audios/piper-cori-high/sample_06.wav"
         },
         {
@@ -1732,8 +1732,8 @@
           "sentence_id": 9,
           "word_count": 6,
           "length_bucket": "short",
-          "inference_time_sec": 13.3096,
-          "audio_seconds": 2.345,
+          "inference_time_sec": 9.6238,
+          "audio_seconds": 2.299,
           "audio_file": "audios/piper-cori-high/sample_07.wav"
         },
         {
@@ -1741,8 +1741,8 @@
           "sentence_id": 3,
           "word_count": 10,
           "length_bucket": "medium",
-          "inference_time_sec": 24.1999,
-          "audio_seconds": 4.365,
+          "inference_time_sec": 17.9076,
+          "audio_seconds": 4.272,
           "audio_file": "audios/piper-cori-high/sample_08.wav"
         },
         {
@@ -1750,7 +1750,7 @@
           "sentence_id": 11,
           "word_count": 26,
           "length_bucket": "long",
-          "inference_time_sec": 52.3201,
+          "inference_time_sec": 41.8938,
           "audio_seconds": 10.228,
           "audio_file": "audios/piper-cori-high/sample_09.wav"
         }
@@ -1758,27 +1758,27 @@
       "by_bucket": {
         "short": {
           "n": 3,
-          "median_sec": 13.3096,
-          "min_sec": 13.2709,
-          "max_sec": 16.8541
+          "median_sec": 9.6238,
+          "min_sec": 9.2981,
+          "max_sec": 11.849
         },
         "medium": {
           "n": 3,
-          "median_sec": 31.9425,
-          "min_sec": 24.1999,
-          "max_sec": 39.1499
+          "median_sec": 26.0863,
+          "min_sec": 17.9076,
+          "max_sec": 32.0075
         },
         "long": {
           "n": 3,
-          "median_sec": 52.3201,
-          "min_sec": 35.7589,
-          "max_sec": 56.8779
+          "median_sec": 41.8938,
+          "min_sec": 28.7519,
+          "max_sec": 46.5889
         }
       },
-      "avg_inference_time_sec": 31.5204,
-      "std_inference_time_sec": 15.2219,
-      "min_inference_time_sec": 13.2709,
-      "max_inference_time_sec": 56.8779
+      "avg_inference_time_sec": 24.8897,
+      "std_inference_time_sec": 13.0041,
+      "min_inference_time_sec": 9.2981,
+      "max_inference_time_sec": 46.5889
     }
   ]
 }

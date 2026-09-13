@@ -34,7 +34,11 @@ An end-to-end evaluation, benchmarking, and embedded deployment pipeline for **C
 ├── pyproject.toml            # Project dependencies (managed via uv)
 ├── README.md
 │
-├── data/                     # Gaudí knowledge files
+├── core/
+│   ├── config.py             # config.yaml loader (env > yaml > default)
+│   └── device_prompt.py      # Imports the device's real prompt builders
+│
+├── data/                     # Gaudí knowledge files (copies of the device's)
 │   ├── knowledge_base.json   # High-level biographies, works, and timelines
 │   └── element_sheets.json   # Granular architectural facts, materials, and element IDs
 │
@@ -45,8 +49,35 @@ An end-to-end evaluation, benchmarking, and embedded deployment pipeline for **C
 └── eval/                     # Ragas evaluation suite
     ├── testset.json          # Curated Gaudí question/reference-answer benchmark set
     ├── evaluate.py           # Self-contained Ragas scoring runner
-    └── predictions.example.json
+    ├── predictions.example.json
+    └── legacy_pre_device_parity/   # Superseded runs, kept for comparison only
 ```
+
+---
+
+## The prompt comes from the device
+
+The benchmark does **not** define its own prompt. `core/device_prompt.py` imports
+`build_messages` and `PERSONALITY_PROMPTS` straight out of
+`arduino/python/core/model_module.py`, the module the board actually runs, so a
+change to the guide's wording lands in the next benchmark run automatically.
+
+That matters because the two had already drifted: this suite used to score a
+single flat completion prompt under a generic persona, long after the device had
+moved to a chat prompt that puts retrieved facts **first** and the personality
+instructions second — an ordering llama.cpp's prefix KV cache depends on.
+
+Generation parameters in `config.yaml` (`max_tokens: 60`, `repeat_penalty: 1.1`,
+`stop: ["\n\n", "<|im_end|>"]`, `temperature: 0.1`) mirror the device's
+`create_chat_completion` call. Keep them in step by hand.
+
+### The one deliberate difference: retrieval
+
+On the board, vision names the element and the knowledge sheet is fetched by id.
+The testset has no element ids, and includes architect-level and cross-monument
+questions that no single element sheet can answer, so passages are retrieved
+semantically here (`retrieval.top_k`, default 3). Everything downstream of
+retrieval — prompt, personality, sampling — matches the device.
 
 ---
 
@@ -75,18 +106,31 @@ uv run python main.py prepare --download-only
 ```
 
 ### 4. Run the Benchmark
-Generate predictions across `eval/testset.json` and score them with Ragas:
+Generate predictions across `eval/testset.json` and score them with Ragas. Every
+candidate is run once **per guide personality** (artistic, technical, child), so
+the default sweep is 5 models x 3 personalities x 38 questions:
 ```bash
-# Benchmark all candidate models sequentially
+# Every candidate model, every personality
 uv run python main.py benchmark
 
-# Benchmark a single candidate model
+# One model, every personality
 uv run python main.py benchmark --model qwen2.5:1.5b
+
+# One model, one personality
+uv run python main.py benchmark --model qwen2.5:1.5b --personality technical
 
 # Generate predictions without running the Ragas judge
 uv run python main.py benchmark --model gemma3:1b --skip-eval
 ```
-Benchmark scores and per-question breakdowns are saved to `eval/results/`.
+
+Predictions land in `eval/predictions_<model>_<personality>.json`; scores and
+per-question breakdowns in `eval/results/`.
+
+The artistic and child voices are expected to score lower on
+`answer_correctness` than the technical one: the testset references are written
+as plain factual statements, and those two personalities are instructed to
+speak in metaphor and simple analogy. Compare a personality against itself
+across models, not against a different personality.
 
 ---
 

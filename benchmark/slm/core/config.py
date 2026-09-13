@@ -54,12 +54,21 @@ class Config:
     # --- Embeddings ---
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
-    # --- Inference parameters ---
+    # --- Endpoint serving the candidate models (distinct from the judge's) ---
+    ollama_base_url: str = "http://localhost:11434"
+
+    # --- Inference parameters (mirror arduino/python/core/model_module.py) ---
     inference_temperature: float = 0.1
-    inference_max_tokens: int = 128
+    inference_max_tokens: int = 60
+    inference_repeat_penalty: float = 1.1
+    inference_stop: tuple[str, ...] = ("\n\n", "<|im_end|>")
     inference_context_window: int = 2048
     inference_threads: int = 4
     inference_batch_size: int = 256
+    personalities: tuple[str, ...] = ("artistic", "technical", "child")
+
+    # --- Retrieval ---
+    retrieval_top_k: int = 3
 
     # --- Resolved absolute paths ---
     knowledge_base_path: Path = ROOT / "data" / "knowledge_base.json"
@@ -88,7 +97,9 @@ def _build_config() -> Config:
     raw = _load_yaml()
 
     paths = raw.get("paths", {})
+    ollama = raw.get("ollama", {})
     judge = raw.get("judge", {})
+    retrieval = raw.get("retrieval", {})
     embeddings = raw.get("embeddings", {})
     inference = raw.get("inference", {})
     arduino = raw.get("arduino", {})
@@ -101,6 +112,10 @@ def _build_config() -> Config:
     return Config(
         candidates=raw.get("candidates", []),
 
+        ollama_base_url=os.getenv(
+            "OLLAMA_BASE_URL", ollama.get("base_url", "http://localhost:11434")
+        ),
+
         judge_model=os.getenv("OLLAMA_JUDGE_MODEL", judge.get("model", "qwen2.5:7b")),
         judge_base_url=os.getenv("OLLAMA_JUDGE_BASE_URL", judge.get("base_url", "http://localhost:11434")),
         judge_temperature=float(os.getenv("JUDGE_TEMPERATURE", str(judge.get("temperature", 0.0)))),
@@ -108,10 +123,15 @@ def _build_config() -> Config:
         embedding_model=os.getenv("EMBEDDING_MODEL", embeddings.get("model", "sentence-transformers/all-MiniLM-L6-v2")),
 
         inference_temperature=inference.get("temperature", 0.1),
-        inference_max_tokens=inference.get("max_tokens", 128),
+        inference_max_tokens=inference.get("max_tokens", 60),
+        inference_repeat_penalty=inference.get("repeat_penalty", 1.1),
+        inference_stop=tuple(inference.get("stop", ["\n\n", "<|im_end|>"])),
         inference_context_window=inference.get("context_window", 2048),
         inference_threads=inference.get("threads", 4),
         inference_batch_size=inference.get("batch_size", 256),
+        personalities=tuple(inference.get("personalities", ["artistic", "technical", "child"])),
+
+        retrieval_top_k=int(retrieval.get("top_k", 3)),
 
         knowledge_base_path=p("", paths.get("knowledge_base"), "data/knowledge_base.json"),
         element_sheets_path=p("", paths.get("element_sheets"), "data/element_sheets.json"),

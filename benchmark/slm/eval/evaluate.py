@@ -23,7 +23,10 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from ragas import EvaluationDataset, evaluate
 from ragas.dataset_schema import SingleTurnSample
-from ragas.metrics.collections import (
+# ragas.metrics, not ragas.metrics.collections: the collections variants take an
+# instructor-style LLM as a constructor argument, while these accept the judge
+# that evaluate() injects -- which is how a local ChatOllama judge can be used.
+from ragas.metrics import (
     AnswerCorrectness,
     AnswerRelevancy,
     ContextPrecision,
@@ -162,6 +165,10 @@ def main() -> None:
 
     testset = load_json(cfg.testset_path)
     predictions = load_json(args.predictions)
+
+    personalities = {p["personality"] for p in predictions if p.get("personality")}
+    if personalities:
+        print(f"Personality     : {', '.join(sorted(personalities))}")
     validate_testset(testset)
     validate_predictions(predictions, {item["id"] for item in testset})
     dataset = build_dataset(testset, predictions)
@@ -183,7 +190,9 @@ def main() -> None:
 
     cfg.results_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    csv_path = cfg.results_dir / f"eval_{timestamp}.csv"
+    # Name the CSV after the predictions file so runs over different models and
+    # personalities sit side by side instead of being told apart by timestamp.
+    csv_path = cfg.results_dir / f"eval_{args.predictions.stem}_{timestamp}.csv"
     result.to_pandas().to_csv(csv_path, index=False)
     print(f"\nPer-question results saved to {csv_path}")
 

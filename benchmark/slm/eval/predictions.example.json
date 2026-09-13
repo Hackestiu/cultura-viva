@@ -1,11 +1,14 @@
 [
   {
-    "id": "birth-death",
-    "question": "When and where was Antoni Gaudí born, and when did he die?",
-    "reference": "Gaudí was born on 25 June 1852 in Reus (or possibly Riudoms). He died on 10 June 1926 in Barcelona.",
+    "id": "park-guell-viaducts",
+    "question": "What are the elevated pathways in Park Güell, and what natural forms do they imitate?",
+    "reference": "A system of elevated stone pathways, originally intended for carriages, winds through Park Güell...",
     "contexts": [
-      "The retrieved passage for this question goes here."
+      "Element: Viaducts\nCreator: Antoni Gaudí\nMaterials: unworked local stone",
+      "Park Güell. Location: La Salut, Gràcia, Barcelona. Architect: Antoni Gaudí."
     ],
-    "answer": "The SLM-generated answer goes here."
+    "answer": "They are the viaducts, three raised walkways Gaudí built from unworked local stone. He shaped their leaning columns to imitate tree trunks and natural rock, so the structure reads as part of the hillside.",
+    "personality": "technical",
+    "elapsed_s": 2.41
   }
 ]

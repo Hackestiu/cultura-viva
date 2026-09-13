@@ -34,6 +34,12 @@ candidates:
     gguf_file: "google_gemma-3-1b-it-Q4_K_M.gguf"
     gguf_url: "https://huggingface.co/bartowski/google_gemma-3-1b-it-GGUF/resolve/main/google_gemma-3-1b-it-Q4_K_M.gguf"
 
+# Endpoint serving the candidate models under test. Kept separate from the
+# judge's: the two are the same Ollama instance today, but scoring a model with
+# itself is exactly the mistake this split is here to prevent.
+ollama:
+  base_url: "http://localhost:11434"
+
 # Evaluation Judge (Ragas)
 judge:
   model: "qwen2.5:7b"
@@ -54,13 +60,33 @@ paths:
   eval_dir: "eval"
   results_dir: "eval/results"
 
-# Generation & Context Parameters
+# Generation parameters. These mirror the values the device passes to
+# create_chat_completion in arduino/python/core/model_module.py -- if that
+# changes, change it here too, or the benchmark stops describing what ships.
 inference:
   temperature: 0.1
-  max_tokens: 128
+  max_tokens: 60            # device: max_tokens=60
+  repeat_penalty: 1.1       # device: repeat_penalty=1.1
+  stop:                     # device: stop=["\n\n", "<|im_end|>"]
+    - "\n\n"
+    - "<|im_end|>"
   context_window: 2048
   threads: 4
   batch_size: 256
+
+  # Guide voices to benchmark. Names must exist in PERSONALITY_PROMPTS in
+  # arduino/python/core/model_module.py; each produces its own predictions file.
+  personalities:
+    - artistic
+    - technical
+    - child
+
+# Passages pulled from the knowledge base per question. The device instead looks
+# an element up directly by the id vision gives it; the testset has no element
+# ids and includes architect-level and cross-monument questions, so retrieval
+# stays semantic here.
+retrieval:
+  top_k: 3
 
 # Arduino UNO Q Deployment Defaults
 arduino:

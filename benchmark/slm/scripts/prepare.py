@@ -27,7 +27,7 @@ from core.config import cfg
 # ==========================================
 def check_ollama_running() -> bool:
     try:
-        urllib.request.urlopen(f"{cfg.judge_base_url.rstrip('/')}/api/tags", timeout=3)
+        urllib.request.urlopen(f"{cfg.ollama_base_url.rstrip('/')}/api/tags", timeout=3)
         return True
     except Exception:
         return False
@@ -37,7 +37,7 @@ def setup_pc_models():
     """Pulls candidate models and judge model in Ollama for evaluation."""
     print("\n[1/3] Preparing Ollama models for local evaluation...")
     if not check_ollama_running():
-        print(f"Ollama is not reachable at {cfg.judge_base_url}. Start it with `ollama serve` and try again.")
+        print(f"Ollama is not reachable at {cfg.ollama_base_url}. Start it with `ollama serve` and try again.")
         sys.exit(1)
 
     print(f"Pulling judge model: {cfg.judge_model}")

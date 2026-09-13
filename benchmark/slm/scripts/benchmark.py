@@ -1,13 +1,23 @@
 """CulturaViva: SLM Benchmarking Suite for Gaudí Audio Guide
 
-Generates predictions over eval/testset.json for each candidate model,
-then invokes Ragas evaluation to score them.
+Generates predictions over eval/testset.json for each candidate model and each
+guide personality, then invokes Ragas evaluation to score them.
+
+The prompt is not defined here. It is imported from the device application
+(arduino/python/core/model_module.py) via core.device_prompt, so a benchmark run
+measures the prompt that actually ships rather than a copy of an older one.
+
+Retrieval is the one deliberate difference from the device. On the board, vision
+names the element and the knowledge sheet is looked up by id; the testset has no
+element ids and asks architect-level and cross-monument questions, so passages
+are retrieved semantically here instead.
 
 All settings come from config.yaml via core.config.cfg.
 
 Usage (via main.py):
     uv run python main.py benchmark
     uv run python main.py benchmark --model qwen2.5:1.5b
+    uv run python main.py benchmark --personality technical
     uv run python main.py benchmark --skip-eval
 """
 
@@ -26,6 +36,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from core.config import cfg
+from core.device_prompt import PERSONALITIES, build_messages
 
 
 # ==========================================
@@ -157,67 +168,86 @@ class GaudiKnowledgeStore:
 # ==========================================
 # 2. PREDICTION GENERATOR
 # ==========================================
-def generate_predictions_for_model(model_tag: str, store: GaudiKnowledgeStore) -> list[dict]:
+def _ollama_chat(model_tag: str, messages: list[dict]) -> tuple[str, float]:
+    """One /api/chat call against the candidate model. Returns (answer, seconds).
+
+    /api/chat rather than /api/generate: the device calls llama.cpp's
+    create_chat_completion, which applies the model's chat template to a system
+    and a user turn. Flattening that into one completion prompt, as this script
+    used to, measures a prompt shape the device never sends.
+    """
+    payload = json.dumps({
+        "model": model_tag,
+        "messages": messages,
+        "stream": False,
+        "options": {
+            "temperature": cfg.inference_temperature,
+            "num_predict": cfg.inference_max_tokens,
+            "repeat_penalty": cfg.inference_repeat_penalty,
+            "num_ctx": cfg.inference_context_window,
+            "stop": list(cfg.inference_stop),
+        },
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        f"{cfg.ollama_base_url.rstrip('/')}/api/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+
+    start = time.time()
+    try:
+        with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            answer = (result.get("message") or {}).get("content", "").strip()
+    except Exception as e:
+        answer = f"Error during inference: {e}"
+    return answer, time.time() - start
+
+
+def load_testset() -> list[dict]:
     if not cfg.testset_path.exists():
         print(f"Testset not found at {cfg.testset_path}. Ensure eval/testset.json exists.")
         sys.exit(1)
-
     with open(cfg.testset_path, "r", encoding="utf-8") as f:
-        testset = json.load(f)
+        return json.load(f)
 
+
+def generate_predictions(
+    model_tag: str, personality: str, store: GaudiKnowledgeStore, testset: list[dict]
+) -> list[dict]:
+    """Answer every testset question as one guide personality."""
     predictions = []
-    print(f"\nGenerating predictions for: {model_tag}")
+    print(f"\nGenerating predictions for: {model_tag}  [{personality}]")
 
     for i, item in enumerate(testset, 1):
-        q_id = item["id"]
         question = item["question"]
+
         element_id = item.get("element_id")
         if element_id:
             contexts = [store.context_for_element(element_id)]
         else:
-            contexts = store.retrieve_top_k(question, k=3)
-        context_str = "\n\n---\n\n".join(contexts)
+            contexts = store.retrieve_top_k(question, k=cfg.retrieval_top_k)
 
-        prompt = (
-            "You are CulturaViva, an audio guide for Antoni Gaudi's monuments in Barcelona.\n"
-            "Answer the visitor's question accurately and concisely, using only the context below. "
-            "If the context does not contain the answer, say you are not sure rather than guessing.\n\n"
-            f"Context:\n{context_str}\n\n"
-            f"Question: {question}\nAnswer:"
+        # The device's own prompt builder: retrieved facts first, personality
+        # instructions second, question alone in the user turn.
+        messages = build_messages(
+            question=question,
+            element=element_id,
+            personality=personality,
+            kg_context="\n\n---\n\n".join(contexts),
         )
 
-        payload = json.dumps({
-            "model": model_tag,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": cfg.inference_temperature,
-                "num_predict": cfg.inference_max_tokens,
-            },
-        }).encode("utf-8")
+        answer, elapsed = _ollama_chat(model_tag, messages)
 
-        req = urllib.request.Request(
-            f"{cfg.judge_base_url.rstrip('/')}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-
-        start = time.time()
-        try:
-            with urllib.request.urlopen(req) as resp:
-                result = json.loads(resp.read().decode("utf-8"))
-                answer = result.get("response", "").strip()
-        except Exception as e:
-            answer = f"Error during inference: {e}"
-        elapsed = time.time() - start
-
-        print(f"  [{i}/{len(testset)}] {elapsed:.2f}s  {q_id}")
+        print(f"  [{i}/{len(testset)}] {elapsed:.2f}s  {item['id']}")
         predictions.append({
-            "id": q_id,
+            "id": item["id"],
             "question": question,
             "reference": item.get("reference", ""),
             "contexts": contexts,
             "answer": answer,
+            "personality": personality,
             "elapsed_s": round(elapsed, 3),
         })
 
@@ -227,36 +257,56 @@ def generate_predictions_for_model(model_tag: str, store: GaudiKnowledgeStore) -
 # ==========================================
 # 3. BENCHMARK RUNNER
 # ==========================================
-def run_benchmark(target_model_tag: str | None = None, skip_eval: bool = False):
-    store = GaudiKnowledgeStore()
+def predictions_path(model_tag: str, personality: str) -> Path:
+    """eval/predictions_<model>_<personality>.json"""
+    return cfg.eval_dir / f"predictions_{model_tag.replace(':', '_')}_{personality}.json"
+
+
+def run_benchmark(
+    target_model_tag: str | None = None,
+    target_personality: str | None = None,
+    skip_eval: bool = False,
+):
     models_to_run = [
         m for m in cfg.candidates
         if target_model_tag is None or m["ollama_tag"] == target_model_tag
     ]
-
     if not models_to_run:
-        print(f"Model tag '{target_model_tag}' not found in candidates from config.yaml.")
+        known = [m["ollama_tag"] for m in cfg.candidates]
+        print(f"Model tag '{target_model_tag}' not found in candidates from config.yaml. Known: {known}")
         sys.exit(1)
 
-    print(f"\nStarting benchmark for {len(models_to_run)} model(s)...")
+    personalities = [target_personality] if target_personality else list(cfg.personalities)
+    unknown = [p for p in personalities if p not in PERSONALITIES]
+    if unknown:
+        print(f"Unknown personality {unknown}. The device defines: {list(PERSONALITIES)}")
+        sys.exit(1)
+
+    store = GaudiKnowledgeStore()
+    testset = load_testset()
+
+    total = len(models_to_run) * len(personalities)
+    print(f"\nStarting benchmark: {len(models_to_run)} model(s) x {len(personalities)} "
+          f"personality(ies) = {total} run(s) over {len(testset)} questions.")
 
     for model in models_to_run:
         model_tag = model["ollama_tag"]
-        pred_file = cfg.eval_dir / f"predictions_{model_tag.replace(':', '_')}.json"
+        for personality in personalities:
+            preds = generate_predictions(model_tag, personality, store, testset)
+            pred_file = predictions_path(model_tag, personality)
+            with open(pred_file, "w", encoding="utf-8") as f:
+                json.dump(preds, f, indent=2, ensure_ascii=False)
+            print(f"Saved predictions -> {pred_file.name}")
 
-        preds = generate_predictions_for_model(model_tag, store)
-        with open(pred_file, "w", encoding="utf-8") as f:
-            json.dump(preds, f, indent=2, ensure_ascii=False)
-        print(f"Saved predictions -> {pred_file.name}")
+            if skip_eval:
+                print("Skipping Ragas evaluation stage (--skip-eval).")
+                continue
 
-        if not skip_eval:
-            print(f"Scoring {model_tag} with judge ({cfg.judge_model})...")
+            print(f"Scoring {model_tag} [{personality}] with judge ({cfg.judge_model})...")
             subprocess.run(
-                ["uv", "run", "python", "-m", "eval.evaluate", "--predictions", str(pred_file)],
+                [sys.executable, "-m", "eval.evaluate", "--predictions", str(pred_file)],
                 check=False,
             )
-        else:
-            print("Skipping Ragas evaluation stage (--skip-eval).")
 
 
 def main():
@@ -265,10 +315,18 @@ def main():
         "--model", default=None,
         help="Ollama model tag to benchmark (e.g. qwen2.5:1.5b). Omit to benchmark all candidates.",
     )
+    parser.add_argument(
+        "--personality", default=None,
+        help=f"Guide personality to benchmark ({', '.join(PERSONALITIES)}). Omit to run all of them.",
+    )
     parser.add_argument("--skip-eval", action="store_true", help="Skip Ragas scoring after generating predictions")
 
     args = parser.parse_args()
-    run_benchmark(target_model_tag=args.model, skip_eval=args.skip_eval)
+    run_benchmark(
+        target_model_tag=args.model,
+        target_personality=args.personality,
+        skip_eval=args.skip_eval,
+    )
 
 
 if __name__ == "__main__":

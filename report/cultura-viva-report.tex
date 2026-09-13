@@ -669,13 +669,39 @@ child     & 9/24 (\SI{38}{\percent}) & 15/24 (\SI{62}{\percent}) \\
 \end{table}
 
 Between a twelfth and two thirds of answers contain something the sheets do not
-support, depending on guide and model size. Spot-checks confirm the judge is not being harsh: the
-model states that the Hypostyle Room was built ``to house a collection of stone
-columns'' where the sheet describes a covered market. Note also that the guide
-asked to speak to a child hallucinates most at 1.5B --- simplifying and staying
-grounded pull against each other. On the evidence here this matters more than
-which voice delivers the answer, and it is the next item this benchmark should
-pursue.
+support, depending on guide and model size.
+
+\paragraph{How far to trust that.} All 72 answers from the 0.5B run were then
+adjudicated by hand against the sheet each was given
+(\texttt{results/manual\_audit\_qwen2.5\_0.5b.json}). The manual count is
+\textbf{23/72 (\SI{31.9}{\percent})} against the judge's \textbf{26/72
+(\SI{36.1}{\percent})} --- but the closeness is partly cancellation. Per-answer
+agreement is 55/72, Cohen's $\kappa = 0.48$, with 10 judge false positives and 7
+false negatives. The false positives cluster on answers that are faithful but
+ungrammatical: one lifts \SI{65}{\percent} of its words verbatim from the sheet
+and was still marked unsupported, suggesting the judge partly conflates
+incoherence with invention. The false negatives are quiet fabrications it waved
+through --- a date absent from the sheet, and a facade described as polychrome
+where the sheet says only that Gaud\'i \emph{wanted} it polychromed.
+
+So roughly a third is the right order of magnitude, but a single judge verdict
+should not be used to triage an individual answer. The failures that matter are
+flat contradictions: Casa Batll\'o placed ``in the centre of Barcelona's Gothic
+Quarter'' (it is on Passeig de Gr\`acia), Casa Mil\`a called ``part of Gaud\'i's
+famous Park G\"uell complex'', and the Hypostyle Room built ``to house a
+collection of over 1,000 columns'' where the sheet says Room of a Hundred Columns
+and describes a rainwater collection system.
+
+Note also that the guide asked to speak to a child hallucinates most at 1.5B ---
+simplifying and staying grounded pull against each other. On the evidence here
+this matters more than which voice delivers the answer, and it is the next item
+this benchmark should pursue.
+
+\paragraph{A separate defect found during the audit.} Three answers return the
+internal element identifier to the visitor verbatim --- ``You are seeing
+laterals\_sagrada\_familia in the photos.'' Nothing in them is factually false,
+so both the judge and the manual pass scored them supported, but they would be
+spoken aloud by Piper exactly as written.
 
 Regenerate any figure in this section with
 \texttt{uv run python main.py personality --model <tag>}.

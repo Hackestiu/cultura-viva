@@ -8,7 +8,7 @@
   ],
   "n_probes": 24,
   "n_answers": 72,
-  "generated_utc": "2026-09-13T14:06:43+00:00",
+  "generated_utc": "2026-09-13T14:51:42+00:00",
   "per_arm": {
     "artistic": {
       "n": 24,
@@ -243,6 +243,368 @@
       "child": 6
     }
   },
+  "identification_detail": [
+    {
+      "probe_id": "park_guell",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "park_guell",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "park_guell",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "technical",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "child",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "child",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "artistic",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "technical",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "artistic",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "technical",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "child",
+      "predicted": "technical"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "child",
+      "predicted": "child"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "child",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "artistic",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "technical",
+      "predicted": "artistic"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "child",
+      "predicted": "artistic"
+    }
+  ],
   "grounding": {
     "artistic": {
       "n": 24,
@@ -259,5 +621,367 @@
       "unsupported": 9,
       "unjudged": 0
     }
-  }
+  },
+  "grounding_detail": [
+    {
+      "probe_id": "park_guell",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "park_guell",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "park_guell",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "drac_park_guell",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porxada_bugaderia",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "porters_lodge_park_guell",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "banc_serpentejant",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "sala_hipostila",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "viaductes_park_guell",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "casa_museu_park_guell",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "turo_3_creus",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "la_pedrera",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "catenaria_pedrera",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "caps_pedrera",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_pedrera",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "patis_pedrera",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "sagrada_familia",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "cupula_sagrada_familia",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_naixement",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "facana_passio",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "laterals_sagrada_familia",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "posterior_sagrada_familia",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "torres_sagrada_familia",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "casa_batllo",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "artistic",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "technical",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "pla_frontal_casa_batllo",
+      "arm": "child",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "artistic",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "technical",
+      "verdict": "SUPPORTED"
+    },
+    {
+      "probe_id": "pla_inferior_casa_batllo",
+      "arm": "child",
+      "verdict": "SUPPORTED"
+    }
+  ]
 }

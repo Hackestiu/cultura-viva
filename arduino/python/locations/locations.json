@@ -23,6 +23,14 @@
       "lon": 2.165111,
       "radius_m": 150,
       "minimap_id": 2
+    },
+    {
+      "id": "casa_mila",
+      "name": "Casa Milà (La Pedrera)",
+      "lat": 41.394933,
+      "lon": 2.161515,
+      "radius_m": 120,
+      "minimap_id": 3
     }
   ],
   "default": "sagrada_familia"

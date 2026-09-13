@@ -2,13 +2,15 @@
 #include "tilemap_guell.h"
 #include "tilemap_sagrada.h"
 #include "tilemap_batllo.h"
+#include "tilemap_mila.h"
 #include "landmarks_sagrada.h"
 #include "landmarks_batllo.h"
+#include "landmarks_mila.h"
 #include "ui_manager.h"
 #include "../core/app_state.h"
 #include "../input/controls.h"
 
-// Active map: 0 = Park Guell, 1 = Sagrada Familia, 2 = Casa Batllo
+// Active map: 0 = Park Guell, 1 = Sagrada Familia, 2 = Casa Batllo, 3 = Casa Mila
 static uint8_t activeMapId = 1;
 
 bool visited[NUM_LANDMARKS] = { false };
@@ -27,24 +29,28 @@ static uint16_t C_VOID[2], C_BLOCK[2], C_BLOCKD[2], C_FORESTDD[2], C_FOREST[2], 
 static uint16_t C_INK, C_RING, C_UNVISITED, C_VISITED, C_LOCATION;
 
 static const Landmark* activeLandmarks() {
+  if (activeMapId == 3) return LANDMARKS_MILA;
   if (activeMapId == 2) return LANDMARKS_BATLLO;
   if (activeMapId == 1) return LANDMARKS_SAGRADA;
   return LANDMARKS;
 }
 
 static uint8_t activeLandmarkCount() {
+  if (activeMapId == 3) return NUM_LANDMARKS_MILA;
   if (activeMapId == 2) return NUM_LANDMARKS_BATLLO;
   if (activeMapId == 1) return NUM_LANDMARKS_SAGRADA;
   return NUM_LANDMARKS;
 }
 
 static const char* const* activeMapRows() {
+  if (activeMapId == 3) return MAP_ROWS_MILA;
   if (activeMapId == 2) return MAP_ROWS_BATLLO;
   if (activeMapId == 1) return MAP_ROWS_SAGRADA;
   return MAP_ROWS;
 }
 
 static uint8_t activeMapRowCount() {
+  if (activeMapId == 3) return MAP_ROW_COUNT_MILA;
   if (activeMapId == 2) return MAP_ROW_COUNT_BATLLO;
   if (activeMapId == 1) return MAP_ROW_COUNT_SAGRADA;
   return MAP_ROW_COUNT;
@@ -61,6 +67,30 @@ static void setPair(uint16_t out[2], const ParkColor& c) {
 }
 
 void initMinimapColors() {
+  if (activeMapId == 3) {
+    // Casa Milà palette — map the 10 shared C_* slots to facade tile colors
+    setPair(C_VOID,    MILA_PAL_VOID);      // ' ' = sky
+    setPair(C_BLOCK,   MILA_PAL_PARAPET);   // 'w' = wavy cornice
+    setPair(C_BLOCKD,  MILA_PAL_OCULUS);    // 'o' = oculus window
+    setPair(C_FOREST,  MILA_PAL_CHIMNEY);   // 'c' = chimney
+    setPair(C_FORESTL, MILA_PAL_STONE);     // 's' = undulating stone facade
+    setPair(C_FORESTDD,MILA_PAL_RECEDE);    // 'r' = receding wing stone
+    setPair(C_SCRUB,   MILA_PAL_WINDOW);    // 'i' = window
+    setPair(C_SCRUBL,  MILA_PAL_BALCONY);   // 'b' = wrought-iron balcony
+    setPair(C_PATH,    MILA_PAL_DIVIDER);   // 'd' = floor cornice divider
+    setPair(C_PATHD,   MILA_PAL_GROUND);    // 'a' = ground floor stone
+    setPair(C_SAND,    MILA_PAL_PORTAL);    // 'p' = portal shadow
+    setPair(C_SANDD,   MILA_PAL_NEIGHBOR);  // 'j' = neighbour building
+    setPair(C_STONE,   MILA_PAL_TREE);      // 't' = street tree
+    setPair(C_STONED,  MILA_PAL_SIDEWALK);  // 'g' = sidewalk
+    setPair(C_ROOF,    MILA_PAL_LAMP);      // 'l' = lamp post
+    C_INK      = tft.color565(MILA_PAL_INK.r,            MILA_PAL_INK.g,            MILA_PAL_INK.b);
+    C_RING     = tft.color565(MILA_COLOR_RING[0],        MILA_COLOR_RING[1],        MILA_COLOR_RING[2]);
+    C_UNVISITED= tft.color565(MILA_COLOR_UNVISITED[0],   MILA_COLOR_UNVISITED[1],   MILA_COLOR_UNVISITED[2]);
+    C_VISITED  = tft.color565(MILA_COLOR_VISITED[0],     MILA_COLOR_VISITED[1],     MILA_COLOR_VISITED[2]);
+    C_LOCATION = tft.color565(MILA_COLOR_LOCATION[0],    MILA_COLOR_LOCATION[1],    MILA_COLOR_LOCATION[2]);
+    return;
+  }
   if (activeMapId == 2) {
     // Casa Batlló palette: reuse the 10 shared C_* slots for the facade tiles
     setPair(C_VOID,    BAT_PAL_VOID);           // ' ' = sky
@@ -163,6 +193,7 @@ static bool isRevealed(int16_t px, int16_t py) {
   return visited[nearestLandmarkId(px + 2, py + 2)];
 }
 
+// Milà doesn't need extra bonus colors — all 15 tile chars fit in the 10 C_* slots.
 // Batlló-specific colours for tiles that don't fit in the 10 shared C_ slots
 static uint16_t BAT_C_SHADOW, BAT_C_CONE, BAT_C_ONION, BAT_C_CROSS, BAT_C_OCULUS;
 static uint16_t BAT_C_AMA_GABLE, BAT_C_AMA_GABLE_D, BAT_C_AMA_WALL, BAT_C_AMA_WALL_D;
@@ -190,6 +221,29 @@ static void initBatlloBonusColors() {
 }
 
 static void paintTile(char ch, int16_t px, int16_t py, bool revealed) {
+  if (activeMapId == 3) {
+    // Casa Milà facade tileset — all chars map to C_* slots set in initMinimapColors
+    uint8_t r = revealed ? 0 : 1;
+    switch (ch) {
+      case ' ': tft.fillRect(px,py,4,4,C_VOID[r]);     break;  // sky
+      case 'w': tft.fillRect(px,py,4,4,C_BLOCK[r]);    break;  // wavy cornice
+      case 'o': tft.fillRect(px,py,4,4,C_BLOCKD[r]);   break;  // oculus
+      case 'c': tft.fillRect(px,py,4,4,C_FOREST[r]);   break;  // chimney
+      case 's': tft.fillRect(px,py,4,4,C_FORESTL[r]);  break;  // stone facade
+      case 'r': tft.fillRect(px,py,4,4,C_FORESTDD[r]); break;  // receding wing
+      case 'i': tft.fillRect(px,py,4,4,C_SCRUB[r]);    break;  // window
+      case 'b': tft.fillRect(px,py,4,4,C_SCRUBL[r]);   break;  // balcony iron
+      case 'd': tft.fillRect(px,py,4,4,C_PATH[r]);     break;  // floor divider
+      case 'a': tft.fillRect(px,py,4,4,C_PATHD[r]);    break;  // ground floor
+      case 'p': tft.fillRect(px,py,4,4,C_SAND[r]);     break;  // portal shadow
+      case 'j': tft.fillRect(px,py,4,4,C_SANDD[r]);    break;  // neighbour
+      case 't': tft.fillRect(px,py,4,4,C_STONE[r]);    break;  // tree
+      case 'g': tft.fillRect(px,py,4,4,C_STONED[r]);   break;  // sidewalk
+      case 'l': tft.fillRect(px,py,4,4,C_ROOF[r]);     break;  // lamp post
+      default:  tft.fillRect(px,py,4,4,C_VOID[r]);     break;
+    }
+    return;
+  }
   if (activeMapId == 2) {
     // Casa Batlló facade tileset
     // Unrevealed tiles are greyed out using [1] palette entries (desaturated).
@@ -476,7 +530,8 @@ static void drawMinimapStatusBar() {
     } else if (lastVisitedId >= 0) {
       label = landmarks[lastVisitedId].screen;
     } else {
-      if (activeMapId == 2)      label = "CASA BATLLO";
+      if (activeMapId == 3)      label = "CASA MILA";
+      else if (activeMapId == 2) label = "CASA BATLLO";
       else if (activeMapId == 1) label = "SAGRADA FAMILIA";
       else                       label = "PARK GUELL";
     }
@@ -570,7 +625,7 @@ void resetMinimapState() {
 }
 
 bool set_minimap_location(int location) {
-  if (location < 0 || location > 2) return false;
+  if (location < 0 || location > 3) return false;
   if ((uint8_t)location == activeMapId) return true;
   activeMapId = (uint8_t)location;
   mapCompletionNotified = false;

@@ -29,6 +29,7 @@ LANDMARKS_FILES = {
     "park_guell": MINIMAP_DIR / "landmarks_guell.json",
     "sagrada_familia": MINIMAP_DIR / "landmarks_sagrada.json",
     "casa_batllo": MINIMAP_DIR / "landmarks_batllo.json",
+    "casa_mila": MINIMAP_DIR / "landmarks_mila.json",
 }
 
 
@@ -63,6 +64,17 @@ VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
         "pla_inferior_casa_batllo": "PI",  # lower half shot -> lower zone
         "casa_batllo": "PS",              # generic building label
     },
+    "casa_mila": {
+        # Vision labels for Casa Milà (La Pedrera) map to one of the three zones:
+        # 'CN' = Cantonada  (straight-on from far sidewalk, classic shot)
+        # 'AE' = Ala Esquerra (left wing, receding toward Provença)
+        # 'AD' = Ala Dreta    (right wing, along Passeig de Gràcia)
+        "casa_mila": "CN",                   # generic building label -> cantonada
+        "la_pedrera": "CN",                  # alias
+        "pla_frontal_casa_mila": "CN",       # full-facade / corner shot
+        "ala_esquerra_casa_mila": "AE",      # left wing shot
+        "ala_dreta_casa_mila": "AD",         # right wing shot
+    },
 }
 
 LINKED_LANDMARKS: dict[str, tuple[tuple[str, ...], ...]] = {
@@ -79,6 +91,7 @@ class MinimapManager:
             "park_guell": set(),
             "sagrada_familia": set(),
             "casa_batllo": set(),
+            "casa_mila": set(),
         }
 
     def _load_landmarks(self, location: str):
@@ -103,7 +116,7 @@ class MinimapManager:
 
         self._landmarks = self._load_landmarks(location)
         self._active_location = location
-        map_ids = {"park_guell": 0, "sagrada_familia": 1, "casa_batllo": 2}
+        map_ids = {"park_guell": 0, "sagrada_familia": 1, "casa_batllo": 2, "casa_mila": 3}
         map_id = map_ids.get(location, 0)
         if Bridge is None:
             logger.debug("[dry run] set_minimap_location({})", map_id)

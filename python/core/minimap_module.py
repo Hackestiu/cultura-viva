@@ -28,6 +28,7 @@ except ModuleNotFoundError:
 LANDMARKS_FILES = {
     "park_guell": MINIMAP_DIR / "landmarks_guell.json",
     "sagrada_familia": MINIMAP_DIR / "landmarks_sagrada.json",
+    "casa_batllo": MINIMAP_DIR / "landmarks_batllo.json",
 }
 
 
@@ -54,6 +55,14 @@ VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
         "posterior": "PO",
         "torres": "TO",
     },
+    "casa_batllo": {
+        # Vision labels for Casa Batlló map to one of the two zones:
+        # 'PS' = Pla Superior (roof + tower + noble floor)
+        # 'PI' = Pla Inferior (ground floor arches + main facade)
+        "pla_frontal_casa_batllo": "PS",  # full-facade shot -> upper zone
+        "pla_inferior_casa_batllo": "PI",  # lower half shot -> lower zone
+        "casa_batllo": "PS",              # generic building label
+    },
 }
 
 
@@ -65,6 +74,7 @@ class MinimapManager:
         self._visited: dict[str, set[int]] = {
             "park_guell": set(),
             "sagrada_familia": set(),
+            "casa_batllo": set(),
         }
 
     def _load_landmarks(self, location: str):
@@ -89,7 +99,8 @@ class MinimapManager:
 
         self._landmarks = self._load_landmarks(location)
         self._active_location = location
-        map_id = 1 if location == "sagrada_familia" else 0
+        map_ids = {"park_guell": 0, "sagrada_familia": 1, "casa_batllo": 2}
+        map_id = map_ids.get(location, 0)
         if Bridge is None:
             logger.debug("[dry run] set_minimap_location({})", map_id)
             return True

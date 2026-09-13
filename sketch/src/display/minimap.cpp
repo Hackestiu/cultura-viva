@@ -1,16 +1,20 @@
 #include "minimap.h"
 #include "tilemap_guell.h"
 #include "tilemap_sagrada.h"
+#include "tilemap_batllo.h"
 #include "landmarks_sagrada.h"
+#include "landmarks_batllo.h"
 #include "ui_manager.h"
 #include "../core/app_state.h"
 #include "../input/controls.h"
+
+// Active map: 0 = Park Guell, 1 = Sagrada Familia, 2 = Casa Batllo
+static uint8_t activeMapId = 1;
 
 bool visited[NUM_LANDMARKS] = { false };
 int8_t lastVisitedId = -1;
 bool hasLocation = false;
 int16_t locX = 0, locY = 0;
-static bool sagradaMap = true;
 
 bool mapCompletionCelebrationActive = false;
 unsigned long mapCompletionCelebrationStart = 0;
@@ -23,19 +27,27 @@ static uint16_t C_VOID[2], C_BLOCK[2], C_BLOCKD[2], C_FORESTDD[2], C_FOREST[2], 
 static uint16_t C_INK, C_RING, C_UNVISITED, C_VISITED, C_LOCATION;
 
 static const Landmark* activeLandmarks() {
-  return sagradaMap ? LANDMARKS_SAGRADA : LANDMARKS;
+  if (activeMapId == 2) return LANDMARKS_BATLLO;
+  if (activeMapId == 1) return LANDMARKS_SAGRADA;
+  return LANDMARKS;
 }
 
 static uint8_t activeLandmarkCount() {
-  return sagradaMap ? NUM_LANDMARKS_SAGRADA : NUM_LANDMARKS;
+  if (activeMapId == 2) return NUM_LANDMARKS_BATLLO;
+  if (activeMapId == 1) return NUM_LANDMARKS_SAGRADA;
+  return NUM_LANDMARKS;
 }
 
 static const char* const* activeMapRows() {
-  return sagradaMap ? MAP_ROWS_SAGRADA : MAP_ROWS;
+  if (activeMapId == 2) return MAP_ROWS_BATLLO;
+  if (activeMapId == 1) return MAP_ROWS_SAGRADA;
+  return MAP_ROWS;
 }
 
 static uint8_t activeMapRowCount() {
-  return sagradaMap ? MAP_ROW_COUNT_SAGRADA : MAP_ROW_COUNT;
+  if (activeMapId == 2) return MAP_ROW_COUNT_BATLLO;
+  if (activeMapId == 1) return MAP_ROW_COUNT_SAGRADA;
+  return MAP_ROW_COUNT;
 }
 
 static uint8_t grayOf(const ParkColor& c) {
@@ -49,7 +61,35 @@ static void setPair(uint16_t out[2], const ParkColor& c) {
 }
 
 void initMinimapColors() {
-  if (!sagradaMap) {
+  if (activeMapId == 2) {
+    // Casa Batlló palette: reuse the 10 shared C_* slots for the facade tiles
+    setPair(C_VOID,    BAT_PAL_VOID);           // ' ' = sky
+    setPair(C_BLOCK,   BAT_PAL_ROOF_TEAL);      // 'u' = cupula teal light
+    setPair(C_BLOCKD,  BAT_PAL_ROOF_TEAL_D);    // 'U' = cupula teal dark
+    setPair(C_FOREST,  BAT_PAL_ROOF_PINK);      // 'v' = left wing pink light
+    setPair(C_FORESTL, BAT_PAL_ROOF_PINK_D);    // 'V' = left wing pink dark
+    setPair(C_FORESTDD,BAT_PAL_ROOF_GREEN);     // 't' = right wing green light
+    setPair(C_SCRUB,   BAT_PAL_ROOF_GREEN_D);   // 'T' = right wing green dark
+    setPair(C_PATH,    BAT_PAL_TOWER);          // 'z' = tower stone light
+    setPair(C_PATHD,   BAT_PAL_TOWER_D);        // 'Z' = tower stone dark
+    setPair(C_SAND,    BAT_PAL_CORNICE);        // 'e' = cornice ochre
+    setPair(C_SANDD,   BAT_PAL_MOSAIC);         // 'm' = trencadis gold
+    setPair(C_STONE,   BAT_PAL_MOSAIC_TEAL);    // 'M' = trencadis teal dot
+    setPair(C_STONED,  BAT_PAL_MOSAIC_CREAM);   // 'c' = trencadis cream dot
+    setPair(C_ROOF,    BAT_PAL_FRAME);          // 'f' = bone window frame
+    setPair(C_ROOFL,   BAT_PAL_GLASS);          // 'h' = blue window glass
+    setPair(C_TILE,    BAT_PAL_BONE);           // 'k' = bone balcony / balustrade
+    setPair(C_TILEL,   BAT_PAL_BONE_SHADOW);    // 'b' = bone balcony dark tip
+    setPair(C_ROCK,    BAT_PAL_STONE);          // 'a' = ground floor stone light
+    setPair(C_ROCKD,   BAT_PAL_STONE_D);        // 'A' = ground floor stone dark
+    C_INK      = tft.color565(BAT_PAL_INK.r,          BAT_PAL_INK.g,          BAT_PAL_INK.b);
+    C_RING     = tft.color565(BAT_COLOR_RING[0],      BAT_COLOR_RING[1],      BAT_COLOR_RING[2]);
+    C_UNVISITED= tft.color565(BAT_COLOR_UNVISITED[0], BAT_COLOR_UNVISITED[1], BAT_COLOR_UNVISITED[2]);
+    C_VISITED  = tft.color565(BAT_COLOR_VISITED[0],   BAT_COLOR_VISITED[1],   BAT_COLOR_VISITED[2]);
+    C_LOCATION = tft.color565(BAT_COLOR_LOCATION[0],  BAT_COLOR_LOCATION[1],  BAT_COLOR_LOCATION[2]);
+    return;
+  }
+  if (activeMapId == 0) {
     setPair(C_VOID, PAL_VOID);
     setPair(C_BLOCK, PAL_BLOCK);
     setPair(C_BLOCKD, PAL_BLOCK_D);
@@ -123,8 +163,90 @@ static bool isRevealed(int16_t px, int16_t py) {
   return visited[nearestLandmarkId(px + 2, py + 2)];
 }
 
+// Batlló-specific colours for tiles that don't fit in the 10 shared C_ slots
+static uint16_t BAT_C_SHADOW, BAT_C_CONE, BAT_C_ONION, BAT_C_CROSS, BAT_C_OCULUS;
+static uint16_t BAT_C_AMA_GABLE, BAT_C_AMA_GABLE_D, BAT_C_AMA_WALL, BAT_C_AMA_WALL_D;
+static uint16_t BAT_C_AMA_GLASS, BAT_C_AMA_PLINTH;
+static uint16_t BAT_C_EIX_WALL, BAT_C_EIX_WALL_D, BAT_C_EIX_ROOF;
+static uint16_t BAT_C_NEIGHBOR, BAT_C_TREE;
+
+static void initBatlloBonusColors() {
+  BAT_C_SHADOW    = tft.color565(BAT_PAL_SHADOW.r,       BAT_PAL_SHADOW.g,       BAT_PAL_SHADOW.b);
+  BAT_C_CONE      = tft.color565(BAT_PAL_CONE.r,         BAT_PAL_CONE.g,         BAT_PAL_CONE.b);
+  BAT_C_ONION     = tft.color565(BAT_PAL_ONION.r,        BAT_PAL_ONION.g,        BAT_PAL_ONION.b);
+  BAT_C_CROSS     = tft.color565(BAT_PAL_CROSS.r,        BAT_PAL_CROSS.g,        BAT_PAL_CROSS.b);
+  BAT_C_OCULUS    = tft.color565(BAT_PAL_OCULUS.r,       BAT_PAL_OCULUS.g,       BAT_PAL_OCULUS.b);
+  BAT_C_AMA_GABLE = tft.color565(BAT_PAL_AMA_GABLE.r,   BAT_PAL_AMA_GABLE.g,   BAT_PAL_AMA_GABLE.b);
+  BAT_C_AMA_GABLE_D=tft.color565(BAT_PAL_AMA_GABLE_D.r, BAT_PAL_AMA_GABLE_D.g, BAT_PAL_AMA_GABLE_D.b);
+  BAT_C_AMA_WALL  = tft.color565(BAT_PAL_AMA_WALL.r,    BAT_PAL_AMA_WALL.g,    BAT_PAL_AMA_WALL.b);
+  BAT_C_AMA_WALL_D= tft.color565(BAT_PAL_AMA_WALL_D.r,  BAT_PAL_AMA_WALL_D.g,  BAT_PAL_AMA_WALL_D.b);
+  BAT_C_AMA_GLASS = tft.color565(BAT_PAL_AMA_GLASS.r,   BAT_PAL_AMA_GLASS.g,   BAT_PAL_AMA_GLASS.b);
+  BAT_C_AMA_PLINTH= tft.color565(BAT_PAL_AMA_PLINTH.r,  BAT_PAL_AMA_PLINTH.g,  BAT_PAL_AMA_PLINTH.b);
+  BAT_C_EIX_WALL  = tft.color565(BAT_PAL_EIX_WALL.r,    BAT_PAL_EIX_WALL.g,    BAT_PAL_EIX_WALL.b);
+  BAT_C_EIX_WALL_D= tft.color565(BAT_PAL_EIX_WALL_D.r,  BAT_PAL_EIX_WALL_D.g,  BAT_PAL_EIX_WALL_D.b);
+  BAT_C_EIX_ROOF  = tft.color565(BAT_PAL_EIX_ROOF.r,    BAT_PAL_EIX_ROOF.g,    BAT_PAL_EIX_ROOF.b);
+  BAT_C_NEIGHBOR  = tft.color565(BAT_PAL_NEIGHBOR.r,     BAT_PAL_NEIGHBOR.g,     BAT_PAL_NEIGHBOR.b);
+  BAT_C_TREE      = tft.color565(BAT_PAL_TREE.r,         BAT_PAL_TREE.g,         BAT_PAL_TREE.b);
+}
+
 static void paintTile(char ch, int16_t px, int16_t py, bool revealed) {
-  if (sagradaMap) {
+  if (activeMapId == 2) {
+    // Casa Batlló facade tileset
+    // Unrevealed tiles are greyed out using [1] palette entries (desaturated).
+    uint8_t r = revealed ? 0 : 1;
+    switch (ch) {
+      // Sky
+      case ' ': tft.fillRect(px,py,4,4,C_VOID[r]); break;
+      // Tower / cross / onion
+      case 'x': tft.fillRect(px,py,4,4,revealed ? BAT_C_CROSS   : C_VOID[1]); break;
+      case 'n': tft.fillRect(px,py,4,4,revealed ? BAT_C_ONION   : C_VOID[1]); break;
+      case 'y': tft.fillRect(px,py,4,4,revealed ? BAT_C_CONE    : C_VOID[1]); break;
+      case 'z': tft.fillRect(px,py,4,4,C_PATH[r]);  break;  // tower stone light
+      case 'Z': tft.fillRect(px,py,4,4,C_PATHD[r]); break;  // tower stone dark
+      // Roof scales left wing (pink)
+      case 'v': tft.fillRect(px,py,4,4,C_FOREST[r]);  break;
+      case 'V': tft.fillRect(px,py,4,4,C_FORESTL[r]); break;
+      // Roof scales main cupola (teal)
+      case 'u': tft.fillRect(px,py,4,4,C_BLOCK[r]);  break;
+      case 'U': tft.fillRect(px,py,4,4,C_BLOCKD[r]); break;
+      // Roof scales right wing (green)
+      case 't': tft.fillRect(px,py,4,4,C_FORESTDD[r]); break;
+      case 'T': tft.fillRect(px,py,4,4,C_SCRUB[r]);    break;
+      // Cornice
+      case 'e': tft.fillRect(px,py,4,4,C_SAND[r]); break;
+      // Trencadis mosaic
+      case 'm': tft.fillRect(px,py,4,4,C_SANDD[r]); break;
+      case 'M': tft.fillRect(px,py,4,4,C_STONE[r]); break;
+      case 'c': tft.fillRect(px,py,4,4,C_STONED[r]); break;
+      // Windows / bone
+      case 'f': tft.fillRect(px,py,4,4,C_ROOF[r]);  break;  // bone frame
+      case 'h': tft.fillRect(px,py,4,4,C_ROOFL[r]); break;  // blue glass
+      case 'k': tft.fillRect(px,py,4,4,C_TILE[r]);  break;  // bone balcony / balustrade
+      case 'b': tft.fillRect(px,py,4,4,C_TILEL[r]); break;  // balcony dark tip
+      case 'o': tft.fillRect(px,py,4,4,revealed ? BAT_C_OCULUS : C_VOID[1]); break;  // oculus
+      // Ground floor stone
+      case 'a': tft.fillRect(px,py,4,4,C_ROCK[r]);  break;
+      case 'A': tft.fillRect(px,py,4,4,C_ROCKD[r]); break;
+      // Shadow / party wall
+      case 'q': tft.fillRect(px,py,4,4,revealed ? BAT_C_SHADOW : C_VOID[1]); break;
+      // Street trees
+      case 'g': tft.fillRect(px,py,4,4,revealed ? BAT_C_TREE : C_VOID[1]); break;
+      // Amatller neighbour (left)
+      case 'i': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_GABLE   : C_VOID[1]); break;
+      case 'I': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_GABLE_D : C_VOID[1]); break;
+      case 'p': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_WALL    : C_VOID[1]); break;
+      case 'P': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_WALL_D  : C_VOID[1]); break;
+      case 'l': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_GLASS   : C_VOID[1]); break;
+      case 'r': tft.fillRect(px,py,4,4,revealed ? BAT_C_AMA_PLINTH  : C_VOID[1]); break;
+      // Eixample neighbour (right)
+      case 'B': tft.fillRect(px,py,4,4,revealed ? BAT_C_EIX_WALL   : C_VOID[1]); break;
+      case 'C': tft.fillRect(px,py,4,4,revealed ? BAT_C_EIX_WALL_D : C_VOID[1]); break;
+      case 'D': tft.fillRect(px,py,4,4,revealed ? BAT_C_EIX_ROOF   : C_VOID[1]); break;
+      default:  tft.fillRect(px,py,4,4,C_VOID[r]); break;
+    }
+    return;
+  }
+  if (activeMapId == 1) {
     uint8_t r = revealed ? 0 : 1;
     switch (ch) {
       case '#': tft.fillRect(px, py, 4, 4, C_BLOCK[r]); break;
@@ -140,6 +262,7 @@ static void paintTile(char ch, int16_t px, int16_t py, bool revealed) {
     }
     return;
   }
+  // activeMapId == 0: Park Guell
   uint8_t r = revealed ? 0 : 1;
 
   switch (ch) {
@@ -353,7 +476,9 @@ static void drawMinimapStatusBar() {
     } else if (lastVisitedId >= 0) {
       label = landmarks[lastVisitedId].screen;
     } else {
-      label = sagradaMap ? "SAGRADA FAMILIA" : "PARK GUELL";
+      if (activeMapId == 2)      label = "CASA BATLLO";
+      else if (activeMapId == 1) label = "SAGRADA FAMILIA";
+      else                       label = "PARK GUELL";
     }
     tft.setTextColor(C_RING);
     tft.setCursor(19, 118);
@@ -422,7 +547,8 @@ void setLocation(int16_t x, int16_t y) {
 }
 
 void resetMinimapState() {
-  for (uint8_t i = 0; i < NUM_LANDMARKS; i++) visited[i] = false;
+  uint8_t total = activeLandmarkCount();
+  for (uint8_t i = 0; i < total; i++) visited[i] = false;
   lastVisitedId = -1;
   hasLocation = false;
   mapCompletionNotified = false;
@@ -440,12 +566,12 @@ void resetMinimapState() {
 }
 
 bool set_minimap_location(int location) {
-  if (location != 0 && location != 1) return false;
-  bool nextSagradaMap = location == 1;
-  if (nextSagradaMap == sagradaMap) return true;
-  sagradaMap = nextSagradaMap;
+  if (location < 0 || location > 2) return false;
+  if ((uint8_t)location == activeMapId) return true;
+  activeMapId = (uint8_t)location;
   mapCompletionNotified = false;
   mapCompletionCelebrationActive = false;
+  if (activeMapId == 2) initBatlloBonusColors();
   initMinimapColors();
   resetMinimapState();
   return true;

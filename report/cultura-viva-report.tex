@@ -521,14 +521,35 @@ choice can be made on answer quality and memory headroom instead.
 \toprule
 \textbf{Model} & \textbf{Faithful.} & \textbf{Ans.\ Rel.} & \textbf{Ctx.\ Prec.} & \textbf{Ctx.\ Rec.} \\
 \midrule
-Qwen 2.5 1.5B Instruct  & 0.84 & 0.87 & 0.84 & 0.87 \\
-Llama 3.2 1B Instruct   & 0.78 & 0.83 & 0.84 & 0.87 \\
-Gemma 3 1B IT           & 0.76 & 0.81 & 0.84 & 0.87 \\
-Qwen 2.5 0.5B Instruct  & 0.68 & 0.79 & 0.84 & 0.87 \\
+Qwen 2.5 1.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
+Llama 3.2 1B Instruct   & \tbd & \tbd & \tbd & \tbd \\
+Gemma 3 1B IT           & \tbd & \tbd & \tbd & \tbd \\
+Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\begin{table}[h]
+\centering
+\caption{Comparison of candidate SLMs: footprint, generation latency, and measured grounding.}
+\label{tab:slm-comparison}
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & 
+\begin{tabular}{@{}c@{}}\textbf{RAM Working}\\\textbf{Set}\end{tabular} & 
+\begin{tabular}{@{}c@{}}\textbf{Host}\\\textbf{Latency (s)}\end{tabular} & 
+\begin{tabular}{@{}c@{}}\textbf{Cortex-A53}\\\textbf{Latency (s)}\end{tabular} & 
+\begin{tabular}{@{}c@{}}\textbf{Unsupported}\\\textbf{Claims\footnotemark}\end{tabular} \\
+\midrule
+Qwen 2.5 0.5B Instruct & \textbf{\SI{0.65}{\giga\byte}} & 2.41 & \textbf{19.2} & 31.9\,\% (23/72) \\
+Qwen 2.5 1.5B Instruct & \SI{1.45}{\giga\byte} & 2.61 & $>45$         & 33.3\,\% (24/72) \\
+Llama 3.2 1B Instruct  & \SI{1.20}{\giga\byte} & 2.40 & ---           & --- \\
+Gemma 3 1B IT          & \SI{1.25}{\giga\byte} & 2.48 & ---           & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+\footnotetext{Hand-checked grounding audit across 72 answers from element sheets (commit \texttt{d471adc}).}
 
 \subsubsection{Guide personalities}
 \label{sec:slm-personalities}

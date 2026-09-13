@@ -1,0 +1,27 @@
+{
+  "monument": "park_guell",
+  "checkpoint_dir": ".\\onnx_export\\park_guell-vit\\",
+  "num_classes": 7,
+  "validation_images": 298,
+  "recall_target": 0.95,
+  "top1_accuracy": 0.9966442953020134,
+  "suggested_entropy_threshold": 0.26767024397850037,
+  "suggested_confidence_threshold": 0.9471297264099121,
+  "auto_entropy_threshold": 0.9729550745276566,
+  "id_recall_entropy_gate": 0.9496644295302014,
+  "id_recall_confidence_gate": 0.9496644295302014,
+  "id_recall_combined_gates": 0.9496644295302014,
+  "entropy_stats": {
+    "mean": 0.0674678236246109,
+    "std": 0.17597830295562744,
+    "p50": 0.016737662255764008,
+    "p95": 0.26767024397850037,
+    "p99": 0.9290565252304077
+  },
+  "confidence_stats": {
+    "mean": 0.9844332933425903,
+    "std": 0.05943084880709648,
+    "p05": 0.9471297264099121,
+    "p50": 0.9980849027633667
+  }
+}

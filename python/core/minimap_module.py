@@ -65,6 +65,10 @@ VISION_LABEL_TO_LANDMARK: dict[str, dict[str, str]] = {
     },
 }
 
+LINKED_LANDMARKS: dict[str, tuple[tuple[str, ...], ...]] = {
+    "sagrada_familia": (("NL", "NR"),),
+}
+
 
 class MinimapManager:
     def __init__(self):
@@ -164,9 +168,19 @@ class MinimapManager:
             logger.warning("Unknown landmark: {!r}", label)
             return False
 
+        linked_codes = (self._landmarks[landmark_id]["code"],)
+        if self._active_location:
+            for group in LINKED_LANDMARKS.get(self._active_location, ()):
+                if linked_codes[0] in group:
+                    linked_codes = group
+                    break
+
+        landmark_ids = [self._resolve_id(code) for code in linked_codes]
+        landmark_ids = [id_ for id_ in landmark_ids if id_ is not None]
+
         if self._active_location:
             was_completed = self.is_completed(self._active_location)
-            self._visited.setdefault(self._active_location, set()).add(landmark_id)
+            self._visited.setdefault(self._active_location, set()).update(landmark_ids)
             now_completed = self.is_completed(self._active_location)
 
             if not was_completed and now_completed:
@@ -181,9 +195,11 @@ class MinimapManager:
                 )
 
         if Bridge is None:
-            logger.debug("[dry run] mark_landmark_visited({})", landmark_id)
+            logger.debug("[dry run] mark_landmark_visited({})", landmark_ids)
             return True
-        return bool(Bridge.call("mark_landmark_visited", landmark_id))
+        return all(
+            bool(Bridge.call("mark_landmark_visited", id_)) for id_ in landmark_ids
+        )
 
     def set_position(self, label_or_xy) -> bool:
         """Moves the "you are here" marker, accepting either a landmark identifier (code or numeric id) or an explicit (x, y) coordinate pair. Returns True if the position update was dispatched successfully, False if a given identifier could not be resolved."""

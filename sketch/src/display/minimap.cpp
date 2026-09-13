@@ -413,19 +413,19 @@ void drawMapCompletedOverlay() {
   tft.setTextSize(1);
   tft.setTextColor(0x0000); // Black text
   tft.setCursor(x + 14, y + 8);
-  tft.print(F("MAPA COMPLETAT!"));
+  tft.print(F("COMPLETED MAP!"));
 
   // Subtitle / congratulations
   tft.setTextColor(0xFFFF); // White
   tft.setCursor(x + 38, y + 26);
-  tft.print(F("Enhorabona!"));
+  tft.print(F("Congratulations!"));
 
   // Message body
   tft.setTextColor(tft.color565(255, 215, 60)); // Warm gold
   tft.setCursor(x + 12, y + 40);
-  tft.print(F("Has visitat tots els"));
+  tft.print(F("You have discovered all the"));
   tft.setCursor(x + 20, y + 51);
-  tft.print(F("punts del mapa!"));
+  tft.print(F("landmarks!"));
 
   // Badge capsule at the bottom
   uint8_t count = getVisitedLandmarkCount();
@@ -438,7 +438,7 @@ void drawMapCompletedOverlay() {
   tft.print(count);
   tft.print(F("/"));
   tft.print(total);
-  tft.print(F(" Descoberts ]"));
+  tft.print(F(" Discovered ]"));
 }
 
 static void drawMinimapStatusBar() {
@@ -462,7 +462,7 @@ static void drawMinimapStatusBar() {
     // Celebration status text
     tft.setTextColor(0xFFE0);
     tft.setCursor(19, 118);
-    tft.print(F("MAPA COMPLETAT!"));
+    tft.print(F("COMPLETED MAP!"));
   } else {
     tft.fillRect(3, 115, 11, 11, C_RING);
     tft.setTextSize(1);

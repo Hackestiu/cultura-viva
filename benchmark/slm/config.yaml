@@ -52,8 +52,13 @@ embeddings:
 
 # Workspace Paths (relative to repository root)
 paths:
-  knowledge_base: "data/knowledge_base.json"
-  element_sheets: "data/element_sheets.json"
+  # Read the device's knowledge files directly rather than keeping a copy here.
+  # The copies drifted twice: once by 12 element sheets, and again when the sheets
+  # were translated into English, each time leaving the benchmark grounding answers
+  # in text the device no longer serves. Same argument as core/device_prompt.py
+  # makes for the prompts -- import the real thing, do not duplicate it.
+  knowledge_base: "../../arduino/python/models/knowledge/knowledge_base.json"
+  element_sheets: "../../arduino/python/models/knowledge/element_sheets.json"
   testset: "eval/testset.json"
   models_dir: "models"
   arduino_export_dir: "arduino_export"

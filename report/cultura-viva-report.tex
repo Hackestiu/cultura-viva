@@ -568,7 +568,9 @@ it, choosing between paraphrased descriptions rather than the prompt text, with
 the options shuffled per item. Chance is therefore \SI{33.3}{\percent}. The same
 judge is given three hand-written, deliberately distinct texts as a self-test on
 every run; it scored 3/3 throughout, so a null result is a statement about the
-guides and not about the instrument.
+guides and not about the instrument. The benchmark reads the device's own
+knowledge files and imports its prompt builders directly, rather than keeping
+copies, so these figures describe what the board actually serves.
 
 \paragraph{Tone instructions did not work.} The original prompts described how
 each guide should sound --- ``you speak with passion and use evocative
@@ -604,26 +606,26 @@ satisfying that guide's stated requirement.}
 \cmidrule(lr){2-3}\cmidrule(lr){4-6}
 \textbf{Model} & \textbf{Correct} & \textbf{Accuracy} & \textbf{art.} & \textbf{tech.} & \textbf{child} \\
 \midrule
-Qwen 2.5 0.5B (shipped) & 31/72 & \SI{43.1}{\percent} & \SI{38}{\percent} & \SI{17}{\percent} & \SI{0}{\percent} \\
-Qwen 2.5 1.5B           & 55/72 & \SI{76.4}{\percent} & \SI{96}{\percent} & \SI{29}{\percent} & \SI{42}{\percent} \\
+Qwen 2.5 0.5B (shipped) & 30/72 & \SI{41.7}{\percent} & \SI{21}{\percent} & \SI{8}{\percent} & \SI{0}{\percent} \\
+Qwen 2.5 1.5B           & 53/72 & \SI{73.6}{\percent} & \SI{92}{\percent} & \SI{33}{\percent} & \SI{21}{\percent} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-On the \textbf{0.5B model the change is not significant}: \SI{43.1}{\percent}
-against \SI{33.3}{\percent} chance, $p = 0.05$, and the child guide still never
+On the \textbf{0.5B model the change is not significant}: \SI{41.7}{\percent}
+against \SI{33.3}{\percent} chance, $p = 0.09$, and the child guide still never
 once ended with a question across 24 answers. Three further wordings were tried
 --- dropping the competing ``answer only what the user asks'' sentence, adding a
 worked example, and moving the requirement to the front of the prompt --- and
-compliance stayed at \SIrange{0}{8}{\percent}. The 0.5B model does not act on the
+compliance never rose above \SI{10}{\percent}. The 0.5B model does not act on the
 personality tail.
 
-On the \textbf{1.5B model the same prompts work}: \SI{76.4}{\percent}
-identification, $p < 0.001$, with per-guide recall of \SI{83}{\percent},
-\SI{71}{\percent} and \SI{75}{\percent} --- the child guide rising from
+On the \textbf{1.5B model the same prompts work}: \SI{73.6}{\percent}
+identification, $p < 0.001$, with per-guide recall of \SI{67}{\percent},
+\SI{79}{\percent} and \SI{75}{\percent} --- the child guide rising from
 \SI{4}{\percent} under tone instructions to \SI{75}{\percent}. Median text
-similarity between two guides answering the same question falls from $0.51$ to
-$0.20$.
+similarity between two guides answering the same question falls from $0.62$ to
+$0.27$.
 
 \begin{table}[h]
 \centering
@@ -633,9 +635,9 @@ wrote the answer, columns the judge's choice.}
 \toprule
 \textbf{true \textbackslash\ predicted} & \textbf{artistic} & \textbf{technical} & \textbf{child} \\
 \midrule
-artistic  & \textbf{20} & 4  & 0  \\
-technical & 7  & \textbf{17} & 0  \\
-child     & 5  & 1  & \textbf{18} \\
+artistic  & \textbf{16} & 6  & 2  \\
+technical & 5  & \textbf{19} & 0  \\
+child     & 6  & 0  & \textbf{18} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -644,7 +646,7 @@ child     & 5  & 1  & \textbf{18} \\
 headroom, and this is the measured cost of that
 choice: the guide personality is a feature the shipped configuration does not
 deliver. It is not a prompt-wording problem --- the identical prompts produce
-\SI{76}{\percent} identification one model size up. Either the personality is
+\SI{74}{\percent} identification one model size up. Either the personality is
 presented as cosmetic, or the 1.5B model is reinstated and the
 \SI{1.45}{\giga\byte} working set budgeted for.
 
@@ -659,15 +661,15 @@ answer, whether every claim was supported by the facts the model had been given
 \toprule
 \textbf{Guide} & \textbf{0.5B} & \textbf{1.5B} \\
 \midrule
-artistic  & 16/24 (\SI{67}{\percent}) & 9/24 (\SI{38}{\percent}) \\
-technical & 10/24 (\SI{42}{\percent}) & 8/24 (\SI{33}{\percent}) \\
-child     & 10/24 (\SI{42}{\percent}) & 17/24 (\SI{71}{\percent}) \\
+artistic  & 10/24 (\SI{42}{\percent}) & 7/24 (\SI{29}{\percent}) \\
+technical & 7/24 (\SI{29}{\percent}) & 2/24 (\SI{8}{\percent}) \\
+child     & 9/24 (\SI{38}{\percent}) & 15/24 (\SI{62}{\percent}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Between a third and seven tenths of answers contain something the sheets do not
-support, at either size. Spot-checks confirm the judge is not being harsh: the
+Between a twelfth and two thirds of answers contain something the sheets do not
+support, depending on guide and model size. Spot-checks confirm the judge is not being harsh: the
 model states that the Hypostyle Room was built ``to house a collection of stone
 columns'' where the sheet describes a covered market. Note also that the guide
 asked to speak to a child hallucinates most at 1.5B --- simplifying and staying

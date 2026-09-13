@@ -8,57 +8,57 @@
   ],
   "n_probes": 24,
   "n_answers": 72,
-  "generated_utc": "2026-09-13T13:52:26+00:00",
+  "generated_utc": "2026-09-13T14:06:43+00:00",
   "per_arm": {
     "artistic": {
       "n": 24,
-      "median_words": 24.0,
-      "min_words": 7,
+      "median_words": 23.5,
+      "min_words": 9,
       "max_words": 44,
-      "truncated": 4,
+      "truncated": 2,
       "echoed": 0,
-      "follows_format": 9
+      "follows_format": 5
     },
     "technical": {
       "n": 24,
-      "median_words": 28.5,
-      "min_words": 13,
-      "max_words": 51,
-      "truncated": 10,
+      "median_words": 26.5,
+      "min_words": 7,
+      "max_words": 48,
+      "truncated": 8,
       "echoed": 0,
-      "follows_format": 4
+      "follows_format": 2
     },
     "child": {
       "n": 24,
-      "median_words": 25.0,
-      "min_words": 10,
-      "max_words": 47,
-      "truncated": 5,
+      "median_words": 23.5,
+      "min_words": 12,
+      "max_words": 48,
+      "truncated": 7,
       "echoed": 0,
       "follows_format": 0
     }
   },
   "similarity": {
-    "probes_with_an_identical_pair": 0,
-    "median_max_similarity": 0.506,
+    "probes_with_an_identical_pair": 1,
+    "median_max_similarity": 0.623,
     "per_probe": [
       {
         "probe_id": "park_guell",
-        "max_similarity": 0.346,
-        "mean_similarity": 0.195,
+        "max_similarity": 0.633,
+        "mean_similarity": 0.365,
         "any_identical": false
       },
       {
         "probe_id": "drac_park_guell",
-        "max_similarity": 0.503,
-        "mean_similarity": 0.419,
+        "max_similarity": 0.695,
+        "mean_similarity": 0.353,
         "any_identical": false
       },
       {
         "probe_id": "porxada_bugaderia",
-        "max_similarity": 0.762,
-        "mean_similarity": 0.45,
-        "any_identical": false
+        "max_similarity": 1.0,
+        "mean_similarity": 0.549,
+        "any_identical": true
       },
       {
         "probe_id": "porters_lodge_park_guell",
@@ -68,122 +68,122 @@
       },
       {
         "probe_id": "banc_serpentejant",
-        "max_similarity": 0.747,
-        "mean_similarity": 0.627,
+        "max_similarity": 0.473,
+        "mean_similarity": 0.215,
         "any_identical": false
       },
       {
         "probe_id": "sala_hipostila",
-        "max_similarity": 0.682,
-        "mean_similarity": 0.576,
+        "max_similarity": 0.869,
+        "mean_similarity": 0.675,
         "any_identical": false
       },
       {
         "probe_id": "viaductes_park_guell",
-        "max_similarity": 0.592,
-        "mean_similarity": 0.359,
+        "max_similarity": 0.627,
+        "mean_similarity": 0.494,
         "any_identical": false
       },
       {
         "probe_id": "casa_museu_park_guell",
-        "max_similarity": 0.379,
-        "mean_similarity": 0.179,
+        "max_similarity": 0.571,
+        "mean_similarity": 0.414,
         "any_identical": false
       },
       {
         "probe_id": "turo_3_creus",
-        "max_similarity": 0.509,
-        "mean_similarity": 0.429,
+        "max_similarity": 0.67,
+        "mean_similarity": 0.439,
         "any_identical": false
       },
       {
         "probe_id": "la_pedrera",
-        "max_similarity": 0.414,
-        "mean_similarity": 0.178,
+        "max_similarity": 0.383,
+        "mean_similarity": 0.343,
         "any_identical": false
       },
       {
         "probe_id": "catenaria_pedrera",
-        "max_similarity": 0.381,
-        "mean_similarity": 0.216,
+        "max_similarity": 0.408,
+        "mean_similarity": 0.381,
         "any_identical": false
       },
       {
         "probe_id": "caps_pedrera",
-        "max_similarity": 0.396,
-        "mean_similarity": 0.233,
+        "max_similarity": 0.289,
+        "mean_similarity": 0.25,
         "any_identical": false
       },
       {
         "probe_id": "facana_pedrera",
-        "max_similarity": 0.62,
-        "mean_similarity": 0.317,
+        "max_similarity": 0.676,
+        "mean_similarity": 0.556,
         "any_identical": false
       },
       {
         "probe_id": "patis_pedrera",
-        "max_similarity": 0.419,
-        "mean_similarity": 0.336,
+        "max_similarity": 0.503,
+        "mean_similarity": 0.467,
         "any_identical": false
       },
       {
         "probe_id": "sagrada_familia",
-        "max_similarity": 0.262,
-        "mean_similarity": 0.151,
+        "max_similarity": 0.36,
+        "mean_similarity": 0.207,
         "any_identical": false
       },
       {
         "probe_id": "cupula_sagrada_familia",
-        "max_similarity": 0.397,
-        "mean_similarity": 0.353,
+        "max_similarity": 0.469,
+        "mean_similarity": 0.349,
         "any_identical": false
       },
       {
         "probe_id": "facana_naixement",
-        "max_similarity": 0.561,
-        "mean_similarity": 0.413,
+        "max_similarity": 0.632,
+        "mean_similarity": 0.586,
         "any_identical": false
       },
       {
         "probe_id": "facana_passio",
-        "max_similarity": 0.773,
-        "mean_similarity": 0.501,
+        "max_similarity": 0.583,
+        "mean_similarity": 0.468,
         "any_identical": false
       },
       {
         "probe_id": "laterals_sagrada_familia",
-        "max_similarity": 0.852,
-        "mean_similarity": 0.759,
+        "max_similarity": 0.635,
+        "mean_similarity": 0.62,
         "any_identical": false
       },
       {
         "probe_id": "posterior_sagrada_familia",
-        "max_similarity": 0.481,
-        "mean_similarity": 0.389,
+        "max_similarity": 0.619,
+        "mean_similarity": 0.41,
         "any_identical": false
       },
       {
         "probe_id": "torres_sagrada_familia",
-        "max_similarity": 0.61,
-        "mean_similarity": 0.388,
+        "max_similarity": 0.638,
+        "mean_similarity": 0.43,
         "any_identical": false
       },
       {
         "probe_id": "casa_batllo",
-        "max_similarity": 0.314,
-        "mean_similarity": 0.304,
+        "max_similarity": 0.46,
+        "mean_similarity": 0.242,
         "any_identical": false
       },
       {
         "probe_id": "pla_frontal_casa_batllo",
-        "max_similarity": 0.434,
-        "mean_similarity": 0.19,
+        "max_similarity": 0.54,
+        "mean_similarity": 0.373,
         "any_identical": false
       },
       {
         "probe_id": "pla_inferior_casa_batllo",
-        "max_similarity": 0.63,
-        "mean_similarity": 0.33,
+        "max_similarity": 0.784,
+        "mean_similarity": 0.716,
         "any_identical": false
       }
     ]
@@ -210,53 +210,53 @@
   "identification": {
     "matrix": {
       "artistic": {
-        "artistic": 11,
-        "technical": 8,
-        "child": 5,
-        "unparsed": 0
-      },
-      "technical": {
-        "artistic": 7,
-        "technical": 16,
+        "artistic": 14,
+        "technical": 9,
         "child": 1,
         "unparsed": 0
       },
+      "technical": {
+        "artistic": 9,
+        "technical": 13,
+        "child": 2,
+        "unparsed": 0
+      },
       "child": {
-        "artistic": 8,
-        "technical": 12,
-        "child": 4,
+        "artistic": 7,
+        "technical": 14,
+        "child": 3,
         "unparsed": 0
       }
     },
-    "correct": 31,
+    "correct": 30,
     "total": 72,
-    "accuracy": 0.431,
+    "accuracy": 0.417,
     "chance": 0.333,
     "per_arm_recall": {
-      "artistic": 0.458,
-      "technical": 0.667,
-      "child": 0.167
+      "artistic": 0.583,
+      "technical": 0.542,
+      "child": 0.125
     },
     "prediction_spread": {
       "technical": 36,
-      "artistic": 26,
-      "child": 10
+      "artistic": 30,
+      "child": 6
     }
   },
   "grounding": {
     "artistic": {
       "n": 24,
-      "unsupported": 16,
+      "unsupported": 10,
       "unjudged": 0
     },
     "technical": {
       "n": 24,
-      "unsupported": 10,
+      "unsupported": 7,
       "unjudged": 0
     },
     "child": {
       "n": 24,
-      "unsupported": 10,
+      "unsupported": 9,
       "unjudged": 0
     }
   }

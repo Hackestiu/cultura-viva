@@ -35,3 +35,10 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+# pythonpath = ["."] is what lets tests/ do `import knowledge_store` with no
+# conftest.py -- knowledge_store.py is a top-level module beside config.py, not a
+# package member. See its docstring for why it cannot live under core/.
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,107 +1,65 @@
-"""Bridge to the prompt construction the device actually ships.
+"""Bridge to the prompt construction and knowledge base the device actually ships.
 
 This benchmark used to carry its own copy of the prompt: one flat string with a
 generic "CulturaViva" persona. The device has since moved to chat messages whose
 system turn puts the retrieved facts *first* and the personality instructions
-second -- an ordering llama.cpp's prefix KV cache depends on. The two drifted,
-and the benchmark ended up scoring a prompt that no longer shipped.
+second -- an ordering llama.cpp's prefix KV cache depends on. The two drifted, and
+the benchmark ended up scoring a prompt that no longer shipped.
 
-So rather than copy the prompt again, this imports it. `arduino/python` is a
-sibling folder in this monorepo, and its prompt builders are pure functions over
-(question, element, personality, kg_context). Importing them means a change to
-the guide's wording shows up in the next benchmark run automatically.
+So rather than copy the prompt again, this imports it.
 
-Importing `core.model_module` pulls in the device's `config`, which probes for a
-camera, microphone and speaker on import and logs a warning for each when run off
-the board. Harmless here, and quietened below.
+It used to import only *half* of what it needed. The prompt builders came from the
+device; the facts they were given came from a renderer this project maintained
+separately, which produced a prose blob the board has never emitted -- so
+`personality/arms.py` claimed to build "the exact chat messages the device would
+send" while feeding them context the device would never produce. Both halves now
+come from the same place.
+
+`arduino/python/guide_prompt.py` and `knowledge_store.py` are top-level,
+stdlib-only modules on purpose, so importing them costs nothing: no `config`, and
+therefore no camera, microphone or speaker probe, and no log file. That is why the
+old `_quieten_device_logging()` workaround is gone.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import logging
-import os
-import sys
-from pathlib import Path
+from core.device_paths import DEVICE_APP_DIR  # noqa: F401  (side effect: sys.path)
 
-# benchmark/slm/core/device_prompt.py -> repo root is three levels up.
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DEVICE_APP_DIR = REPO_ROOT / "arduino" / "python"
+from guide_prompt import (
+    PERSONALITIES,
+    PERSONALITY_PROMPTS,
+    build_facts_block,
+    build_messages,
+    build_system_prompt,
+)
+from knowledge_store import UNKNOWN_ELEMENT, KnowledgeStore, element_display_name
 
-if not (DEVICE_APP_DIR / "core" / "model_module.py").exists():
-    raise ImportError(
-        f"Cannot find the device application at {DEVICE_APP_DIR}. The benchmark "
-        "imports its prompt builders from there so the two cannot drift apart. "
-        "Run this from a full checkout of the monorepo."
-    )
+__all__ = [
+    "DEVICE_APP_DIR",
+    "PERSONALITIES",
+    "PERSONALITY_PROMPTS",
+    "UNKNOWN_ELEMENT",
+    "KnowledgeStore",
+    "build_facts_block",
+    "build_messages",
+    "build_system_prompt",
+    "display_name",
+    "element_display_name",
+]
 
-if str(DEVICE_APP_DIR) not in sys.path:
-    sys.path.insert(0, str(DEVICE_APP_DIR))
-
-def _quieten_device_logging() -> None:
-    """Keep the device's hardware-discovery warnings out of benchmark output.
-
-    The device logs through loguru when it is installed and falls back to a
-    stdlib shim on the "cultura" logger when it is not. This project does not
-    depend on loguru, so the fallback is the path that actually runs here.
-    """
-    os.environ.setdefault("CULTURA_LOG_LEVEL", "ERROR")
-    logging.getLogger("cultura").setLevel(logging.ERROR)
-    try:
-        from loguru import logger
-    except ImportError:
-        return
-    logger.remove()
-    logger.add(sys.stderr, level="ERROR")
+# One store for the whole process. Constructing it is cheap -- the JSON is loaded
+# lazily on first lookup -- but sharing it means the sheets are parsed once.
+_store: KnowledgeStore | None = None
 
 
-_quieten_device_logging()
-
-
-def _load_device_model_module():
-    """Load arduino/python/core/model_module.py under its own module name.
-
-    It cannot be imported as `core.model_module`: this project has its own
-    top-level `core` package, which would shadow the device's. Loading by path
-    sidesteps the collision. The device's own imports (`config`, `logging_setup`)
-    are absolute and resolve through DEVICE_APP_DIR on sys.path.
-    """
-    path = DEVICE_APP_DIR / "core" / "model_module.py"
-    spec = importlib.util.spec_from_file_location("cultura_device_model_module", path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_device = _load_device_model_module()
-
-PERSONALITY_PROMPTS: dict[str, str] = _device.PERSONALITY_PROMPTS
-build_facts_block = _device.build_facts_block
-build_messages = _device.build_messages
-build_system_prompt = _device.build_system_prompt
-
-PERSONALITIES: tuple[str, ...] = tuple(PERSONALITY_PROMPTS)
-
-# display_name lives on ModelRegistry because it needs the loaded knowledge index.
-# The registry is constructed lazily and never loads the LLM (that is _ensure_llm,
-# called only on generate), so this is cheap here.
-_registry = None
+def store() -> KnowledgeStore:
+    """The device's knowledge store, reading the device's own JSON files."""
+    global _store
+    if _store is None:
+        _store = KnowledgeStore()
+    return _store
 
 
 def display_name(element: str | None) -> str | None:
     """The element's English name, resolved exactly as the device resolves it."""
-    global _registry
-    if _registry is None:
-        _registry = _device.ModelRegistry()
-    return _registry.display_name(element)
-
-__all__ = [
-    "PERSONALITIES",
-    "display_name",
-    "PERSONALITY_PROMPTS",
-    "build_facts_block",
-    "build_messages",
-    "build_system_prompt",
-    "DEVICE_APP_DIR",
-]
+    return store().display_name(element)

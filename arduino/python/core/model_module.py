@@ -28,46 +28,21 @@ except ImportError:
 
     VISION_UNKNOWN_LABEL = "unknown"
 
+# The knowledge base and the prompt live in their own top-level, dependency-free
+# modules so the benchmark, the personality study and the Arduino export bundle can
+# import exactly what the board runs instead of keeping their own copies -- which is
+# what they used to do, in four mutually-divergent versions. Re-exported below so
+# anything already importing them from here keeps working.
+from guide_prompt import (  # noqa: F401  (re-exported)
+    PERSONALITIES,
+    PERSONALITY_PROMPTS,
+    build_facts_block,
+    build_messages,
+    build_system_prompt,
+)
+from knowledge_store import KnowledgeStore, element_display_name  # noqa: F401
+
 _DEFAULT_NAMES = {"A": "artistic", "B": "technical", "C": "child"}
-
-# System prompts for each Personality (Cultura Viva pipeline).
-# Keys must match the values in models/models.json ("artistic", "technical", "child").
-#
-# Each guide is given a FORMAT requirement rather than a tone instruction. The
-# earlier prompts described how to sound -- "speak with passion and use evocative
-# metaphors", "be precise and rigorous", "use an animated tone" -- and a 0.5B model
-# did not act on any of it: a blind judge recovered the intended guide in 38.9% of
-# answers against a 33.3% chance baseline, and identified the child guide in 4% of
-# its own (benchmark/slm/personality/results/baseline_tone_prompts/).
-#
-# The three required formats are deliberately orthogonal -- a comparison, a number,
-# a closing question -- so the guides differ in something a listener can actually
-# catch, rather than in three shades of register that all sound the same coming out
-# of a small model.
-PERSONALITY_PROMPTS: dict[str, str] = {
-    "artistic": (
-        "You are a tour guide who helps visitors see. "
-        "You explain Gaudí's works through shape, colour, light and the forms he borrowed from nature. "
-        "Every answer must contain one comparison to something from nature, written as \"like ...\". "
-        "Answer only what the user asks, and add no unrelated background. "
-        "Keep your response strictly under 3 short sentences (maximum 50 words)."
-    ),
-    "technical": (
-        "You are a tour guide who explains how things were built. "
-        "You explain Gaudí's works through construction techniques, materials and structural innovations. "
-        "Every answer must contain at least one number written in digits, taken from the facts you were given. "
-        "Answer only what the user asks, and add no unrelated background. "
-        "Keep your response strictly under 3 short sentences (maximum 50 words)."
-    ),
-    "child": (
-        "You are a tour guide talking to a child of about eight. "
-        "You explain Gaudí's works in simple everyday words, with no technical terms. "
-        "Every answer must end by asking the child a short question, finishing with a question mark. "
-        "Answer only what the user asks, and add no unrelated background. "
-        "Keep your response strictly under 3 short sentences (maximum 50 words)."
-    ),
-}
-
 
 # Sentence boundary: terminal punctuation followed by whitespace or end of text.
 # The lookahead keeps "1.5 metres" and "Gaudi's" from splitting, which matters
@@ -77,95 +52,6 @@ _SENTENCE_END = re.compile(r"""[.!?…]['"\)\]]*(?=\s|$)""")
 # Below this, a chunk is too short to be worth a separate Piper invocation and
 # its prosody sounds clipped; it is held back and merged into the next one.
 MIN_SENTENCE_CHARS = 12
-
-
-def element_display_name(element: str) -> str:
-    """Fallback rendering of an element identifier for a reader.
-
-    Identifiers are Catalan/Spanish snake_case ("sala_hipostila", "facana_passio")
-    because they are also the vision model's class labels. Putting one in the prompt
-    raw is what produced answers like "You are seeing laterals_sagrada_familia" and,
-    worse, "Gaudi built the Sala Hipostila to house a collection of columns" -- the
-    model reads the identifier as a proper name it half-recognises and invents around
-    it. ModelRegistry.display_name resolves the real English name from the knowledge
-    sheet; this is only the fallback for an element that has no sheet.
-    """
-    return element.replace("_", " ").strip()
-
-
-def build_facts_block(
-    element: str | None, kg_context: str, element_name: str | None = None
-) -> str:
-    """Renders the photo-dependent head of the system prompt: what vision detected and
-    the facts retrieved for it.
-
-    This block is deliberately free of anything personality-specific, and
-    build_system_prompt puts it first, because it is the part that gets cached. llama.cpp
-    reuses the longest common *prefix* of its KV cache and nothing else, so a block can
-    only be restored from disk if it sits at the very front of the prompt -- see
-    ModelRegistry.warm_prefix.
-
-    Returns an empty string when there is nothing photo-dependent to say, in which case
-    there is also nothing worth caching.
-    """
-    parts: list[str] = []
-
-    if element == VISION_UNKNOWN_LABEL:
-        parts.append(
-            "[Visual recognition: The photo does not match any architectural element of this monument. "
-            "Politely and concisely tell the user (in your assigned guide personality) that the photo does not seem "
-            "to show a recognized monument element, and invite them to capture an architectural element if they'd like details.]"
-        )
-    elif element:
-        parts.append(
-            f"[Detected element in photo: {element_name or element_display_name(element)}]"
-        )
-
-    if kg_context:
-        parts.append(f"[Factual information about the element:\n{kg_context}]")
-
-    return "\n\n".join(parts)
-
-
-def build_system_prompt(
-    element: str | None, personality: str, kg_context: str, element_name: str | None = None
-) -> str:
-    """Assembles the system message: what vision detected and the retrieved facts first,
-    the personality instructions second.
-
-    That order is what makes the prefix cache possible -- the facts are identical for
-    every personality, so one cached KV state per element serves all three, and editing a
-    personality prompt invalidates none of them. It also puts the instructions closer to
-    the question, which small models tend to follow better.
-
-    The rendered prompt up to the user turn is identical for every question asked about
-    the same photo with the same personality, so llama.cpp treats it as a cache hit once
-    warm_prefix() has evaluated it.
-    """
-    instructions = PERSONALITY_PROMPTS.get(
-        personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
-    )
-    facts = build_facts_block(element, kg_context, element_name)
-    return f"{facts}\n\n{instructions}" if facts else instructions
-
-
-def build_messages(
-    question: str,
-    element: str | None,
-    personality: str,
-    kg_context: str,
-    element_name: str | None = None,
-) -> list[dict]:
-    """Builds the chat messages for one question. The user turn holds nothing but the
-    question, so it is the only part of the rendered prompt that changes between
-    questions about the same photo."""
-    return [
-        {
-            "role": "system",
-            "content": build_system_prompt(element, personality, kg_context, element_name),
-        },
-        {"role": "user", "content": question or "(no question provided)"},
-    ]
 
 
 class ModelRegistry:
@@ -209,220 +95,59 @@ class ModelRegistry:
         return MODELS_DIR
 
     def _load_kg(self) -> None:
-        """Lazily loads element_sheets.json into an index by element id and an alias index (alias, lowercased, mapped to id); a no-op once already loaded, and leaves both indices empty if the file is missing."""
+        """Lazily builds the KnowledgeStore and mirrors its indices onto this registry.
+
+        `_kg_index` and `_kg_alias_index` are bound to the store's *own* dict objects,
+        not copies, because prewarm_cache.py reads `models._kg_index` directly to
+        enumerate elements and validate ids. Rebinding rather than copying keeps that
+        working with no edit there, and keeps the two from drifting apart.
+        """
         if hasattr(self, "_kg_index"):
             return
-        from config import KG_PATH
+        from config import KG_BASE_PATH, KG_PATH
 
-        self._kg_index: dict = {}
-        self._kg_alias_index: dict = {}  # alias.lower() -> id
-
-        if not KG_PATH.exists():
-            logger.warning(
-                "element_sheets.json not found at {}. Returning empty KG context.",
-                KG_PATH,
-            )
-            return
-
-        try:
-            with open(KG_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            sheets = data.get("sheets", [])
-            for sheet in sheets:
-                sid = sheet.get("id", "")
-                if sid:
-                    self._kg_index[sid] = sheet
-                    for alias in [sheet.get("name", "")] + sheet.get("aliases", []):
-                        if alias:
-                            self._kg_alias_index[alias.lower()] = sid
-            logger.success(
-                "Knowledge sheets loaded: {} elements", len(self._kg_index)
-            )
-        except (OSError, ValueError) as exc:
-            logger.exception("Could not read element_sheets.json: {}", exc)
+        self._store = KnowledgeStore(
+            sheets_path=KG_PATH, kb_path=KG_BASE_PATH, logger=logger
+        )
+        self._store.load_sheets()
+        self._kg_index: dict = self._store.sheets_by_id
+        self._kg_alias_index: dict = self._store.alias_index
 
     def _load_kg_base(self) -> dict:
-        """Lazily loads and caches knowledge_base.json, which provides monument-level overview context used as a fallback when a specific element sheet is unavailable."""
+        """Lazily loads knowledge_base.json, the monument-level overview used as a
+        fallback when an element has no sheet of its own.
+
+        Deliberately does not force the sheet load: the two files are independent here,
+        as they were before the store was extracted.
+        """
         if hasattr(self, "_kg_base"):
             return self._kg_base
-        from config import KG_BASE_PATH
+        from config import KG_BASE_PATH, KG_PATH
 
-        self._kg_base: dict = {}
-        if not KG_BASE_PATH.exists():
-            return self._kg_base
-        try:
-            with open(KG_BASE_PATH, "r", encoding="utf-8") as f:
-                self._kg_base = json.load(f)
-            logger.success("Knowledge base loaded.")
-        except (OSError, ValueError) as exc:
-            logger.exception("Could not read knowledge_base.json: {}", exc)
+        if not hasattr(self, "_store"):
+            self._store = KnowledgeStore(
+                sheets_path=KG_PATH, kb_path=KG_BASE_PATH, logger=logger
+            )
+        self._kg_base: dict = self._store.load_kb()
         return self._kg_base
 
     def display_name(self, element: str | None) -> str | None:
-        """The element's English name from its knowledge sheet.
-
-        Vision emits Catalan/Spanish snake_case class labels ("sala_hipostila",
-        "escalinata_drac"); the sheets carry a readable name and list those labels
-        among their aliases. Resolving here keeps the identifier out of the prompt,
-        and therefore out of the spoken answer.
-
-        Falls back to the de-underscored identifier when no sheet matches, so an
-        element the knowledge base does not cover still reads as words.
-        """
-        if not element or element == VISION_UNKNOWN_LABEL:
-            return None
+        """The element's English name from its knowledge sheet, or None when vision did
+        not recognise the photo. See KnowledgeStore.display_name."""
         self._load_kg()
-        sheet = self._kg_index.get(element)
-        if sheet is None:
-            sid = self._kg_alias_index.get(element.lower())
-            sheet = self._kg_index.get(sid) if sid else None
-        if sheet is None:
-            base = self._load_kg_base().get(element, {})
-            return base.get("name") or element_display_name(element)
-        return sheet.get("name") or element_display_name(element)
+        return self._store.display_name(element)
 
     def get_kg_context(self, element: str) -> str:
-        """Retrieves and formats factual context for an architectural element. Falls back
-        to monument-level overview data if no specific element sheet is found, and returns
-        an empty string if the element is empty, unknown, or absent from both knowledge
-        files.
+        """Factual context for an architectural element, personality-independent.
 
-        The result deliberately does not depend on the personality. The three guides differ
-        in how they speak, not in what is true, and one rendering shared by all of them is
-        what lets a single cached KV state per element serve every button -- see
-        warm_prefix(). Personality selects the *voice* in PERSONALITY_PROMPTS, which sits
-        after this block in the prompt and is prefilled live.
+        One rendering shared by all three guides is what lets a single cached KV state
+        per element serve every button -- see warm_prefix(). See
+        KnowledgeStore.context_for_element for the rendering itself, which is frozen by
+        tests/golden/kg_context.json because it is the prefix cache key.
         """
-        if not element or element == VISION_UNKNOWN_LABEL:
-            return ""
-
         self._load_kg()
-
-        # look up sheet by id, then by alias
-        sheet = self._kg_index.get(element)
-        if sheet is None:
-            sid = self._kg_alias_index.get(element.lower())
-            if sid:
-                sheet = self._kg_index.get(sid)
-
-        # fallback: monument level from knowledge_base.json
-        if sheet is None:
-            base = self._load_kg_base()
-            entry = base.get(element, {})
-            if entry:
-                logger.info(
-                    "KG: element {!r} served from knowledge_base.json", element
-                )
-                return self._render_kb_entry(entry)
-            logger.warning(
-                "KG: element {!r} not found in any knowledge file.", element
-            )
-            return ""
-
-        return self._build_element_context(sheet)
-
-    def _build_element_context(self, sheet: dict) -> str:
-        """Assembles the full context block for an element sheet: its own facts, a short
-        summary of its parent monument if any, and up to two related-element notes,
-        following the shape used by benchmark.py's context builder but trimmed for the
-        on-device SLM's small context window."""
-        parts = [self._format_sheet(sheet)]
-
-        parent_id = sheet.get("parent")
-        if parent_id and parent_id != sheet.get("id"):
-            parent_sheet = self._kg_index.get(parent_id)
-            if parent_sheet is not None:
-                parts.append(self._render_parent_summary(parent_sheet))
-
-        related = sheet.get("similarities", [])[:2]
-        for note in related:
-            parts.append(f"Related: {note}")
-
-        return "\n---\n".join(p for p in parts if p)
-
-    def _render_parent_summary(self, parent_sheet: dict) -> str:
-        """Produces a compact 2-3 line summary of the parent monument or area a sub-element belongs to (e.g. Park Güell for the Dragon Stairway). Unlike benchmark.py's full-sheet renderer used for offline eval grounding, this stays short since it rides alongside the element's own facts."""
-        name = parent_sheet.get("name", "")
-        lines = [f"Part of: {name}"] if name else []
-        if parent_sheet.get("creator"):
-            lines.append(f"Creator: {parent_sheet['creator']}")
-        if parent_sheet.get("inspiration"):
-            lines.append(f"Context: {parent_sheet['inspiration']}")
-        return "\n".join(lines)
-
-    def _format_sheet(self, sheet: dict) -> str:
-        """Formats a knowledge sheet into a compact factual string for the SLM prompt.
-
-        One rendering serves all three personalities. The per-personality field selection
-        this replaced saved perhaps forty tokens of prompt, and cost a separate cached KV
-        state per personality -- a bad trade once the prefix is read from disk rather than
-        prefilled. The per-kind caps keep the block near the size the artistic rendering
-        used to be, which matters for a 0.5B model's attention even though the prefill is
-        now free.
-        """
-        lines: list[str] = []
-        name = sheet.get("name", "")
-        if name:
-            lines.append(f"Element: {name}")
-
-        if sheet.get("creator"):
-            lines.append(f"Creator: {sheet['creator']}")
-        if sheet.get("timeline"):
-            lines.append(f"Timeline: {sheet['timeline']}")
-        if sheet.get("purpose"):
-            lines.append(f"Purpose: {sheet['purpose']}")
-        if sheet.get("inspiration"):
-            lines.append(f"Inspiration: {sheet['inspiration']}")
-
-        for key in ("materials", "construction_process", "technical_figures"):
-            val = sheet.get(key)
-            if not val:
-                continue
-            if isinstance(val, list):
-                lines.append(f"{key}: {'; '.join(str(v) for v in val)}")
-            elif isinstance(val, dict):
-                for k2, v2 in val.items():
-                    lines.append(f"{k2}: {v2}")
-            else:
-                lines.append(f"{key}: {val}")
-
-        for fact in sheet.get("technical_facts", [])[:2]:
-            lines.append(f"- {fact}")
-        for fact in sheet.get("artistic_facts", [])[:2]:
-            lines.append(f"- {fact}")
-        for fact in sheet.get("general_knowledge_facts", [])[:1]:
-            lines.append(f"- {fact}")
-
-        # similarities are deliberately not rendered here: _build_element_context
-        # already appends the first two as "Related:" lines. Emitting them in both
-        # places, as the artistic rendering used to, spent tokens saying the same
-        # thing twice to a model with 1024 of them.
-
-        return "\n".join(lines)
-
-    def _render_kb_entry(self, entry: dict) -> str:
-        """Formats a monument-level knowledge_base.json entry into a labeled string, deriving each label from its JSON key so new fields appear automatically without code changes. The 'name' field is surfaced first; list-of-strings fields render as bullets, nested dicts are flattened one level, and empty or falsy values are skipped."""
-        lines: list[str] = []
-        if name := entry.get("name"):
-            lines.append(f"Name: {name}")
-
-        for key, val in entry.items():
-            if key == "name" or not val:
-                continue
-            label = key.replace("_", " ").title()
-
-            if isinstance(val, list):
-                if all(isinstance(v, str) for v in val):
-                    lines.append(f"{label}:\n- " + "\n- ".join(val))
-                else:
-                    lines.append(f"{label}: {'; '.join(str(v) for v in val)}")
-            elif isinstance(val, dict):
-                for k2, v2 in val.items():
-                    lines.append(f"{k2.replace('_', ' ').title()}: {v2}")
-            else:
-                lines.append(f"{label}: {val}")
-
-        return "\n".join(lines).strip()
+        self._load_kg_base()
+        return self._store.context_for_element(element)
 
     def _ensure_llm(self):
         """Loads and caches the Llama instance on first call, returning it (or None if the

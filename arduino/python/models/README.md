@@ -11,6 +11,10 @@ python/models/
 ├── knowledge/
 │   ├── element_sheets.json  ← Detailed fact sheets per Gaudí element (indexed by id and aliases)
 │   └── knowledge_base.json  ← General Gaudí and monument context (fallback when vision returns unknown)
+│                              Both are read by ../../knowledge_store.py, the single
+│                              renderer shared by the device, the SLM benchmark and
+│                              the Arduino export bundle. These two files are tracked;
+│                              everything else here is downloaded.
 ├── stt/                     ← faster-whisper model (faster-whisper-base.en/)
 ├── slm/                     ← GGUF model (qwen2.5-1.5b-instruct-q4_k_m.gguf)
 ├── tts/                     ← Piper voice pairs (.onnx + .onnx.json)

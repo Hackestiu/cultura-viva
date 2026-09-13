@@ -57,9 +57,19 @@ questions. Low compliance means the model ignored the instruction; high complian
 with chance-level identification would mean it obeyed and the voices still sound
 alike. The remedies are not the same.
 
-**The prompts are imported, not copied.** `arms.py` pulls them from
-`arduino/python/core/model_module.py` through `core/device_prompt.py`, so this
-measures what ships and cannot drift from it.
+**The prompts and the facts are imported, not copied.** `arms.py` pulls the
+personality prompts from `arduino/python/guide_prompt.py` through
+`core/device_prompt.py`, and the context comes from the device's own
+`knowledge_store.KnowledgeStore`, so this measures what ships and cannot drift
+from it.
+
+Only half of that used to be true, and it invalidated a run. The prompts were
+imported; the facts they were given came from a renderer this project maintained
+separately, which produced a prose blob the board has never emitted — no `creator`,
+no `timeline`, uncapped facts, and the raw vision label interpolated as
+`(part of park_guell)`. Since every probe here carries an `element_id`, every one of
+the 24 contexts was affected. The superseded run is kept in
+`results/pre_shared_renderer/` with the specific hallucinations it produced.
 
 **Unknown arm names are refused.** `build_system_prompt` resolves an unrecognised
 personality by silently falling back to artistic, so a typo would generate a second
@@ -73,6 +83,9 @@ design for this question. `probes.json` asks one open question per element sheet
 ("Why does this look so strange?"), and each carries an `element_id`, so retrieval
 goes through the direct-lookup path the device uses when vision names an element.
 No item in the old testset has one, so that path had never been exercised.
+
+Since the knowledge store was unified, that sentence is true in the strong sense:
+the lookup *and* the rendering are the board's, not a local approximation of them.
 
 **There are no reference answers,** deliberately. Grounding is judged against the
 retrieved facts. Writing plain-register references and scoring against them is the

@@ -44,7 +44,8 @@ from personality.arms import (
     messages_for,
     resolve_arms,
 )
-from scripts.benchmark import GaudiKnowledgeStore, ollama_chat
+from core.knowledge import SemanticKnowledgeStore
+from core.ollama import ollama_chat
 
 HERE = Path(__file__).resolve().parent
 PROBES_PATH = HERE / "probes.json"
@@ -87,7 +88,7 @@ def warmup(model_tag: str) -> None:
                 options={"num_predict": 1})
 
 
-def generate(model_tag: str, arms: list[str], probes: list[dict], store: GaudiKnowledgeStore) -> list[dict]:
+def generate(model_tag: str, arms: list[str], probes: list[dict], store: SemanticKnowledgeStore) -> list[dict]:
     """Answer every probe as every guide. Facts are retrieved once per probe and
     shared across arms, so the only thing that varies is the personality text."""
     warmup(model_tag)
@@ -350,7 +351,7 @@ def main() -> None:
         print(f"Reusing {len(rows)} saved answers from {raw_path.name}\n")
     else:
         print(f"\nGenerating {len(probes) * len(arms)} answers...")
-        store = GaudiKnowledgeStore()
+        store = SemanticKnowledgeStore()
         rows = generate(args.model, arms, probes, store)
         for row in rows:
             row["echo_span"] = echo_span(row)

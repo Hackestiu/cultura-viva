@@ -56,21 +56,39 @@ An end-to-end evaluation, benchmarking, and embedded deployment pipeline for **C
 
 ---
 
-## The prompt comes from the device
+## The prompt *and the facts* come from the device
 
-The benchmark does **not** define its own prompt. `core/device_prompt.py` imports
-`build_messages` and `PERSONALITY_PROMPTS` straight out of
-`arduino/python/core/model_module.py`, the module the board actually runs, so a
-change to the guide's wording lands in the next benchmark run automatically.
+The benchmark defines neither. `core/device_prompt.py` imports
+`build_messages` and `PERSONALITY_PROMPTS` from `arduino/python/guide_prompt.py`,
+and `KnowledgeStore` from `arduino/python/knowledge_store.py` — the two modules the
+board itself runs — so a change to the guide's wording or to how a knowledge sheet
+is rendered lands in the next benchmark run automatically.
 
-That matters because the two had already drifted: this suite used to score a
-single flat completion prompt under a generic persona, long after the device had
-moved to a chat prompt that puts retrieved facts **first** and the personality
-instructions second — an ordering llama.cpp's prefix KV cache depends on.
+That matters because the two had already drifted, twice. First the prompt: this
+suite used to score a single flat completion under a generic persona, long after
+the device had moved to a chat prompt that puts retrieved facts **first** and the
+personality instructions second — an ordering llama.cpp's prefix KV cache depends
+on. Importing `build_messages` fixed that.
+
+Then the facts, which nobody had noticed were still a copy. Until the knowledge
+store was unified there were **four** renderers: the device's, one in
+`scripts/benchmark.py`, one embedded as a Python *string* in `scripts/prepare.py`,
+and the hand-edited output of that string in `arduino_export/`. The last two had
+each evolved a different half, so regenerating the bundle silently reverted
+whichever improvement it overwrote. And `personality/study.py`, whose probes all go
+through the id-lookup path, was scoring a prose rendering the board has never
+emitted — one that dropped `creator` and `timeline` and leaked raw vision labels
+like `(part of park_guell)` into the prompt.
+
+`arduino/python/tests/test_knowledge_store.py` now pins the rendering against a
+golden file, because it is also the board's KV prefix cache key: change a
+separator and every deployed board re-prefills from cold.
 
 Generation parameters in `config.yaml` (`max_tokens: 60`, `repeat_penalty: 1.1`,
 `stop: ["\n\n", "<|im_end|>"]`, `temperature: 0.1`) mirror the device's
-`create_chat_completion` call. Keep them in step by hand.
+`create_chat_completion` call. Keep them in step by hand. `prepare.py` writes them
+into the bundle's `bundle_config.json`, so the on-board scripts at least cannot
+disagree with this file.
 
 ### The one deliberate difference: retrieval
 
@@ -144,7 +162,8 @@ uv run python main.py prepare --export-arduino --model qwen2.5:1.5b
 ```
 
 ### 2. Transfer to the Arduino
-Copy the `arduino_export/` directory over SSH:
+`arduino_export/` is a build artefact and is gitignored — `prepare` assembles it
+from the device's real modules. Copy it over SSH:
 ```bash
 scp -r arduino_export/ debian@<ARDUINO_IP>:~/culturaviva/
 ```
@@ -159,17 +178,30 @@ cd ~/culturaviva
 chmod +x setup_arduino.sh
 ./setup_arduino.sh
 
-# Run the interactive audio guide
-./venv/bin/python run_guide.py
+# Run the interactive audio guide (pick a guide personality)
+./venv/bin/python run_guide.py --personality artistic
 ```
+
+`run_guide.py` and `benchmark_arduino.py` are copied into the bundle from
+[`device_runtime/`](device_runtime); the model and sampling settings come from the
+generated `bundle_config.json`. Neither defines a prompt — both call the device's
+`build_messages`.
 
 ### 4. Run the Full Benchmark on Arduino Hardware
 To evaluate real-world inference speed, tokens/sec, and accuracy directly on the Cortex-A53 CPU:
 ```bash
 # Run benchmark for Qwen 2.5 1.5B (or any other GGUF in models/)
-./venv/bin/python benchmark_arduino.py --model models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+./venv/bin/python benchmark_arduino.py \
+    --model models/qwen2.5-1.5b-instruct-q4_k_m.gguf --personality technical
 ```
-This runs the 38 test questions and saves `predictions_arduino_<model>.json`.
+This runs the 38 test questions and saves
+`predictions_arduino_<model>_<personality>.json`.
+
+The personality is now part of the measurement, and retrieval returns
+`retrieval_top_k` passages rather than one, so these runs are finally shaped like
+the PC ones. Earlier on-device runs, in
+[`eval/predictions_arduino/`](eval/predictions_arduino), are not — see the README
+there.
 
 ### 5. Evaluate Arduino Predictions on PC with Ragas
 Copy the on-device predictions back to your PC and score them:

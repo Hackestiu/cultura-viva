@@ -7,3 +7,10 @@ eval/results/
 arduino_export/models/
 models/
 .vscode/
+# The Arduino bundle is a build artefact: prepare.py copies the device's real
+# knowledge_store.py, guide_prompt.py and knowledge JSON into it. It used to be
+# tracked, and the tracked copy went stale -- the element sheets sat in git in
+# pre-translation Spanish, 23 of 24 differing from the device's, which is one of
+# the two drifts this layout removes. Build it with:
+#   uv run python main.py prepare --export-arduino
+arduino_export/

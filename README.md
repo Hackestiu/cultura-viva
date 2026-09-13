@@ -6,6 +6,40 @@ The system combines computer vision (ONNX), speech-to-text (faster-whisper), a s
 
 ---
 
+## Performance Benchmark
+
+The pipeline is latency-sensitive and every stage runs on four Cortex-A53 cores. Before changing anything for speed, measure — `python/benchmark.py` reports where the time actually goes.
+
+Run it on the board's MPU shell (not on your laptop). It needs no Bridge RPC, no App Lab, no camera and no microphone:
+
+```bash
+cd ~/ArduinoApps/cultura-viva-uno-q/python
+python3 benchmark.py --json before.json
+```
+
+| Flag | Purpose |
+|---|---|
+| `--reps N` | Repetitions per stage (default 3); medians are reported |
+| `--stage {vision,stt,slm,tts}` | Benchmark one stage only — repeatable, useful while iterating |
+| `--photo PATH` / `--audio PATH` | Override the auto-discovered fixtures |
+| `--json PATH` | Write full results to JSON, for before/after comparison |
+
+Fixtures are auto-discovered: the newest file in `data/photos/` and the newest in `data/recordings/`. Any stage whose model or fixture is missing is skipped with a reason rather than failing the run.
+
+### What it reports
+
+1. **Environment** — the facts that cap what is achievable regardless of tuning:
+   - `asimddp` / `i8mm` / `sve` CPU features. Cortex-A53 is ARMv8.0 and has none of them; every fast quantised-inference path on ARM assumes at least `asimddp`. This is why `Q4_0` (which llama.cpp repacks into a NEON-friendly layout at load time) beats `Q4_K_M` on this board.
+   - `llama GPU offload` — whether `llama-cpp-python` was actually built with a GPU backend. Expected to be `NO`: the build in `models/README.md` passes no `GGML_OPENCL`/`GGML_VULKAN` flag, which is why `n_gpu_layers` was dropped from the SLM loader. If this ever says `yes`, GPU offload becomes worth revisiting.
+   - Governor, max vs. current clock, and thermal zones — to catch throttling.
+   - `cgroup cpu.max` — see the caveat below.
+2. **Model preload** — times each model's `preload()`, the startup cost `main.py` pays up front so the first user does not absorb it.
+3. **Stage breakdown** — vision, STT, SLM and TTS with each stage's share of total latency. The SLM row is split into **prefill** (time to first token, scales with prompt length) and **decode** (the rest, scales with answer length), broken out per personality with prompt token counts. A single end-to-end number cannot tell you which of the two to attack; `artistic` builds a much larger prompt than `child`, and the table makes that cost visible.
+
+> **Caveat — host shell vs. App Lab container.** App Lab runs `main.py` in a sandboxed container (see *Issue 4* below), while the command above runs on the host Debian. The packages are the same, but CPU allocation may not be. If `cgroup cpu.max` reports a quota on the host, production is capped too; if it reports none, confirm once by comparing a stage timing against a real App Lab run.
+
+---
+
 ## Hardware
 
 | Component | Details |
@@ -54,6 +88,7 @@ cultura-viva-uno-q/
 └── python/                      ← Python code on the Linux MPU
     ├── main.py                  ← Main application loop (App.run)
     ├── config.py                ← Centralised configuration (paths, devices, buffer sizes)
+    ├── benchmark.py             ← Per-stage latency benchmark (see Performance Benchmark)
     ├── requirements.txt         ← Python dependencies
     │
     ├── core/                    ← AI services and domain logic

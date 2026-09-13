@@ -25,6 +25,9 @@ except ModuleNotFoundError:
     Microphone = None
 
 
+# Encoder window, in seconds. See transcribe().
+STT_CHUNK_LENGTH_S = 15
+
 # Gaudí domain vocabulary — used by faster-whisper to recognize terms that appear frequently in the audioguide context.
 
 DOMAIN_PROMPT = (
@@ -379,6 +382,15 @@ class MicrophoneManager:
                 condition_on_previous_text=False,
                 initial_prompt=DOMAIN_PROMPT,
                 hotwords=build_hotwords(),
+                # Whisper pads every window to chunk_length seconds before the
+                # encoder runs, so a 4 s question otherwise costs the same as a
+                # 30 s one. Halving the window halves the encoder input
+                # (3000 -> 1500 mel frames). Questions longer than 15 s are not
+                # truncated -- they are processed as successive windows.
+                chunk_length=STT_CHUNK_LENGTH_S,
+                # Timestamp tokens are interleaved with text tokens and then
+                # discarded below, so decoding them is wasted work.
+                without_timestamps=True,
             )
             raw_text = " ".join(s.text for s in segments).strip()
             text = canonicalize_domain_entities(raw_text)

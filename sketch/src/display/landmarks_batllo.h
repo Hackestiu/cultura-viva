@@ -30,8 +30,8 @@
 #define NUM_LANDMARKS_BATLLO 2
 
 const Landmark LANDMARKS_BATLLO[NUM_LANDMARKS_BATLLO] = {
-  { .x = 80, .y = 44, .screen = "PLA SUPERIOR" },  // id 0, code "PS": teulada del drac, torre, planta noble
-  { .x = 80, .y = 96, .screen = "PLA INFERIOR" },  // id 1, code "PI": arcs parabolics, facana d'acces
+  { "PS", "PLA SUPERIOR", 80, 44 },  // id 0: teulada del drac, torre, planta noble
+  { "PI", "PLA INFERIOR", 80, 96 },  // id 1: arcs parabolics, facana d'acces
 };
 
 // Marker colors -> landmarks_batllo.json "markerColors"

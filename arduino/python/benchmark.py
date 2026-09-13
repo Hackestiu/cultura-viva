@@ -419,7 +419,8 @@ def bench_slm(models, reps: int) -> dict:
         # The same builder generate_response uses, so the prompt measured here is the
         # prompt production sends — including which half of it is the cacheable prefix.
         messages = build_messages(
-            BENCH_QUESTION, BENCH_ELEMENT, personality, kg_context
+            BENCH_QUESTION, BENCH_ELEMENT, personality, kg_context,
+            models.display_name(BENCH_ELEMENT),
         )
 
         prefills, decodes, totals, prompt_tokens, decoded_counts = [], [], [], [], []

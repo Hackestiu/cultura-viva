@@ -93,7 +93,7 @@ def main() -> int:
     # without paying the model load.
     plan = []
     for eid in elements:
-        facts = build_facts_block(eid, models.get_kg_context(eid))
+        facts = build_facts_block(eid, models.get_kg_context(eid), models.display_name(eid))
         if not facts:
             continue
         plan.append((eid, facts, models._prefix_state_path(facts)))

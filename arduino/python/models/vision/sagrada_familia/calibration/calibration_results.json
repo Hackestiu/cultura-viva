@@ -1,0 +1,27 @@
+{
+  "monument": "sagrada_familia",
+  "checkpoint_dir": "onnx_export/sagrada_familia-vit",
+  "num_classes": 6,
+  "validation_images": 312,
+  "recall_target": 0.95,
+  "top1_accuracy": 0.9487179487179487,
+  "suggested_entropy_threshold": 0.5067151784896851,
+  "suggested_confidence_threshold": 0.8490707874298096,
+  "auto_entropy_threshold": 0.8958797346140275,
+  "id_recall_entropy_gate": 0.9487179487179487,
+  "id_recall_confidence_gate": 0.9487179487179487,
+  "id_recall_combined_gates": 0.9455128205128205,
+  "entropy_stats": {
+    "mean": 0.08826848119497299,
+    "std": 0.17187699675559998,
+    "p50": 0.025654500350356102,
+    "p95": 0.5067151784896851,
+    "p99": 0.8837443590164185
+  },
+  "confidence_stats": {
+    "mean": 0.9754503965377808,
+    "std": 0.06956510990858078,
+    "p05": 0.8490707874298096,
+    "p50": 0.9968967437744141
+  }
+}

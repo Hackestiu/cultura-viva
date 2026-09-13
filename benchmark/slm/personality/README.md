@@ -91,6 +91,15 @@ accuracy for the wrong reason. When any answer echoes its prompt, identification
 run a second time with those spans masked. A large gap between the two means the
 model states its personality instead of enacting it.
 
+**Element names, not identifiers.** Vision emits Catalan snake_case class labels
+(`sala_hipostila`, `escalinata_drac`). These used to go into the prompt raw, and the
+model both read them aloud ("You are seeing laterals_sagrada_familia") and invented
+around them ("Gaudí built the Sala Hipostila to house a collection of columns" — a
+name the sheet does not contain). `ModelRegistry.display_name` resolves the English
+name from the sheet, whose aliases already list every vision label. Worth knowing if
+you re-measure: this fixed the spoken output but did **not** measurably reduce
+hallucination — 16 answers improved and 10 regressed, McNemar p = 1.00.
+
 **A warmup call precedes generation.** With a fixed seed the first call after a
 cold model load differs from every later one, which then agree byte-for-byte.
 Without the warmup the first probe would carry an anomaly the other 23 do not.

@@ -67,6 +67,10 @@ def build_summary(*, model, judge_model, arms, rows, similarity, ident, ident_ma
         summary["judge_self_test"] = judge_check
     if ident is not None:
         summary["identification"] = _identification_block(ident, arms)
+        summary["identification_detail"] = [
+            {"probe_id": r["probe_id"], "arm": r["arm"], "predicted": r["predicted"]}
+            for r in ident
+        ]
     if ident_masked is not None:
         summary["identification_echo_masked"] = _identification_block(ident_masked, arms)
     if facts is not None:
@@ -77,6 +81,12 @@ def build_summary(*, model, judge_model, arms, rows, similarity, ident, ident_ma
             g[arm] = {"n": len(arm_f), "unsupported": unsupported,
                       "unjudged": sum(1 for f in arm_f if f["verdict"] is None)}
         summary["grounding"] = g
+        # Per-answer verdicts, not just counts: an aggregate hallucination rate
+        # nobody can audit is a number you have to take on trust.
+        summary["grounding_detail"] = [
+            {"probe_id": f["probe_id"], "arm": f["arm"], "verdict": f["verdict"]}
+            for f in facts
+        ]
     return summary
 
 

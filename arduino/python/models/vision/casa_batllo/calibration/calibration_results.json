@@ -1,0 +1,27 @@
+{
+  "monument": "casa_batllo",
+  "checkpoint_dir": "onnx_export/casa_batllo-vit",
+  "num_classes": 2,
+  "validation_images": 48,
+  "recall_target": 0.95,
+  "top1_accuracy": 1.0,
+  "suggested_entropy_threshold": 0.2882373631000519,
+  "suggested_confidence_threshold": 0.9105096459388733,
+  "auto_entropy_threshold": 0.34657359027997264,
+  "id_recall_entropy_gate": 0.9375,
+  "id_recall_confidence_gate": 0.9375,
+  "id_recall_combined_gates": 0.9375,
+  "entropy_stats": {
+    "mean": 0.053660135716199875,
+    "std": 0.12369278818368912,
+    "p50": 0.01935887336730957,
+    "p95": 0.2882373631000519,
+    "p99": 0.5877619385719299
+  },
+  "confidence_stats": {
+    "mean": 0.982343852519989,
+    "std": 0.05789284408092499,
+    "p05": 0.9105096459388733,
+    "p50": 0.9971822500228882
+  }
+}

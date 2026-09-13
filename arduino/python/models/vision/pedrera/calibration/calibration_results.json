@@ -1,0 +1,27 @@
+{
+  "monument": "pedrera",
+  "checkpoint_dir": "onnx_export/pedrera-vit",
+  "num_classes": 3,
+  "validation_images": 80,
+  "recall_target": 0.95,
+  "top1_accuracy": 1.0,
+  "suggested_entropy_threshold": 0.21238663792610168,
+  "suggested_confidence_threshold": 0.955349862575531,
+  "auto_entropy_threshold": 0.5493061443340549,
+  "id_recall_entropy_gate": 0.95,
+  "id_recall_confidence_gate": 0.95,
+  "id_recall_combined_gates": 0.95,
+  "entropy_stats": {
+    "mean": 0.07989354431629181,
+    "std": 0.08492428064346313,
+    "p50": 0.05103038251399994,
+    "p95": 0.21238663792610168,
+    "p99": 0.4243941903114319
+  },
+  "confidence_stats": {
+    "mean": 0.9840348958969116,
+    "std": 0.026144742965698242,
+    "p05": 0.955349862575531,
+    "p50": 0.9921497106552124
+  }
+}

@@ -1,0 +1,304 @@
+{
+  "_method": "Manual adjudication of all 72 answers against the element sheet each was given. UNSUPPORTED = contains at least one claim the sheet does not support, or asserts as fact something the sheet explicitly marks as contested. Vague-but-not-false answers are counted SUPPORTED even when useless.",
+  "verdicts": {
+    "park_guell|artistic": [
+      "U",
+      "'designed for Catalan independence' (sheet: Catalanism is one symbolic reference); benches placed 'at its entrance' (they are on the terrace); 'echoing Casa Mila' (sheet: precursor to Sagrada Familia)"
+    ],
+    "park_guell|technical": [
+      "U",
+      "'trencadis used to create an inverted cat[enary]' conflates the mosaic cladding with the stone structural system"
+    ],
+    "park_guell|child": [
+      "U",
+      "'designed for Catalan artists and architects' - invented"
+    ],
+    "drac_park_guell|artistic": [
+      "U",
+      "'inspired by Greek mythology' - not in the sheet"
+    ],
+    "drac_park_guell|technical": [
+      "S",
+      ""
+    ],
+    "drac_park_guell|child": [
+      "S",
+      ""
+    ],
+    "porxada_bugaderia|artistic": [
+      "S",
+      ""
+    ],
+    "porxada_bugaderia|technical": [
+      "S",
+      ""
+    ],
+    "porxada_bugaderia|child": [
+      "S",
+      ""
+    ],
+    "porters_lodge_park_guell|artistic": [
+      "S",
+      ""
+    ],
+    "porters_lodge_park_guell|technical": [
+      "S",
+      "minor: ambition attributed to Gaudi, sheet says Guell"
+    ],
+    "porters_lodge_park_guell|child": [
+      "S",
+      "same minor attribution slip"
+    ],
+    "banc_serpentejant|artistic": [
+      "S",
+      ""
+    ],
+    "banc_serpentejant|technical": [
+      "S",
+      ""
+    ],
+    "banc_serpentejant|child": [
+      "U",
+      "'at the end of the 19th century' - no date in the sheet, and wrong"
+    ],
+    "sala_hipostila|artistic": [
+      "U",
+      "'built to house a collection of columns' - sheet: part of the rainwater system"
+    ],
+    "sala_hipostila|technical": [
+      "U",
+      "'over 1,000 columns' - sheet says Room of a Hundred Columns; 'diversity of nature' invented"
+    ],
+    "sala_hipostila|child": [
+      "U",
+      "'to house his own collection of sculptures' - invented"
+    ],
+    "viaductes_park_guell|artistic": [
+      "S",
+      ""
+    ],
+    "viaductes_park_guell|technical": [
+      "S",
+      "leaks the raw element id into the answer"
+    ],
+    "viaductes_park_guell|child": [
+      "S",
+      ""
+    ],
+    "casa_museu_park_guell|artistic": [
+      "S",
+      ""
+    ],
+    "casa_museu_park_guell|technical": [
+      "S",
+      ""
+    ],
+    "casa_museu_park_guell|child": [
+      "U",
+      "'not mentioned in the text, but it likely represents an extension' - speculation, and it contradicts the sheet title"
+    ],
+    "turo_3_creus|artistic": [
+      "U",
+      "'a church-like structure' - there are three crosses; chapel was only the original conception"
+    ],
+    "turo_3_creus|technical": [
+      "S",
+      ""
+    ],
+    "turo_3_creus|child": [
+      "S",
+      ""
+    ],
+    "la_pedrera|artistic": [
+      "U",
+      "states contested facade inspirations as fact; sheet explicitly says there is no agreement"
+    ],
+    "la_pedrera|technical": [
+      "S",
+      ""
+    ],
+    "la_pedrera|child": [
+      "U",
+      "'part of Gaudi's famous Park Guell complex' - flatly false"
+    ],
+    "catenaria_pedrera|artistic": [
+      "S",
+      ""
+    ],
+    "catenaria_pedrera|technical": [
+      "S",
+      ""
+    ],
+    "catenaria_pedrera|child": [
+      "S",
+      ""
+    ],
+    "caps_pedrera|artistic": [
+      "S",
+      ""
+    ],
+    "caps_pedrera|technical": [
+      "S",
+      ""
+    ],
+    "caps_pedrera|child": [
+      "U",
+      "applies the 'constant curve' quote, which is about the house, to the chimneys"
+    ],
+    "facana_pedrera|artistic": [
+      "S",
+      ""
+    ],
+    "facana_pedrera|technical": [
+      "S",
+      "minor: 'free-standing' beams, sheet says curved beams around the perimeter"
+    ],
+    "facana_pedrera|child": [
+      "S",
+      ""
+    ],
+    "patis_pedrera|artistic": [
+      "U",
+      "applies the facade's contested mountain inspirations to the courtyards"
+    ],
+    "patis_pedrera|technical": [
+      "U",
+      "'symmetrical', 'rectangular' - sheet describes a non-symmetrical gate and an irregular figure-8 plan"
+    ],
+    "patis_pedrera|child": [
+      "U",
+      "'privacy and security' invented"
+    ],
+    "sagrada_familia|artistic": [
+      "S",
+      ""
+    ],
+    "sagrada_familia|technical": [
+      "S",
+      ""
+    ],
+    "sagrada_familia|child": [
+      "S",
+      ""
+    ],
+    "cupula_sagrada_familia|artistic": [
+      "S",
+      ""
+    ],
+    "cupula_sagrada_familia|technical": [
+      "U",
+      "'an illusion of perspective, as if it were curved' - the vaults are curved; sheet describes real ascending perspective"
+    ],
+    "cupula_sagrada_familia|child": [
+      "U",
+      "'post-tensioned stone, a special type of rock' - it is a construction technique, not a rock"
+    ],
+    "facana_naixement|artistic": [
+      "S",
+      ""
+    ],
+    "facana_naixement|technical": [
+      "U",
+      "'contains a polychrome facade' - sheet says Gaudi WANTED it polychromed"
+    ],
+    "facana_naixement|child": [
+      "S",
+      ""
+    ],
+    "facana_passio|artistic": [
+      "S",
+      ""
+    ],
+    "facana_passio|technical": [
+      "S",
+      ""
+    ],
+    "facana_passio|child": [
+      "U",
+      "invents the causation: bare because it faces the setting sun; sheet says Gaudi wanted it to frighten"
+    ],
+    "laterals_sagrada_familia|artistic": [
+      "S",
+      "useless - echoes the raw element id back at the visitor - but nothing false"
+    ],
+    "laterals_sagrada_familia|technical": [
+      "S",
+      "same"
+    ],
+    "laterals_sagrada_familia|child": [
+      "S",
+      "same"
+    ],
+    "posterior_sagrada_familia|artistic": [
+      "S",
+      ""
+    ],
+    "posterior_sagrada_familia|technical": [
+      "S",
+      ""
+    ],
+    "posterior_sagrada_familia|child": [
+      "S",
+      ""
+    ],
+    "torres_sagrada_familia|artistic": [
+      "S",
+      "garbled but nothing false"
+    ],
+    "torres_sagrada_familia|technical": [
+      "S",
+      ""
+    ],
+    "torres_sagrada_familia|child": [
+      "U",
+      "'to make the spires look more interesting' - sheet gives Eucharistic symbolism"
+    ],
+    "casa_batllo|artistic": [
+      "S",
+      ""
+    ],
+    "casa_batllo|technical": [
+      "U",
+      "'in the centre of Barcelona's Gothic Quarter' - it is on Passeig de Gracia, Eixample"
+    ],
+    "casa_batllo|child": [
+      "S",
+      ""
+    ],
+    "pla_frontal_casa_batllo|artistic": [
+      "U",
+      "attributes the attic's ribcage to the central light well"
+    ],
+    "pla_frontal_casa_batllo|technical": [
+      "S",
+      ""
+    ],
+    "pla_frontal_casa_batllo|child": [
+      "S",
+      ""
+    ],
+    "pla_inferior_casa_batllo|artistic": [
+      "S",
+      ""
+    ],
+    "pla_inferior_casa_batllo|technical": [
+      "S",
+      ""
+    ],
+    "pla_inferior_casa_batllo|child": [
+      "S",
+      ""
+    ]
+  },
+  "_summary": {
+    "manual_unsupported": "23/72",
+    "manual_rate": 31.9,
+    "judge_unsupported": "26/72",
+    "judge_rate": 36.1,
+    "agreement": "55/72",
+    "cohens_kappa": 0.48,
+    "judge_false_positives": 10,
+    "judge_false_negatives": 7,
+    "note": "The two rates are close in aggregate but that is partly cancellation: the judge has 10 false positives and 7 false negatives against the manual reading. Per-answer agreement is kappa=0.48, moderate. Treat the ~third as an order of magnitude, not a measurement, and do not use single judge verdicts to triage individual answers."
+  }
+}

@@ -79,7 +79,23 @@ _SENTENCE_END = re.compile(r"""[.!?…]['"\)\]]*(?=\s|$)""")
 MIN_SENTENCE_CHARS = 12
 
 
-def build_facts_block(element: str | None, kg_context: str) -> str:
+def element_display_name(element: str) -> str:
+    """Fallback rendering of an element identifier for a reader.
+
+    Identifiers are Catalan/Spanish snake_case ("sala_hipostila", "facana_passio")
+    because they are also the vision model's class labels. Putting one in the prompt
+    raw is what produced answers like "You are seeing laterals_sagrada_familia" and,
+    worse, "Gaudi built the Sala Hipostila to house a collection of columns" -- the
+    model reads the identifier as a proper name it half-recognises and invents around
+    it. ModelRegistry.display_name resolves the real English name from the knowledge
+    sheet; this is only the fallback for an element that has no sheet.
+    """
+    return element.replace("_", " ").strip()
+
+
+def build_facts_block(
+    element: str | None, kg_context: str, element_name: str | None = None
+) -> str:
     """Renders the photo-dependent head of the system prompt: what vision detected and
     the facts retrieved for it.
 
@@ -101,7 +117,9 @@ def build_facts_block(element: str | None, kg_context: str) -> str:
             "to show a recognized monument element, and invite them to capture an architectural element if they'd like details.]"
         )
     elif element:
-        parts.append(f"[Detected element in photo: {element}]")
+        parts.append(
+            f"[Detected element in photo: {element_name or element_display_name(element)}]"
+        )
 
     if kg_context:
         parts.append(f"[Factual information about the element:\n{kg_context}]")
@@ -110,7 +128,7 @@ def build_facts_block(element: str | None, kg_context: str) -> str:
 
 
 def build_system_prompt(
-    element: str | None, personality: str, kg_context: str
+    element: str | None, personality: str, kg_context: str, element_name: str | None = None
 ) -> str:
     """Assembles the system message: what vision detected and the retrieved facts first,
     the personality instructions second.
@@ -127,12 +145,16 @@ def build_system_prompt(
     instructions = PERSONALITY_PROMPTS.get(
         personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
     )
-    facts = build_facts_block(element, kg_context)
+    facts = build_facts_block(element, kg_context, element_name)
     return f"{facts}\n\n{instructions}" if facts else instructions
 
 
 def build_messages(
-    question: str, element: str | None, personality: str, kg_context: str
+    question: str,
+    element: str | None,
+    personality: str,
+    kg_context: str,
+    element_name: str | None = None,
 ) -> list[dict]:
     """Builds the chat messages for one question. The user turn holds nothing but the
     question, so it is the only part of the rendered prompt that changes between
@@ -140,7 +162,7 @@ def build_messages(
     return [
         {
             "role": "system",
-            "content": build_system_prompt(element, personality, kg_context),
+            "content": build_system_prompt(element, personality, kg_context, element_name),
         },
         {"role": "user", "content": question or "(no question provided)"},
     ]
@@ -236,6 +258,29 @@ class ModelRegistry:
             logger.exception("Could not read knowledge_base.json: {}", exc)
         return self._kg_base
 
+    def display_name(self, element: str | None) -> str | None:
+        """The element's English name from its knowledge sheet.
+
+        Vision emits Catalan/Spanish snake_case class labels ("sala_hipostila",
+        "escalinata_drac"); the sheets carry a readable name and list those labels
+        among their aliases. Resolving here keeps the identifier out of the prompt,
+        and therefore out of the spoken answer.
+
+        Falls back to the de-underscored identifier when no sheet matches, so an
+        element the knowledge base does not cover still reads as words.
+        """
+        if not element or element == VISION_UNKNOWN_LABEL:
+            return None
+        self._load_kg()
+        sheet = self._kg_index.get(element)
+        if sheet is None:
+            sid = self._kg_alias_index.get(element.lower())
+            sheet = self._kg_index.get(sid) if sid else None
+        if sheet is None:
+            base = self._load_kg_base().get(element, {})
+            return base.get("name") or element_display_name(element)
+        return sheet.get("name") or element_display_name(element)
+
     def get_kg_context(self, element: str) -> str:
         """Retrieves and formats factual context for an architectural element. Falls back
         to monument-level overview data if no specific element sheet is found, and returns
@@ -324,6 +369,8 @@ class ModelRegistry:
             lines.append(f"Creator: {sheet['creator']}")
         if sheet.get("timeline"):
             lines.append(f"Timeline: {sheet['timeline']}")
+        if sheet.get("purpose"):
+            lines.append(f"Purpose: {sheet['purpose']}")
         if sheet.get("inspiration"):
             lines.append(f"Inspiration: {sheet['inspiration']}")
 
@@ -570,7 +617,8 @@ class ModelRegistry:
             kg_context = self.get_kg_context(element) if element else ""
 
         key = (element, personality)
-        facts = build_facts_block(element, kg_context)
+        element_name = self.display_name(element)
+        facts = build_facts_block(element, kg_context, element_name)
 
         with self._llm_lock:
             if self._warm_key == key:
@@ -598,7 +646,7 @@ class ModelRegistry:
                 # the user turn with the real call, which is all of the expensive part.
                 # max_tokens=1 is the cheapest way to make llama.cpp evaluate it.
                 llm.create_chat_completion(
-                    messages=build_messages("", element, personality, kg_context),
+                    messages=build_messages("", element, personality, kg_context, element_name),
                     max_tokens=1,
                     temperature=0.1,
                 )
@@ -676,7 +724,8 @@ class ModelRegistry:
         if self._ensure_llm() is None:
             return "(llama-cpp-python not installed — install it to get responses)"
 
-        messages = build_messages(question, element, personality, kg_context)
+        element_name = self.display_name(element)
+        messages = build_messages(question, element, personality, kg_context, element_name)
 
         try:
             # The lock makes a still-running warm_prefix finish first; the prompt it
@@ -708,7 +757,7 @@ class ModelRegistry:
                 # keeps a follow-up question about the same photo from reloading a
                 # cached prefix it is already past.
                 self._warm_key = None
-                self._prefix_facts = build_facts_block(element, kg_context) or None
+                self._prefix_facts = build_facts_block(element, kg_context, element_name) or None
                 for chunk in stream:
                     # Check cancellation between every generated token
                     if is_active_fn is not None and not is_active_fn():

@@ -1,0 +1,164 @@
+{
+  "description": "Small / edge-friendly open-source HF TTS models compared in this benchmark, plus one larger autoregressive model (Bark-small) kept as a contrast point. To add a model, append an entry here -- see README 'Adding a new model'.",
+  "models": [
+    {
+      "slug": "mms-tts-eng-onnx",
+      "name": "MMS-TTS (English, VITS, ONNX)",
+      "model_id": "facebook/mms-tts-eng",
+      "architecture": "vits-onnx",
+      "params_millions": 36,
+      "disk_size_mb": 138.5
+    },
+    {
+      "slug": "vits-ljs-onnx",
+      "name": "VITS (LJSpeech, ONNX)",
+      "model_id": "kakao-enterprise/vits-ljs",
+      "architecture": "vits-onnx",
+      "params_millions": 83,
+      "disk_size_mb": 332.1
+    },
+    {
+      "slug": "vits-vctk-low-onnx",
+      "name": "VITS (VCTK, multi-speaker, ONNX)",
+      "model_id": "kakao-enterprise/vits-vctk",
+      "architecture": "vits-onnx",
+      "params_millions": 38,
+      "disk_size_mb": 150.0
+    },
+    {
+      "slug": "piper-lessac-low",
+      "name": "Piper (en_US-lessac-low)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/lessac/low/en_US-lessac-low.onnx",
+      "config_filename": "en/en_US/lessac/low/en_US-lessac-low.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 20.0
+    },
+    {
+      "slug": "piper-lessac-medium",
+      "name": "Piper (en_US-lessac-medium)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/lessac/medium/en_US-lessac-medium.onnx",
+      "config_filename": "en/en_US/lessac/medium/en_US-lessac-medium.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 63.0
+    },
+    {
+      "slug": "piper-lessac-high",
+      "name": "Piper (en_US-lessac-high)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/lessac/high/en_US-lessac-high.onnx",
+      "config_filename": "en/en_US/lessac/high/en_US-lessac-high.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 113.0
+    },
+    {
+      "slug": "piper-ryan-low",
+      "name": "Piper (en_US-ryan-low)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/ryan/low/en_US-ryan-low.onnx",
+      "config_filename": "en/en_US/ryan/low/en_US-ryan-low.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 20.0
+    },
+    {
+      "slug": "piper-ryan-medium",
+      "name": "Piper (en_US-ryan-medium)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/ryan/medium/en_US-ryan-medium.onnx",
+      "config_filename": "en/en_US/ryan/medium/en_US-ryan-medium.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 63.0
+    },
+    {
+      "slug": "piper-ryan-high",
+      "name": "Piper (en_US-ryan-high)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/ryan/high/en_US-ryan-high.onnx",
+      "config_filename": "en/en_US/ryan/high/en_US-ryan-high.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 113.0
+    },
+    {
+      "slug": "piper-amy-low",
+      "name": "Piper (en_US-amy-low)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/amy/low/en_US-amy-low.onnx",
+      "config_filename": "en/en_US/amy/low/en_US-amy-low.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 20.0
+    },
+    {
+      "slug": "piper-amy-medium",
+      "name": "Piper (en_US-amy-medium)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/amy/medium/en_US-amy-medium.onnx",
+      "config_filename": "en/en_US/amy/medium/en_US-amy-medium.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 63.0
+    },
+    {
+      "slug": "piper-amy-high",
+      "name": "Piper (en_US-amy-high)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_US/amy/high/en_US-amy-high.onnx",
+      "config_filename": "en/en_US/amy/high/en_US-amy-high.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 113.0
+    },
+    {
+      "slug": "piper-alan-low",
+      "name": "Piper (en_GB-alan-low)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/alan/low/en_GB-alan-low.onnx",
+      "config_filename": "en/en_GB/alan/low/en_GB-alan-low.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 20.0
+    },
+    {
+      "slug": "piper-alan-medium",
+      "name": "Piper (en_GB-alan-medium)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/alan/medium/en_GB-alan-medium.onnx",
+      "config_filename": "en/en_GB/alan/medium/en_GB-alan-medium.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 63.0
+    },
+    {
+      "slug": "piper-alan-high",
+      "name": "Piper (en_GB-alan-high)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/alan/high/en_GB-alan-high.onnx",
+      "config_filename": "en/en_GB/alan/high/en_GB-alan-high.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 113.0
+    },
+    {
+      "slug": "piper-cori-low",
+      "name": "Piper (en_GB-cori-low)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/cori/low/en_GB-cori-low.onnx",
+      "config_filename": "en/en_GB/cori/low/en_GB-cori-low.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 20.0
+    },
+    {
+      "slug": "piper-cori-medium",
+      "name": "Piper (en_GB-cori-medium)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/cori/medium/en_GB-cori-medium.onnx",
+      "config_filename": "en/en_GB/cori/medium/en_GB-cori-medium.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 63.0
+    },
+    {
+      "slug": "piper-cori-high",
+      "name": "Piper (en_GB-cori-high)",
+      "model_id": "rhasspy/piper-voices",
+      "onnx_filename": "en/en_GB/cori/high/en_GB-cori-high.onnx",
+      "config_filename": "en/en_GB/cori/high/en_GB-cori-high.onnx.json",
+      "architecture": "piper",
+      "disk_size_mb": 113.0
+    }
+  ]
+}

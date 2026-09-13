@@ -367,7 +367,7 @@ def run_app() -> None:
                                 return
 
                             kg_context = (
-                                models.get_kg_context(element, personality=model_name)
+                                models.get_kg_context(element)
                                 if element
                                 else ""
                             )

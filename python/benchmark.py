@@ -414,7 +414,7 @@ def bench_slm(models, reps: int) -> dict:
     all_decodes: list[float] = []
 
     for personality in BENCH_PERSONALITIES:
-        kg_context = models.get_kg_context(BENCH_ELEMENT, personality=personality)
+        kg_context = models.get_kg_context(BENCH_ELEMENT)
 
         # The same builder generate_response uses, so the prompt measured here is the
         # prompt production sends — including which half of it is the cacheable prefix.

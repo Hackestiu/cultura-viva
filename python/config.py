@@ -43,6 +43,7 @@ for _dir in (
     PHOTOS_DIR,
     RECORDINGS_DIR,
     RESPONSES_DIR,
+    DATA_DIR / "prefix_cache",
     MODELS_DIR / "stt",
     MODELS_DIR / "slm",
     MODELS_DIR / "tts",
@@ -150,6 +151,33 @@ SILENCE_LEADIN_SECONDS = 6.0
 # consonant is not clipped off.
 SILENCE_TRIM_PADDING_SECONDS = 0.25
 
+# Continuous silence after which the transcription of what has been said so far is
+# started speculatively, on a background thread, while the hangover above runs out.
+# The visitor has already stopped talking at this point, so the rest of the hangover
+# is dead time on the critical path -- this spends it on Whisper instead. Must stay
+# below SILENCE_HANGOVER_SECONDS, or the recording ends before the head start begins;
+# raising it costs overlap, lowering it makes a mid-question breath more likely to
+# launch a run that is thrown away. Set to 0 to disable.
+SILENCE_SPECULATIVE_SECONDS = 0.6
+
+# ---------------------------------------------------------------------------
+# Speech to text (see hw/microphone_module.py).
+# ---------------------------------------------------------------------------
+
+# Whisper pads every window to chunk_length seconds of mel frames before the encoder
+# runs, so the encoder cost is set by this number and not by how long the visitor
+# actually spoke. STT_CHUNK_LENGTH_S is the ceiling (audio longer than this is split
+# into successive windows); a recording shorter than that is transcribed in a window
+# cut down to its own duration, never below STT_MIN_CHUNK_LENGTH_S.
+STT_CHUNK_LENGTH_S = 15
+STT_MIN_CHUNK_LENGTH_S = 6
+
+# Silero VAD inside faster-whisper. Off by default: trim_silence() already crops the
+# room tone off both ends from the RMS levels the silence gate has measured anyway,
+# so the VAD pass is a second ONNX model over the same audio for what is, on a cropped
+# question, almost always the same span.
+STT_VAD_FILTER = False
+
 # Camera capture resolution / codec settings
 CAMERA_PHOTO_WIDTH = 1920
 CAMERA_PHOTO_HEIGHT = 1080
@@ -168,13 +196,45 @@ PHOTO_CHUNK_PIXELS = 80
 
 POLL_INTERVAL = 0.1
 
+# Whisper weights. base.en transcribes at roughly 1.3x realtime on these four
+# Cortex-A53 cores; faster-whisper-tiny.en is about 2.5x faster for a modest accuracy
+# cost on short tourist questions. Drop that model into models/stt/ and point
+# CULTURA_STT_MODEL at it to trade one for the other without editing this file.
+_STT_MODEL_OVERRIDE = _os.environ.get("CULTURA_STT_MODEL")
 STT_MODEL_PATH = (
-    MODELS_DIR / "stt"
-    if (MODELS_DIR / "stt" / "model.bin").exists()
-    else MODELS_DIR / "stt" / "faster-whisper-base.en"
+    Path(_STT_MODEL_OVERRIDE)
+    if _STT_MODEL_OVERRIDE
+    else (
+        MODELS_DIR / "stt"
+        if (MODELS_DIR / "stt" / "model.bin").exists()
+        else MODELS_DIR / "stt" / "faster-whisper-base.en"
+    )
 )
+if not STT_MODEL_PATH.is_absolute():
+    STT_MODEL_PATH = MODELS_DIR / "stt" / STT_MODEL_PATH
 
 SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+
+# ---------------------------------------------------------------------------
+# SLM prefix cache (see core/model_module.py, warm_prefix()).
+#
+# Prefilling the ~400-token prompt costs ~27s on these Cortex-A53 cores, and it is
+# the same arithmetic every time: the KV cache llama.cpp builds is a pure function of
+# the model file and the tokens. So it is computed once per element and kept on disk.
+#
+# Only the *facts* head of the prompt is cached, not the personality instructions that
+# follow it -- llama.cpp reuses a prefix and nothing else, so a cached block has to sit
+# at the very front. That leaves the ~94-token personality tail to prefill live (~6s,
+# overlapped with the recording), and buys the property that editing a personality
+# prompt does not invalidate a single cached state. Editing a knowledge sheet or
+# swapping the model does, and the filename hash makes that automatic.
+#
+# Disposable by construction: deleting this directory costs one slow prefill per
+# element, never a wrong answer.
+# ---------------------------------------------------------------------------
+
+SLM_PREFIX_CACHE_DIR = DATA_DIR / "prefix_cache"
+SLM_PREFIX_CACHE_MAX_MB = 400
 KG_PATH = MODELS_DIR / "knowledge" / "element_sheets.json"
 KG_BASE_PATH = MODELS_DIR / "knowledge" / "knowledge_base.json"
 TTS_MODEL_DIR = MODELS_DIR / "tts"

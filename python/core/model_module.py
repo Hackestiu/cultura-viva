@@ -8,7 +8,10 @@ files, and generates the spoken response using a local SLM (Qwen2.5-1.5B via
 llama-cpp-python).
 """
 
+import hashlib
 import json
+import os
+import pickle
 import re
 import threading
 import time
@@ -64,23 +67,20 @@ _SENTENCE_END = re.compile(r"""[.!?…]['"\)\]]*(?=\s|$)""")
 MIN_SENTENCE_CHARS = 12
 
 
-def build_system_prompt(
-    element: str | None, personality: str, kg_context: str
-) -> str:
-    """Assembles the system message: the personality instructions, what vision detected,
-    and the retrieved facts.
+def build_facts_block(element: str | None, kg_context: str) -> str:
+    """Renders the photo-dependent head of the system prompt: what vision detected and
+    the facts retrieved for it.
 
-    Everything that depends on the photo rather than on the question lives here, so the
-    rendered prompt up to the user turn is identical for every question asked about the
-    same photo. llama.cpp reuses the longest common prefix of its KV cache, which makes
-    that stable block a cache hit once warm_prefix() has evaluated it — see
-    ModelRegistry.warm_prefix for why that matters on a Cortex-A53.
+    This block is deliberately free of anything personality-specific, and
+    build_system_prompt puts it first, because it is the part that gets cached. llama.cpp
+    reuses the longest common *prefix* of its KV cache and nothing else, so a block can
+    only be restored from disk if it sits at the very front of the prompt -- see
+    ModelRegistry.warm_prefix.
+
+    Returns an empty string when there is nothing photo-dependent to say, in which case
+    there is also nothing worth caching.
     """
-    parts = [
-        PERSONALITY_PROMPTS.get(
-            personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
-        )
-    ]
+    parts: list[str] = []
 
     if element == VISION_UNKNOWN_LABEL:
         parts.append(
@@ -95,6 +95,28 @@ def build_system_prompt(
         parts.append(f"[Factual information about the element:\n{kg_context}]")
 
     return "\n\n".join(parts)
+
+
+def build_system_prompt(
+    element: str | None, personality: str, kg_context: str
+) -> str:
+    """Assembles the system message: what vision detected and the retrieved facts first,
+    the personality instructions second.
+
+    That order is what makes the prefix cache possible -- the facts are identical for
+    every personality, so one cached KV state per element serves all three, and editing a
+    personality prompt invalidates none of them. It also puts the instructions closer to
+    the question, which small models tend to follow better.
+
+    The rendered prompt up to the user turn is identical for every question asked about
+    the same photo with the same personality, so llama.cpp treats it as a cache hit once
+    warm_prefix() has evaluated it.
+    """
+    instructions = PERSONALITY_PROMPTS.get(
+        personality, PERSONALITY_PROMPTS.get("artistic", "You are a tour guide.")
+    )
+    facts = build_facts_block(element, kg_context)
+    return f"{facts}\n\n{instructions}" if facts else instructions
 
 
 def build_messages(
@@ -123,6 +145,11 @@ class ModelRegistry:
         # waits, which is no worse than doing the prefill inline.
         self._llm_lock = threading.RLock()
         self._warm_key: tuple | None = None
+        # The facts block currently sitting at the front of llama.cpp's KV cache. Used to
+        # tell "the cache already starts with these facts" from "it starts with another
+        # element's", so a second question about the same photo is not answered by
+        # throwing away a warmer in-memory cache to reload a colder one from disk.
+        self._prefix_facts: str | None = None
 
     def _load_overrides(self) -> None:
         """Applies personality-name overrides from models/models.json onto the default A/B/C mapping, ignoring unrecognized keys or malformed entries and leaving defaults untouched if the file is absent or unreadable."""
@@ -197,8 +224,18 @@ class ModelRegistry:
             logger.exception("Could not read knowledge_base.json: {}", exc)
         return self._kg_base
 
-    def get_kg_context(self, element: str, personality: str = "artistic") -> str:
-        """Retrieves and formats factual context for an architectural element, prioritizing fields according to the requested guide personality. Falls back to monument-level overview data if no specific element sheet is found, and returns an empty string if the element is empty, unknown, or absent from both knowledge files."""
+    def get_kg_context(self, element: str) -> str:
+        """Retrieves and formats factual context for an architectural element. Falls back
+        to monument-level overview data if no specific element sheet is found, and returns
+        an empty string if the element is empty, unknown, or absent from both knowledge
+        files.
+
+        The result deliberately does not depend on the personality. The three guides differ
+        in how they speak, not in what is true, and one rendering shared by all of them is
+        what lets a single cached KV state per element serve every button -- see
+        warm_prefix(). Personality selects the *voice* in PERSONALITY_PROMPTS, which sits
+        after this block in the prompt and is prefilled live.
+        """
         if not element or element == VISION_UNKNOWN_LABEL:
             return ""
 
@@ -225,11 +262,14 @@ class ModelRegistry:
             )
             return ""
 
-        return self._build_element_context(sheet, personality)
+        return self._build_element_context(sheet)
 
-    def _build_element_context(self, sheet: dict, personality: str) -> str:
-        """Assembles the full context block for an element sheet: its own facts, a short summary of its parent monument if any, and up to two related-element notes, following the shape used by benchmark.py's context builder but trimmed for the on-device SLM's small context window."""
-        parts = [self._format_sheet(sheet, personality)]
+    def _build_element_context(self, sheet: dict) -> str:
+        """Assembles the full context block for an element sheet: its own facts, a short
+        summary of its parent monument if any, and up to two related-element notes,
+        following the shape used by benchmark.py's context builder but trimmed for the
+        on-device SLM's small context window."""
+        parts = [self._format_sheet(sheet)]
 
         parent_id = sheet.get("parent")
         if parent_id and parent_id != sheet.get("id"):
@@ -253,51 +293,51 @@ class ModelRegistry:
             lines.append(f"Context: {parent_sheet['inspiration']}")
         return "\n".join(lines)
 
-    def _format_sheet(self, sheet: dict, personality: str) -> str:
-        """Formats a knowledge sheet into a compact factual string for the SLM prompt, selecting technical, child-friendly, or artistic fields depending on the active personality."""
+    def _format_sheet(self, sheet: dict) -> str:
+        """Formats a knowledge sheet into a compact factual string for the SLM prompt.
+
+        One rendering serves all three personalities. The per-personality field selection
+        this replaced saved perhaps forty tokens of prompt, and cost a separate cached KV
+        state per personality -- a bad trade once the prefix is read from disk rather than
+        prefilled. The per-kind caps keep the block near the size the artistic rendering
+        used to be, which matters for a 0.5B model's attention even though the prefill is
+        now free.
+        """
         lines: list[str] = []
         name = sheet.get("name", "")
         if name:
             lines.append(f"Element: {name}")
 
-        # Fields shared by all personalities
         if sheet.get("creator"):
             lines.append(f"Creator: {sheet['creator']}")
         if sheet.get("timeline"):
             lines.append(f"Timeline: {sheet['timeline']}")
+        if sheet.get("inspiration"):
+            lines.append(f"Inspiration: {sheet['inspiration']}")
 
-        if personality == "technical":
-            for key in ("materials", "construction_process", "technical_figures"):
-                val = sheet.get(key)
-                if val:
-                    if isinstance(val, list):
-                        lines.append(f"{key}: {'; '.join(str(v) for v in val)}")
-                    elif isinstance(val, dict) and val:
-                        for k2, v2 in val.items():
-                            lines.append(f"{k2}: {v2}")
-                    else:
-                        lines.append(f"{key}: {val}")
-            for fact in sheet.get("technical_facts", []):
-                lines.append(f"- {fact}")
+        for key in ("materials", "construction_process", "technical_figures"):
+            val = sheet.get(key)
+            if not val:
+                continue
+            if isinstance(val, list):
+                lines.append(f"{key}: {'; '.join(str(v) for v in val)}")
+            elif isinstance(val, dict):
+                for k2, v2 in val.items():
+                    lines.append(f"{k2}: {v2}")
+            else:
+                lines.append(f"{key}: {val}")
 
-        elif personality == "child":
-            if sheet.get("inspiration"):
-                lines.append(f"Inspiration: {sheet['inspiration']}")
-            for fact in sheet.get("artistic_facts", [])[:3]:
-                lines.append(f"- {fact}")
-            for fact in sheet.get("general_knowledge_facts", [])[:2]:
-                lines.append(f"- {fact}")
+        for fact in sheet.get("technical_facts", [])[:2]:
+            lines.append(f"- {fact}")
+        for fact in sheet.get("artistic_facts", [])[:2]:
+            lines.append(f"- {fact}")
+        for fact in sheet.get("general_knowledge_facts", [])[:1]:
+            lines.append(f"- {fact}")
 
-        else:  # artistic (default)
-            if sheet.get("inspiration"):
-                lines.append(f"Inspiration: {sheet['inspiration']}")
-            for fact in sheet.get("artistic_facts", []):
-                lines.append(f"- {fact}")
-            for fact in sheet.get("general_knowledge_facts", []):
-                lines.append(f"- {fact}")
-            sims = sheet.get("similarities", [])
-            if sims:
-                lines.append(f"Connections: {'; '.join(sims)}")
+        # similarities are deliberately not rendered here: _build_element_context
+        # already appends the first two as "Related:" lines. Emitting them in both
+        # places, as the artistic rendering used to, spent tokens saying the same
+        # thing twice to a model with 1024 of them.
 
         return "\n".join(lines)
 
@@ -348,7 +388,10 @@ class ModelRegistry:
 
             self._llm = Llama(
                 model_path=str(SLM_MODEL_PATH),
-                n_ctx=1024,  # context window
+                # Headroom for the largest knowledge sheet. The facts block is restored
+                # from disk rather than prefilled (see warm_prefix), so a longer context
+                # costs KV cache memory -- about 25 MB here -- and no latency.
+                n_ctx=2048,  # context window
                 n_threads=4,  # Cortex-A53 has 4 cores
                 n_threads_batch=4,  # parallelise prefill across the 4 cores
                 n_batch=128,  # larger prefill batches amortise per-batch overhead
@@ -384,18 +427,125 @@ class ModelRegistry:
         self._load_kg_base()
         return self._ensure_llm() is not None
 
+    def _prefix_state_path(self, facts: str):
+        """Returns the on-disk path of the cached KV state for a facts block.
+
+        Keyed by the model filename and the facts text, so swapping the GGUF or editing a
+        knowledge sheet lands on a different filename rather than restoring a state whose
+        tokens no longer match. Personality is deliberately absent: the facts block is the
+        same for all three, which is the whole point of caching only that much.
+        """
+        from config import SLM_MODEL_PATH, SLM_PREFIX_CACHE_DIR
+
+        digest = hashlib.sha256(
+            f"{SLM_MODEL_PATH.name}\x00{facts}".encode("utf-8")
+        ).hexdigest()[:32]
+        return SLM_PREFIX_CACHE_DIR / f"prefix_{digest}.pkl"
+
+    def _restore_prefix(self, facts: str) -> bool:
+        """Loads the cached KV state for a facts block into the live context, if there is
+        one. Returns True if the prefill of those tokens can now be skipped.
+
+        Caller must hold _llm_lock. A miss, a corrupt file or a state from another build
+        all return False and cost nothing but the normal prefill -- llama.cpp compares the
+        restored tokens against the ones it is about to evaluate and truncates the cache
+        wherever they diverge, so a stale state can make the answer slow, never wrong.
+        """
+        path = self._prefix_state_path(facts)
+        if not path.exists():
+            return False
+        try:
+            started = time.perf_counter()
+            with open(path, "rb") as f:
+                self._llm.load_state(pickle.load(f))
+            os.utime(path, None)  # mark as recently used for _prune_prefix_cache
+            logger.info(
+                "SLM prefix restored from cache in {:.2f}s ({})",
+                time.perf_counter() - started,
+                path.name,
+            )
+            return True
+        except Exception as exc:
+            logger.warning("Could not restore prefix cache {}: {}", path.name, exc)
+            try:
+                path.unlink()
+            except OSError:
+                pass
+            return False
+
+    def _store_prefix(self, facts: str) -> None:
+        """Evaluates the facts block on its own and writes the resulting KV state to disk.
+
+        Caller must hold _llm_lock, and must call this *before* anything personality- or
+        question-specific has been evaluated: what gets saved is whatever is in the cache,
+        and the point is to save the facts and nothing after them.
+
+        Writing is best-effort throughout. The cache is an optimisation; a full disk or a
+        pickle that chokes on this llama-cpp-python's LlamaState must cost a slow prefill,
+        not an answer.
+        """
+        path = self._prefix_state_path(facts)
+        try:
+            self._llm.create_chat_completion(
+                messages=[
+                    {"role": "system", "content": facts},
+                    {"role": "user", "content": "(no question provided)"},
+                ],
+                max_tokens=1,
+                temperature=0.1,
+            )
+            tmp = path.with_suffix(".tmp")
+            with open(tmp, "wb") as f:
+                pickle.dump(self._llm.save_state(), f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, path)
+            logger.info(
+                "SLM prefix cached: {} ({:.1f} MB)",
+                path.name,
+                path.stat().st_size / 1e6,
+            )
+            self._prune_prefix_cache()
+        except Exception as exc:
+            logger.warning("Could not cache SLM prefix: {}", exc)
+
+    @staticmethod
+    def _prune_prefix_cache() -> None:
+        """Drops least-recently-used states until the cache fits SLM_PREFIX_CACHE_MAX_MB,
+        so adding locations cannot quietly fill the board's eMMC."""
+        from config import SLM_PREFIX_CACHE_DIR, SLM_PREFIX_CACHE_MAX_MB
+
+        try:
+            files = sorted(
+                SLM_PREFIX_CACHE_DIR.glob("prefix_*.pkl"),
+                key=lambda f: f.stat().st_mtime,
+            )
+            total = sum(f.stat().st_size for f in files)
+            budget = SLM_PREFIX_CACHE_MAX_MB * 1_000_000
+            while files and total > budget:
+                victim = files.pop(0)
+                total -= victim.stat().st_size
+                victim.unlink()
+                logger.info("Evicted prefix cache entry {}", victim.name)
+        except OSError as exc:
+            logger.warning("Could not prune the prefix cache: {}", exc)
+
     def warm_prefix(
         self, element: str | None, personality: str, kg_context: str | None = None
     ) -> bool:
-        """Evaluates the photo-dependent part of the prompt into llama.cpp's KV cache
-        before the question exists, so generate_response only has to prefill the question
-        itself.
+        """Gets the photo-dependent part of the prompt into llama.cpp's KV cache before
+        the question exists, so generate_response only has to prefill the question itself.
 
-        On the UNO Q's Cortex-A53 cores a ~500-token prompt costs upwards of 20 seconds to
-        prefill, and it is prefilled after the user has finished speaking — dead time they
-        sit through. But the element is known the moment the photo is validated, which is
-        several seconds before recording even starts, and the board is idle in between.
-        Doing that work there makes it free.
+        On the UNO Q's Cortex-A53 cores a ~400-token prompt costs upwards of 25 seconds to
+        prefill, and it would otherwise be prefilled after the visitor has finished
+        speaking -- dead time they sit through. The element is known the moment the photo
+        is validated, several seconds before recording even starts, so doing it there makes
+        it free. Except that "several seconds" was never reliably 25 of them: warm_prefix
+        holds _llm_lock, and a visitor who asked a short question waited out the remainder.
+
+        So the facts are no longer prefilled at all after the first time. The KV cache for
+        a block of tokens is a pure function of the model and those tokens, so it is saved
+        to disk on first use and restored on every later one, which takes a fraction of a
+        second. Only the ~94-token personality tail is still evaluated live, and *that*
+        does fit in the overlap.
 
         Returns True if the cache was warmed. Retrieves the KG context itself when not
         supplied, so callers can fire this off knowing only the element and personality.
@@ -405,14 +555,26 @@ class ModelRegistry:
             return False
 
         if kg_context is None:
-            kg_context = self.get_kg_context(element, personality=personality) if element else ""
+            kg_context = self.get_kg_context(element) if element else ""
 
         key = (element, personality)
+        facts = build_facts_block(element, kg_context)
+
         with self._llm_lock:
             if self._warm_key == key:
                 return True
             try:
                 started = time.perf_counter()
+
+                # Skipped when the cache already opens with these facts -- a second
+                # question about the same photo, or a personality switch. Restoring then
+                # would replace a cache that covers the whole prompt with one that covers
+                # only its head, and charge for the difference.
+                if facts and self._prefix_facts != facts:
+                    if not self._restore_prefix(facts):
+                        self._store_prefix(facts)
+                    self._prefix_facts = facts
+
                 # An empty question: the rendered prompt then shares every token up to
                 # the user turn with the real call, which is all of the expensive part.
                 # max_tokens=1 is the cheapest way to make llama.cpp evaluate it.
@@ -433,6 +595,7 @@ class ModelRegistry:
                 # Warming is an optimisation: a failure here must not stop the answer,
                 # it only means generate_response pays the full prefill as before.
                 logger.warning("SLM prefix warm-up failed: {}", exc)
+                self._prefix_facts = None
                 return False
 
     def warm_prefix_async(
@@ -521,8 +684,12 @@ class ModelRegistry:
                 pending = ""  # text generated but not yet handed to on_sentence
                 # Whatever happens below — completion, cancellation, an exception —
                 # the KV cache no longer ends at the warmed prefix, so the next
-                # question must warm again rather than trust a stale flag.
+                # question must warm again rather than trust a stale flag. The facts
+                # do still sit at the front of it, though, and recording that is what
+                # keeps a follow-up question about the same photo from reloading a
+                # cached prefix it is already past.
                 self._warm_key = None
+                self._prefix_facts = build_facts_block(element, kg_context) or None
                 for chunk in stream:
                     # Check cancellation between every generated token
                     if is_active_fn is not None and not is_active_fn():

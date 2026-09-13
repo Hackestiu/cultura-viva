@@ -422,6 +422,19 @@ def run_app() -> None:
                                     )
                                     speaker.cancel()
                                     return
+
+                                # The spoken answer, in full and in one place. The SLM
+                                # only reports its length, and the sentences reach the
+                                # speaker one at a time, so without this the log has no
+                                # record of what the guide actually said -- which is the
+                                # first thing wanted when an answer comes out wrong, next
+                                # to the question and the element that produced it.
+                                logger.success(
+                                    "Answer ({} / {}): {}",
+                                    model_name,
+                                    element or "no element",
+                                    answer,
+                                )
                             except BaseException:
                                 speaker.cancel()
                                 raise

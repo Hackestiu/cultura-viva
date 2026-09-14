@@ -22,8 +22,7 @@ const Landmark LANDMARKS[NUM_LANDMARKS] = {
   /* 3 */ { "NS", "NATURE SQUARE",  82,  58 },  // Nature Square
   /* 4 */ { "CG", "CASA GAUDI",     90,  18 },  // Casa Museu Gaudi
   /* 5 */ { "TV", "3 VIADUCTS",     124, 34 },  // The Three Viaducts
-  /* 6 */ { "AG", "AUSTRIA GARDEN", 136, 62 },  // Austria Gardens
-  /* 7 */ { "CH", "CALVARY HILL",   22,  62 },  // Calvary Hill
+  /* 6 */ { "CH", "CALVARY HILL",   22,  62 },  // Calvary Hill
 };
 
 // Marker color definitions (r, g, b)

@@ -150,7 +150,7 @@ SILENCE_CALIBRATION_SECONDS = 0.3
 
 # Silence after the visitor has spoken that ends the recording. Long enough to
 # survive the pause between two sentences, short enough not to be noticed.
-SILENCE_HANGOVER_SECONDS = 1.5
+SILENCE_HANGOVER_SECONDS = 5.0
 
 # Silence *before* any speech that ends the recording, so a button pressed by
 # accident does not hold the pipeline open until RECORD_MAX_SECONDS.

@@ -222,7 +222,14 @@ STT_MODEL_PATH = (
 if not STT_MODEL_PATH.is_absolute():
     STT_MODEL_PATH = MODELS_DIR / "stt" / STT_MODEL_PATH
 
-SLM_MODEL_PATH = MODELS_DIR / "slm" / "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+_SLM_MODEL_OVERRIDE = _os.environ.get("CULTURA_SLM_MODEL")
+SLM_MODEL_PATH = (
+    Path(_SLM_MODEL_OVERRIDE)
+    if _SLM_MODEL_OVERRIDE
+    else MODELS_DIR / "slm" / "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+)
+if not SLM_MODEL_PATH.is_absolute():
+    SLM_MODEL_PATH = MODELS_DIR / "slm" / SLM_MODEL_PATH
 
 # ---------------------------------------------------------------------------
 # SLM prefix cache (see core/model_module.py, warm_prefix()).

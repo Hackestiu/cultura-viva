@@ -310,7 +310,7 @@ def main() -> None:
         prog="main.py personality",
         description="Measure whether the three guide personalities change the model's output.",
     )
-    parser.add_argument("--model", default="qwen2.5:0.5b",
+    parser.add_argument("--model", default="qwen2.5:1.5b",
                         help="Candidate model to study (default: the model the device runs).")
     parser.add_argument("--judge-model", default="llama3.1:8b",
                         help="Judge model. Deliberately a different family from the candidate.")

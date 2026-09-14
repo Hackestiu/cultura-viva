@@ -23,7 +23,7 @@ No board required — this runs entirely on the host through Ollama.
 
 ```bash
 ollama serve &
-ollama pull qwen2.5:0.5b      # the model the device runs
+ollama pull qwen2.5:1.5b      # the model the device runs
 ollama pull llama3.1:8b       # the judge
 
 uv run python main.py personality
@@ -36,7 +36,7 @@ Useful flags:
 | `--no-judge` | Generate and diff only, zero judge calls. Fast iteration on the sheet. |
 | `--reuse` | Re-judge saved answers instead of regenerating. |
 | `--limit N` | First N probes only. |
-| `--model` / `--judge-model` | Defaults are `qwen2.5:0.5b` and `llama3.1:8b`. |
+| `--model` / `--judge-model` | Defaults are `qwen2.5:1.5b` and `llama3.1:8b`. |
 
 Output lands in `results/`: `answers_<model>.json` (raw), plus
 `personality_<model>.json` and `.html`. **Open the HTML** — the confusion matrix is

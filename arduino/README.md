@@ -79,7 +79,7 @@ cultura-viva-uno-q/
     ├── minimapa/                ← JSON coordinate datasets for minimap landmarks
     └── models/                  ← AI model weights and knowledge graph (downloaded separately)
         ├── knowledge/           ← Gaudí fact sheets (element_sheets.json, knowledge_base.json)
-        ├── slm/                 ← Quantized GGUF language model (Qwen2.5 1.5B / 0.5B Instruct)
+        ├── slm/                 ← Quantized GGUF language model (Qwen2.5 1.5B Instruct)
         ├── stt/                 ← faster-whisper speech recognition model
         ├── tts/                 ← Piper voice ONNX models and configs
         └── vision/              ← ONNX classification models for Park Güell & Sagrada Família

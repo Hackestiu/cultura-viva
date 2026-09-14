@@ -28,7 +28,10 @@
 \title{\textbf{Cultura Viva}\\[0.3em]
 \large An on-device multimodal audio guide for Gaud\'i's Barcelona\\
 \normalsize Model selection, benchmarks, and bill of materials}
-\author{Cultura Viva team}
+\author{
+  \textbf{Cultura Viva team} \\
+  Mar Dijort, Lucia Gim\'enez, Josep Rodr\'iguez, Laia Mogas
+}
 \date{13 September 2026}
 
 \begin{document}
@@ -334,7 +337,7 @@ completed run per monument--backbone combination).\protect\footnotemark}
 \toprule
 \textbf{Monument} & \textbf{Backbone} & \textbf{Epochs} & \textbf{Batch size} & \textbf{Learning rate} \\
 \midrule
-Casa Batll\'o & MobileNetV2 & 100 & 8  & $3\times10^{-5}$ \\
+Casa Batll\'o & MobileNetV2 & --- & ---  & --- \\
 Casa Batll\'o & ViT-B/16    & 3   & 16 & $3\times10^{-5}$ \\
 \addlinespace
 Park G\"uell  & MobileNetV2 & 8 & 16 & $2\times10^{-5}$ \\
@@ -348,7 +351,7 @@ Sagrada Fam\'ilia & ViT-B/16    & 8 & 16 & $2\times10^{-5}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
-\footnotetext{No completed MobileNetV2 run exists for \texttt{monument=sagrada\_familia}; the architecture yielded poor accuracy for this visually complex monument, and we opted not to compromise performance with a less complex model.}
+\footnotetext{No completed MobileNetV2 run exists for \texttt{monument=sagrada\_familia or monument=casa\_batllo }; the architecture yielded poor accuracy for this visually complex monument, and we opted not to compromise performance with a less complex model.}
 
 Common to every run: the best checkpoint is selected by validation macro-F1,
 and evaluation reports \textbf{accuracy} and \textbf{macro-F1} --- macro so
@@ -372,17 +375,17 @@ images in that monument's held-out test split (not the class count of
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}
 \textbf{Monument} & \textbf{$N$} & Acc. & macro-F1 & Acc. & macro-F1 \\
 \midrule
-Casa Batll\'o            & 49  & 0.980 & 0.974 & 1.000 & 1.000 \\
+Casa Batll\'o            & 49  & --- & --- & 1.000 & 1.000 \\
 Park G\"uell             & 298 & 0.960 & 0.955 & 0.990 & 0.989 \\
 La Pedrera (Casa Mil\`a) & 81  & 0.889 & 0.879 & 0.988 & 0.987 \\
 Sagrada Fam\'ilia        & 313 & ---   & ---   & 0.962 & 0.963 \\
 \midrule
-\textbf{Mean}\footnotemark &  & 0.943 & 0.936 & 0.985 & 0.985 \\
+\textbf{Mean}\footnotemark &  & 0.925 & 0.917 & 0.985 & 0.985 \\
 \bottomrule
 \end{tabular}
 \end{table}
 \footnotetext{The MobileNetV2 mean is over the three completed monuments
-(Casa Batll\'o, Park G\"uell, La Pedrera); the ViT-B/16 mean is over all four.
+(Park G\"uell, La Pedrera); the ViT-B/16 mean is over all four.
 The two columns are therefore not averaged over the same set of monuments and
 should not be compared directly until the missing Sagrada Fam\'ilia
 MobileNetV2 run is completed.}
@@ -534,17 +537,15 @@ machine (\texttt{uv run python main.py benchmark}).
 \textbf{Model} & 
 \begin{tabular}{@{}c@{}}\textbf{RAM Working}\\\textbf{Set}\end{tabular} & 
 \begin{tabular}{@{}c@{}}\textbf{Host}\\\textbf{Latency (s)}\end{tabular} & 
-\begin{tabular}{@{}c@{}}\textbf{Cortex-A53}\\\textbf{Latency (s)}\end{tabular} & 
-\begin{tabular}{@{}c@{}}\textbf{Unsupported}\\\textbf{Claims\footnotemark}\end{tabular} \\
+\begin{tabular}{@{}c@{}}\textbf{Cortex-A53}\\\textbf{Latency (s)}\end{tabular} \\
 \midrule
-Qwen 2.5 0.5B Instruct & \textbf{\SI{0.65}{\giga\byte}} & 2.41 & 19.2          & 31.9\,\% (23/72) \\
-Qwen 2.5 1.5B Instruct & \SI{1.45}{\giga\byte} & 2.61 & \textbf{53.0} & 33.3\,\% (24/72) \\
-Llama 3.2 1B Instruct  & \SI{1.20}{\giga\byte} & 2.40 & 28.0          & --- \\
-Gemma 3 1B IT          & \SI{1.25}{\giga\byte} & 2.48 & 33.9          & --- \\
+Qwen 2.5 0.5B Instruct & \textbf{\SI{0.65}{\giga\byte}} & 2.41 & 19.2       \\
+Qwen 2.5 1.5B Instruct & \SI{1.45}{\giga\byte} & 2.61 & \textbf{53.0} \\
+Llama 3.2 1B Instruct  & \SI{1.20}{\giga\byte} & 2.40 & 28.0  \\
+Gemma 3 1B IT          & \SI{1.25}{\giga\byte} & 2.48 & 33.9  \\
 \bottomrule
 \end{tabular}
 \end{table}
-\footnotetext{Hand-checked grounding audit across 72 answers from element sheets (commit \texttt{d471adc}).}
 
 \subsubsection{Guide personalities}
 \label{sec:slm-personalities}

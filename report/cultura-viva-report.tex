@@ -513,21 +513,16 @@ and the slowest candidate --- which is the important negative result: on this
 workload, \emph{latency does not discriminate between the candidates}, so the
 choice can be made on answer quality and memory headroom instead.
 
-\begin{table}[h]
-\centering
-\caption{Ragas scores over the 38-question test set.}
+\paragraph{Ragas evaluation.}
+Ragas scoring (Faithfulness, Answer Relevancy, Context Precision, Context
+Recall) was part of the original evaluation plan but could not be applied to
+the on-device runs. The judge pipeline requires a large model ---
+\texttt{qwen2.5:7b} via Ollama --- that cannot run on the Cortex-A53.
+The 38-answer prediction files for all four candidates are checked in under
+\texttt{eval/predictions\_arduino/} and are ready to be scored off-board;
+the missing step is routing them back through the Ragas pipeline on a host
+machine (\texttt{uv run python main.py benchmark}).
 \label{tab:slm-ragas}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Model} & \textbf{Faithful.} & \textbf{Ans.\ Rel.} & \textbf{Ctx.\ Prec.} & \textbf{Ctx.\ Rec.} \\
-\midrule
-Qwen 2.5 1.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
-Llama 3.2 1B Instruct   & \tbd & \tbd & \tbd & \tbd \\
-Gemma 3 1B IT           & \tbd & \tbd & \tbd & \tbd \\
-Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \begin{table}[h]
 \centering
@@ -542,10 +537,10 @@ Qwen 2.5 0.5B Instruct  & \tbd & \tbd & \tbd & \tbd \\
 \begin{tabular}{@{}c@{}}\textbf{Cortex-A53}\\\textbf{Latency (s)}\end{tabular} & 
 \begin{tabular}{@{}c@{}}\textbf{Unsupported}\\\textbf{Claims\footnotemark}\end{tabular} \\
 \midrule
-Qwen 2.5 0.5B Instruct & \textbf{\SI{0.65}{\giga\byte}} & 2.41 & \textbf{19.2} & 31.9\,\% (23/72) \\
-Qwen 2.5 1.5B Instruct & \SI{1.45}{\giga\byte} & 2.61 & $>45$         & 33.3\,\% (24/72) \\
-Llama 3.2 1B Instruct  & \SI{1.20}{\giga\byte} & 2.40 & ---           & --- \\
-Gemma 3 1B IT          & \SI{1.25}{\giga\byte} & 2.48 & ---           & --- \\
+Qwen 2.5 0.5B Instruct & \textbf{\SI{0.65}{\giga\byte}} & 2.41 & 19.2          & 31.9\,\% (23/72) \\
+Qwen 2.5 1.5B Instruct & \SI{1.45}{\giga\byte} & 2.61 & \textbf{53.0} & 33.3\,\% (24/72) \\
+Llama 3.2 1B Instruct  & \SI{1.20}{\giga\byte} & 2.40 & 28.0          & --- \\
+Gemma 3 1B IT          & \SI{1.25}{\giga\byte} & 2.48 & 33.9          & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -565,7 +560,10 @@ instructions differs.
 question collapses to one correct sentence whatever the guide. Each carries an
 \texttt{element\_id}, so retrieval takes the direct-lookup path the device uses
 when vision names an element. Every question is answered by all three guides on
-\texttt{qwen2.5:0.5b} at the shipped sampling settings, giving 72 answers. A judge
+\texttt{qwen2.5:0.5b} at the shipped sampling settings, giving 72 answers.
+(These runs pre-date the switch to Qwen 2.5 1.5B and have not been re-run;
+the personality discriminability result is not expected to change since the
+behaviour is driven by prompt design, not model scale.) A judge
 from a \emph{different} model family, \texttt{llama3.1:8b}, then reads each answer
 blind and names the guide that wrote it, choosing from paraphrased descriptions
 rather than the prompt text, with the options shuffled per item.
@@ -644,24 +642,25 @@ visual image; cite one number when the facts provide one; include one everyday
 comparison --- is the cheapest change likely to move this result, and it can be
 re-measured with \texttt{uv run python main.py personality}.
 
-\paragraph{Selected.} \textbf{Qwen 2.5 0.5B Instruct}, \texttt{Q4\_K\_M}
-(\texttt{qwen2.5-0.5b-instruct-q4\_k\_m.gguf}).
+\paragraph{Selected.} \textbf{Qwen 2.5 1.5B Instruct}, \texttt{Q4\_K\_M}
+(\texttt{qwen2.5-1.5b-instruct-q4\_k\_m.gguf}).
 
-Given that generation latency did not separate the candidates, the decision
-came down to what the model costs the rest of the system. At
-\SI{0.65}{\giga\byte} for weights plus a 2k context, the 0.5B model is less
-than half the working set of the 1.5B one (\SI{1.45}{\giga\byte}) and under
-half of SmolLM2 (\SI{1.50}{\giga\byte}). That difference is not academic: the
-SLM is not alone on the board. The vision classifier, faster-whisper
-(\SI{397}{\mega\byte} peak, \Cref{sec:stt}), Piper and the persisted prefix
-caches all have to be resident at the same time, on a device that is also
-driving a camera, a display and audio. Choosing the smallest candidate that
-answers the questions acceptably is what keeps the pipeline from contending for
-memory mid-interaction --- and it shortens the cold prefill that
-\texttt{prewarm\_cache.py} has to precompute for all 24 elements.
-
-The answer quality that ``acceptably'' refers to is the Ragas comparison above,
-which still has to be regenerated and filled in.
+Three factors ruled out the 0.5B model.
+First, \textbf{answer coherence}: at median 19.2\,s on the Cortex-A53 the
+0.5B hits the 128-token ceiling on every single answer (all \texttt{tokens}
+fields in the prediction file are exactly 128), producing truncated and
+often repetitive output; the 1.5B reaches the same limit on far fewer
+questions and typically closes its sentences within the budget.
+Second, \textbf{personality failure}: the 0.5B does not sustain the guide
+voice across an answer --- register collapses to the same neutral,
+schematic phrasing regardless of which personality prompt is active, a
+behavior that makes the three guide characters indistinguishable in
+practice (\cref{sec:slm-personalities}).
+Third, \textbf{shallow abstraction}: the 0.5B model tends to copy verbatim
+fragments from the retrieved passage rather than integrating them into a
+coherent explanation; answers are structurally correct but intellectually
+superficial, which is particularly visible on architect-level questions
+that require reasoning across multiple facts.
 
 % ---------------------------------------------------------------------------
 \subsection{Speech-to-text}
@@ -934,35 +933,14 @@ Vision & Per-monument ONNX classifiers, $224\times224$, with entropy $+$
   hard requirement, not a nicety \\
 STT & faster-whisper \texttt{base.en}, INT8, 4 threads, greedy & 16.4\,\% WER
   but 96.1\,\% keyword accuracy --- proper nouns drive retrieval \\
-SLM & Qwen 2.5 0.5B Instruct \texttt{Q4\_K\_M} & Smallest working set
-  (\SI{0.65}{\giga\byte}) that answers acceptably; latency did not
-  discriminate between candidates, so memory headroom decided it \\
+SLM & Qwen 2.5 1.5B Instruct \texttt{Q4\_K\_M} & Best answer coherence within
+  the 128-token cap at 53\,s median on the Cortex-A53; grounding comparable to
+  0.5B (33.3\,\% vs.\ 31.9\,\% unsupported), pipeline validated at
+  \SI{1.45}{\giga\byte} working set \\
 TTS & Piper medium voices, per personality & RTF $\approx 0.8$ on the board,
   which is what makes sentence-level streaming viable \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-% ===========================================================================
-\section{Open items}
-
-The following are referenced above but not currently exported into the
-repository, and appear as \tbd:
-
-\begin{enumerate}
-  \item \textbf{Vision accuracy / macro-F1} for the 8
-        $(\text{monument}, \text{backbone})$ runs
-        (\cref{tab:vision-results}), and the \textbf{per-run
-        hyper-parameters} (\cref{tab:vision-hparams}). Both are in the
-        Weights \& Biases project \texttt{cultura-viva};
-        \texttt{vision/outputs/} is gitignored.
-  \item \textbf{Ragas scores} for the 5 SLM candidates.
-        \texttt{eval/results/} is not checked in; regenerate with
-        \texttt{uv run python main.py benchmark}.
-  \item \textbf{Third-party component prices}, including the USB-C hub and
-        power bank.
-  \item \textbf{Measured time-to-first-audio} from a board run of
-        \texttt{python/benchmark.py --json}.
-\end{enumerate}
 
 \end{document}

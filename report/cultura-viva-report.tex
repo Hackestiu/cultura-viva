@@ -917,31 +917,42 @@ Zero. Every model in the pipeline is open-weights and runs locally, so there
 are no inference API calls and no per-visitor marginal cost. The Ragas judge
 used during evaluation (\texttt{qwen2.5:7b} via Ollama) is also local, and is a
 development-time dependency that never ships to the device.
-
 % ===========================================================================
 \section{Summary of selections}
 % ===========================================================================
 
 \begin{table}[h]
 \centering
+\small
 \caption{What the benchmarks selected, and on what grounds.}
-\begin{tabular}{p{1.1cm}p{4.4cm}p{7.4cm}}
+\begin{tabular}{l p{4.5cm} p{8.0cm}}
 \toprule
 \textbf{Stage} & \textbf{Selected} & \textbf{Decided on} \\
 \midrule
-Vision & Per-monument ONNX classifiers, $224\times224$, with entropy $+$
-  confidence OOD gate & Accuracy / macro-F1 per monument; OOD rejection is a
-  hard requirement, not a nicety \\
-STT & faster-whisper \texttt{base.en}, INT8, 4 threads, greedy & 16.4\,\% WER
-  but 96.1\,\% keyword accuracy --- proper nouns drive retrieval \\
-SLM & Qwen 2.5 1.5B Instruct \texttt{Q4\_K\_M} & Best answer coherence within
-  the 128-token cap at 53\,s median on the Cortex-A53; grounding comparable to
-  0.5B (33.3\,\% vs.\ 31.9\,\% unsupported), pipeline validated at
-  \SI{1.45}{\giga\byte} working set \\
-TTS & Piper medium voices, per personality & RTF $\approx 0.8$ on the board,
-  which is what makes sentence-level streaming viable \\
+Vision & Per-monument ONNX classifiers, $224\times224$, with entropy $+$ confidence OOD gate & Accuracy / macro-F1 per monument; OOD rejection is a hard requirement, not a nicety. \\
+\addlinespace
+STT & \texttt{faster-whisper base.en}, INT8, 4 threads, greedy & 16.4\,\% WER but 96.1\,\% keyword accuracy --- proper nouns drive retrieval. \\
+\addlinespace
+SLM & Qwen 2.5 1.5B Instruct \texttt{Q4\_K\_M} & Best answer coherence within the 128-token cap at 53\,s median on the Cortex-A53; grounding comparable to 0.5B (33.3\,\% vs.\ 31.9\,\% unsupported), pipeline validated at \SI{1.45}{\giga\byte} working set. \\
+\addlinespace
+TTS & Piper medium voices, per personality & RTF $\approx 0.8$ on the board, which is what makes sentence-level streaming viable. \\
 \bottomrule
 \end{tabular}
 \end{table}
+\newpage
+% ===========================================================================
+\section{Interactive Web Demo}
+\label{sec:web-demo}
+% ===========================================================================
 
+While the core engineering achievement of \textit{Cultura Viva} is its fully on-device execution on the Arduino UNO Q, we understand that reviewers and users may not have immediate access to this specific hardware to test the pipeline. 
+
+To bridge this gap and allow evaluators to easily experience the system's conversational flow, vision-triggered context, and overall interaction model, we have deployed a cloud-hosted web version of the project. This interactive interface replicates the physical device's AI capabilities within a standard browser environment.
+
+The live demonstration can be accessed at \url{https://demo.culturaviva.tech} using the following credentials:
+
+\begin{itemize}
+  \item \textbf{Username:} \texttt{culturaviva}
+  \item \textbf{Password:} \texttt{gaudi2026}
+\end{itemize}
 \end{document}

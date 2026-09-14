@@ -653,7 +653,7 @@ came down to what the model costs the rest of the system. At
 than half the working set of the 1.5B one (\SI{1.45}{\giga\byte}) and under
 half of SmolLM2 (\SI{1.50}{\giga\byte}). That difference is not academic: the
 SLM is not alone on the board. The vision classifier, faster-whisper
-(\SI{397}{\mega\byte} peak, \S\ref{sec:stt}), Piper and the persisted prefix
+(\SI{397}{\mega\byte} peak, \Cref{sec:stt}), Piper and the persisted prefix
 caches all have to be resident at the same time, on a device that is also
 driving a camera, a display and audio. Choosing the smallest candidate that
 answers the questions acceptably is what keeps the pipeline from contending for
